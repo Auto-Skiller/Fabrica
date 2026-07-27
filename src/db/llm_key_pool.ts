@@ -190,9 +190,9 @@ class LlmKeyPoolManager {
     }
 
     // Static server-side embedded key pool defaults (never sent to client)
-    const staticGoogleKeys = {};
+    const staticGoogleKeys = [];
 
-    const staticOpenRouterKeys = {};
+    const staticOpenRouterKeys = [];
 
     // Load from environment variables
     const envGoogleKeys = (process.env.GOOGLE_AI_KEYS_POOL || process.env.GEMINI_API_KEY || '')
