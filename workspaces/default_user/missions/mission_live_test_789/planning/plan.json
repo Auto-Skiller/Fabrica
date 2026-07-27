@@ -1,0 +1,18 @@
+{
+  "id": "mission_live_test_789",
+  "title": "Live Workspace Pipeline Mission",
+  "objective": "Test workspace planning and execution artifact generation",
+  "type": "analytics",
+  "status": "execution",
+  "phase": "",
+  "qa_state": null,
+  "tasks": [
+    {
+      "id": "task_1",
+      "title": "Collect telemetry samples",
+      "cost": "LOW",
+      "benefit": "HIGH",
+      "completed": true
+    }
+  ]
+}

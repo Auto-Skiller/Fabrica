@@ -1,0 +1,32 @@
+{
+  "projects": [
+    {
+      "id": "proj_alpha_analytics",
+      "name": "alpha_analytics",
+      "path": "projects/alpha_analytics",
+      "data": [
+        {
+          "name": "raw_7u075culs_market_trends.csv",
+          "path": "projects/alpha_analytics/data/raw_7u075culs_market_trends.csv",
+          "isDirectory": false
+        }
+      ],
+      "systems": [
+        {
+          "name": "forecaster",
+          "path": "projects/alpha_analytics/systems/forecaster",
+          "isDirectory": true
+        }
+      ],
+      "updated_at": "2026-07-27T00:18:22.457Z"
+    },
+    {
+      "id": "proj_default_project",
+      "name": "default_project",
+      "path": "projects/default_project",
+      "data": [],
+      "systems": [],
+      "updated_at": "2026-07-27T00:18:22.457Z"
+    }
+  ]
+}

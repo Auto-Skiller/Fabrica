@@ -1,0 +1,15 @@
+{
+  "id": "mission_live_test_789",
+  "status": "execution",
+  "phase": "",
+  "workflow_history": [
+    {
+      "timestamp": "2026-07-26T11:11:20.355Z",
+      "phase": "execution",
+      "status": "Executing pipeline task"
+    }
+  ],
+  "system_ids": [],
+  "input_data_ids": [],
+  "metrics": {}
+}

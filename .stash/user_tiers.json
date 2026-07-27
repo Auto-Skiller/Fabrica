@@ -1,0 +1,184 @@
+{
+  "users": {
+    "usr_sandbox_w4x2ipd": {
+      "tenantId": "usr_sandbox_w4x2ipd",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T14:03:09.599Z",
+      "updatedAt": "2026-07-26T14:03:09.599Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785074589600",
+            "timestamp": "2026-07-26T14:03:09.600Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_w4x2ipd",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_w4x2ipd/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "usr_sandbox_hu1cnon": {
+      "tenantId": "usr_sandbox_hu1cnon",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T14:42:01.521Z",
+      "updatedAt": "2026-07-26T14:42:01.521Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785076921521",
+            "timestamp": "2026-07-26T14:42:01.521Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_hu1cnon",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_hu1cnon/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "usr_sandbox_0bqfpa9": {
+      "tenantId": "usr_sandbox_0bqfpa9",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T23:52:32.094Z",
+      "updatedAt": "2026-07-26T23:52:32.094Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785109952094",
+            "timestamp": "2026-07-26T23:52:32.094Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_0bqfpa9",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_0bqfpa9/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    }
+  }
+}

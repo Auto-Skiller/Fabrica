@@ -1,0 +1,19 @@
+{
+  "language": "EN",
+  "internet_access": true,
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "subscription": {
+    "plan": "Professional",
+    "active": true
+  },
+  "quota": {
+    "monthly_tokens": 1000000,
+    "used_tokens": 0
+  },
+  "alerts": [],
+  "autonomy": "autonomous",
+  "notifications": {},
+  "sync_daemon": true
+}

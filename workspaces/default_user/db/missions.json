@@ -1,0 +1,597 @@
+{
+  "missions": [
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "analytics",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.338Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "analytics",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.339Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "brainstorming",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.340Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "brainstorming",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.341Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "build",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.343Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "build",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.344Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "build_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.345Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "build_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.346Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "deep_research",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.349Z"
+    },
+    {
+      "id": "mission_test_456",
+      "title": "Direct Test Mission",
+      "objective": "Verify direct workspace sync",
+      "type": "deep_research",
+      "user_id": "default_user",
+      "status": "planning",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": "missions/deep_research/mission_test_456/planning/plan.json",
+        "blueprint_md": "missions/deep_research/mission_test_456/planning/blueprint.md"
+      },
+      "execution_artifacts": {
+        "execution_json": "missions/deep_research/mission_test_456/execution/execution.json",
+        "execution_history_md": "missions/deep_research/mission_test_456/execution/execution_history.md"
+      },
+      "workspace_files": [
+        {
+          "name": "execution.json",
+          "path": "missions\\deep_research\\mission_test_456\\execution\\execution.json"
+        },
+        {
+          "name": "execution_history.md",
+          "path": "missions\\deep_research\\mission_test_456\\execution\\execution_history.md"
+        },
+        {
+          "name": "blueprint.md",
+          "path": "missions\\deep_research\\mission_test_456\\planning\\blueprint.md"
+        },
+        {
+          "name": "plan.json",
+          "path": "missions\\deep_research\\mission_test_456\\planning\\plan.json"
+        }
+      ],
+      "metadata": {
+        "tasks": [
+          {
+            "id": "task_1",
+            "title": "Research vector indexes",
+            "completed": false
+          }
+        ],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.352Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "deep_research",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.353Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "mission_live_test_789",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [
+        {
+          "name": "execution.json",
+          "path": "missions\\mission_live_test_789\\execution\\execution.json"
+        },
+        {
+          "name": "execution_history.md",
+          "path": "missions\\mission_live_test_789\\execution\\execution_history.md"
+        }
+      ],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.355Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "mission_live_test_789",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [
+        {
+          "name": "blueprint.md",
+          "path": "missions\\mission_live_test_789\\planning\\blueprint.md"
+        },
+        {
+          "name": "plan.json",
+          "path": "missions\\mission_live_test_789\\planning\\plan.json"
+        }
+      ],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.357Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "optimization",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.358Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "optimization",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.359Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "optimization_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.361Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "optimization_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.362Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "standard",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.363Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "standard",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.364Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "test",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.366Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "test",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.366Z"
+    },
+    {
+      "id": "execution",
+      "title": "execution",
+      "objective": "",
+      "type": "test_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.368Z"
+    },
+    {
+      "id": "planning",
+      "title": "planning",
+      "objective": "",
+      "type": "test_from_data",
+      "user_id": "default_user",
+      "status": "drafting",
+      "phase": "planning",
+      "planning_artifacts": {
+        "plan_json": null,
+        "blueprint_md": null
+      },
+      "execution_artifacts": {
+        "execution_json": null,
+        "execution_history_md": null
+      },
+      "workspace_files": [],
+      "metadata": {
+        "tasks": [],
+        "metrics": {}
+      },
+      "workflow_history": [],
+      "updated_at": "2026-07-27T00:18:22.369Z"
+    }
+  ]
+}
