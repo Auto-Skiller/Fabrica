@@ -1,6 +1,6 @@
 {
-  "name": "Remix: Remix: Remix: Fabrica",
-  "description": "\"AI knows HOW to build. It just doesn\u0027t know WHAT.\"\n\nDrop in your mess — spreadsheets, old software, scattered files, whatever you\u0027ve got. Fabrica digs through it, learns how your business actually works, and builds you a real system to run it on. Not a report. Not a one-time answer you throw away tomorrow. A system that keeps working, keeps improving, and never forgets what your business needs. \n\nWatch your company get built.",
+  "name": "Remix Fabrica",
+  "description": "Imported from GitHub: Auto-Skiller/Fabrica",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import zlib from 'zlib';
+import { execSync } from 'child_process';
 import { GoogleGenAI, Type } from "@google/genai";
 import { WebSocketServer } from 'ws';
 import * as cheerio from 'cheerio';
@@ -32,9 +33,7 @@ import {
   moveUserFile,
   deleteUserFile,
   getUserRoot,
-  recordUserHarnessActivity,
-  syncMissionsDb,
-  syncProjectsDb
+  recordUserHarnessActivity
 } from './src/harness.js';
 import { syncCycle } from './src/sync.js';
 import { db } from './src/db/db_engine.js';
@@ -638,6 +637,14 @@ function apiRateLimiter(req: any, res: any, next: any) {
 
 // Serving the static dashboard assets with cache-control headers
 const FRONTEND = path.join(process.cwd(), "frontend-next", "out");
+if (!fs.existsSync(FRONTEND)) {
+  console.log("[daemon] Building frontend-next static export...");
+  try {
+    execSync("npm run build:frontend", { stdio: "inherit" });
+  } catch (err: any) {
+    console.error("[daemon] Failed to build frontend-next:", err?.message || err);
+  }
+}
 app.use("/static", express.static(FRONTEND, {
   setHeaders: (res) => {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
@@ -4138,24 +4145,6 @@ setInterval(() => {
     console.error(`Error in syncCycle: ${err.message}`);
   }
 }, 5000);
-
-// Serve Next.js compiled frontend static files from frontend-next/out
-const frontendOutDir = path.join(process.cwd(), 'frontend-next', 'out');
-if (fs.existsSync(frontendOutDir)) {
-  app.use(express.static(frontendOutDir));
-  app.get('*', (req: any, res: any, next: any) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/ws')) return next();
-    const dashboardHtml = path.join(frontendOutDir, 'dashboard.html');
-    const indexHtml = path.join(frontendOutDir, 'index.html');
-    if (req.path.startsWith('/dashboard') && fs.existsSync(dashboardHtml)) {
-      return res.sendFile(dashboardHtml);
-    }
-    if (fs.existsSync(indexHtml)) {
-      return res.sendFile(indexHtml);
-    }
-    next();
-  });
-}
 
 // Start server listening on port 3000
 const server = app.listen(PORT, "0.0.0.0", () => {

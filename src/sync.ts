@@ -13,7 +13,6 @@ import {
   nowIso,
   stampFreshness
 } from './utils.js';
-import { simulateMissions } from './simulator.js';
 import { orchestrator } from './pipeline/orchestrator.js';
 
 const _sync_sig = new Map<string, string>();
@@ -1127,11 +1126,6 @@ const CONFIG_FILE = path.join(process.cwd(), "config.yaml");
 const INDEX_FILE = path.join(process.cwd(), "index.yaml");
 
 export function syncCycle(): void {
-  // 1. Enqueue database-driven active mission simulations into the pipeline orchestrator
-  orchestrator.enqueue('system', 'simulation', 'System Active Missions Simulator Step', async () => {
-    await simulateMissions();
-  });
-
   const config = readYaml(CONFIG_FILE);
   if (!config || config.sync_daemon === false) {
     return;

@@ -258,7 +258,7 @@ const DASHBOARD_TEXT = {
     reviewQueueTitle: "REVIEW QUEUE",
     clickToInject: "Click to inject as audit query",
     agentInputPlaceholder: "Ask the Fabrica Agent...",
-    sendBtn: "Send Message",
+    sendBtn: "Send",
     webSearch: "Google Search Grounding",
 
     // Modals
@@ -482,7 +482,7 @@ const DASHBOARD_TEXT = {
     reviewQueueTitle: "FILE DE RÉVISION",
     clickToInject: "Cliquer pour injecter comme requête d'audit",
     agentInputPlaceholder: "Poser une question à l'Agent Fabrica...",
-    sendBtn: "Envoyer le Message",
+    sendBtn: "Envoyer",
     webSearch: "Recherche Google Ancrée",
 
     // Modals
@@ -706,7 +706,7 @@ const DASHBOARD_TEXT = {
     reviewQueueTitle: "قائمة المراجعة",
     clickToInject: "انقر للإدراج كاستعلام تدقيق",
     agentInputPlaceholder: "اسأل مساعد Fabrica...",
-    sendBtn: "إرسال الرسالة",
+    sendBtn: "إرسال",
     webSearch: "بحث جوجل المدعوم",
 
     // Modals
@@ -1403,12 +1403,14 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  // Sizing and layout states matching the original index.html
-  const [minLeftSide, setMinLeftSide] = useState<boolean>(false);
+  // Sizing and layout states matching the 3-column architecture
+  const [minCenter, setMinCenter] = useState<boolean>(false);
   const [minSide, setMinSide] = useState<boolean>(false);
   const [minTop, setMinTop] = useState<boolean>(false);
-  const [leftSideW, setLeftSideW] = useState<number>(24);
-  const [sideW, setSideW] = useState<number>(28);
+  const [leftSideW, setLeftSideW] = useState<number>(31);
+  const [sideW, setSideW] = useState<number>(27);
+  const [isDraggingLeftRail, setIsDraggingLeftRail] = useState<boolean>(false);
+  const [isDraggingRightRail, setIsDraggingRightRail] = useState<boolean>(false);
   const [heroCollapsed, setHeroCollapsed] = useState<boolean>(false);
 
   // Tabs states
@@ -1425,7 +1427,7 @@ export default function Dashboard() {
 
   const handleMobileTabSelect = (tab: 'center' | 'left' | 'right') => {
     setMobileTab(tab);
-    if (tab === 'left') setMinLeftSide(false);
+    if (tab === 'center') setMinCenter(false);
     if (tab === 'right') setMinSide(false);
   };
 
@@ -2394,6 +2396,9 @@ export default function Dashboard() {
   // Layout improvement states
   const [isToolsWindowOpen, setIsToolsWindowOpen] = useState<boolean>(false);
   const [isAutonomyHoverOpen, setIsAutonomyHoverOpen] = useState<boolean>(false);
+  const [autonomyPos, setAutonomyPos] = useState<{ bottom: number; left: number } | null>(null);
+  const [chatInputHeight, setChatInputHeight] = useState<number>(36);
+  const [isDraggingChatInput, setIsDraggingChatInput] = useState<boolean>(false);
   const [isAccountWindowOpen, setIsAccountWindowOpen] = useState<boolean>(false);
   const [isLogsWindowOpen, setIsLogsWindowOpen] = useState<boolean>(false);
   const [activeLogTab, setActiveLogTab] = useState<'system' | 'realtime'>('system');
@@ -2994,6 +2999,17 @@ export default function Dashboard() {
           if (cfg.settings.ui_lang) {
             setUiLang(cfg.settings.ui_lang);
           }
+          if (cfg.settings.layout) {
+            const l = cfg.settings.layout;
+            if (typeof l.minCenter === 'boolean') setMinCenter(l.minCenter);
+            if (typeof l.minSide === 'boolean') setMinSide(l.minSide);
+            if (l.leftTab) setLeftTab(l.leftTab);
+            if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(l.chatInputHeight);
+            if (typeof l.leftSideW === 'number' && !isNaN(l.leftSideW)) setLeftSideW(l.leftSideW);
+            if (typeof l.sideW === 'number' && !isNaN(l.sideW)) setSideW(l.sideW);
+            if (l.agentWin && typeof l.agentWin.w === 'number') setAgentWin(l.agentWin);
+            if (l.agentBtnWin && typeof l.agentBtnWin.x === 'number') setAgentBtnWin(l.agentBtnWin);
+          }
           if (Array.isArray(cfg.settings.chat_sessions) && cfg.settings.chat_sessions.length > 0) {
             setSessions(cfg.settings.chat_sessions);
             const activeId = cfg.settings.active_session_id || cfg.settings.chat_sessions[0].id;
@@ -3007,6 +3023,156 @@ export default function Dashboard() {
       })
       .catch(err => console.warn('Failed to load user app config:', err));
   }, [user]);
+
+  // Persistent Layout Saver & Restore Engine
+  const saveLayoutConfig = useCallback((
+    newMinCenter = minCenter,
+    newMinSide = minSide,
+    newLeftTab = leftTab,
+    newChatInputHeight = chatInputHeight,
+    newAgentWin = agentWin,
+    newAgentBtnWin = agentBtnWin,
+    newLeftSideW = leftSideW,
+    newSideW = sideW
+  ) => {
+    const layoutConfig = {
+      leftSideW: newLeftSideW,
+      sideW: newSideW,
+      minCenter: newMinCenter,
+      minSide: newMinSide,
+      leftTab: newLeftTab,
+      chatInputHeight: newChatInputHeight,
+      agentWin: newAgentWin,
+      agentBtnWin: newAgentBtnWin
+    };
+
+    const tenantKey = user?.id || activeEntity || 'default_user';
+
+    try {
+      localStorage.setItem(`fabrica_layout_${tenantKey}`, JSON.stringify(layoutConfig));
+      localStorage.setItem('fabrica_layout_global', JSON.stringify(layoutConfig));
+    } catch (err) {
+      console.warn('Failed to write layout to localStorage:', err);
+    }
+
+    api.saveAppConfig({
+      user_id: tenantKey,
+      settings: {
+        autonomy: autonomyLevel,
+        theme: theme,
+        ui_lang: uiLang,
+        layout: layoutConfig
+      }
+    }).catch(err => console.warn('Failed to sync layout config to server:', err));
+  }, [minCenter, minSide, leftTab, chatInputHeight, agentWin, agentBtnWin, leftSideW, sideW, user, activeEntity, autonomyLevel, theme, uiLang]);
+
+  // Restore saved layout on mount / user session load
+  useEffect(() => {
+    const tenantKey = user?.id || activeEntity || 'default_user';
+    const localSaved = localStorage.getItem(`fabrica_layout_${tenantKey}`) || localStorage.getItem('fabrica_layout_global');
+    if (localSaved) {
+      try {
+        const l = JSON.parse(localSaved);
+        if (typeof l.minCenter === 'boolean') setMinCenter(l.minCenter);
+        if (typeof l.minSide === 'boolean') setMinSide(l.minSide);
+        if (l.leftTab) setLeftTab(l.leftTab);
+        if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(l.chatInputHeight);
+        if (typeof l.leftSideW === 'number' && !isNaN(l.leftSideW)) setLeftSideW(l.leftSideW);
+        if (typeof l.sideW === 'number' && !isNaN(l.sideW)) setSideW(l.sideW);
+        if (l.agentWin && typeof l.agentWin.w === 'number') setAgentWin(l.agentWin);
+        if (l.agentBtnWin && typeof l.agentBtnWin.x === 'number') setAgentBtnWin(l.agentBtnWin);
+      } catch (err) {
+        console.warn('Failed to parse cached layout:', err);
+      }
+    }
+  }, [user, activeEntity]);
+
+  // Side Rail Drag Resizer Mechanics (Left & Right Column Widths)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingLeftRail) {
+        const pct = Math.max(20, Math.min(45, Math.round((e.clientX / window.innerWidth) * 100)));
+        setLeftSideW(pct);
+      } else if (isDraggingRightRail) {
+        const pct = Math.max(20, Math.min(42, Math.round(((window.innerWidth - e.clientX) / window.innerWidth) * 100)));
+        setSideW(pct);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingLeftRail) {
+        setIsDraggingLeftRail(false);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        saveLayoutConfig(minCenter, minSide, leftTab, chatInputHeight, agentWin, agentBtnWin, leftSideW, sideW);
+      }
+      if (isDraggingRightRail) {
+        setIsDraggingRightRail(false);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        saveLayoutConfig(minCenter, minSide, leftTab, chatInputHeight, agentWin, agentBtnWin, leftSideW, sideW);
+      }
+    };
+
+    if (isDraggingLeftRail || isDraggingRightRail) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingLeftRail, isDraggingRightRail, minCenter, minSide, leftTab, chatInputHeight, agentWin, agentBtnWin, leftSideW, sideW, saveLayoutConfig]);
+
+  // Helper function to calculate fluid responsive 3-column grid template
+  const getGridTemplateColumns = () => {
+    const lw = `${leftSideW}%`;
+    const rw = `${sideW}%`;
+
+    if (minCenter && minSide) {
+      return `minmax(0, 1fr) 6px var(--minw, 58px) 6px var(--minw, 58px)`;
+    }
+    if (minCenter) {
+      return `${lw} 6px var(--minw, 58px) 6px minmax(0, 1fr)`;
+    }
+    if (minSide) {
+      return `${lw} 6px minmax(0, 1fr) 6px var(--minw, 58px)`;
+    }
+    return `${lw} 6px minmax(0, 1fr) 6px ${rw}`;
+  };
+
+  // Agent Chat Input Height Resizer Drag Mechanics
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingChatInput) {
+        const textareaEl = document.getElementById('agent-chat-textarea');
+        if (textareaEl) {
+          const rect = textareaEl.getBoundingClientRect();
+          const newHeight = Math.max(28, Math.min(240, rect.bottom - e.clientY));
+          setChatInputHeight(Math.round(newHeight));
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingChatInput) {
+        setIsDraggingChatInput(false);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        saveLayoutConfig(minCenter, minSide, leftTab, chatInputHeight);
+      }
+    };
+
+    if (isDraggingChatInput) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingChatInput, minCenter, minSide, leftTab, chatInputHeight, saveLayoutConfig]);
 
   // Event listener to automatically pop open Account & API window on API errors
   useEffect(() => {
@@ -3799,7 +3965,7 @@ export default function Dashboard() {
         }
       });
       setToast({
-        message: `Autonomy set to ${newLevel === 'autonomous' ? 'FULL AUTO' : newLevel === 'semi-autonomous' ? 'SEMI-AUTO' : 'SUPERVISED'}!`,
+        message: `Autonomy set to ${newLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}!`,
         type: 'success',
         isOpen: true
       });
@@ -3889,10 +4055,14 @@ export default function Dashboard() {
 
         const systemsSummary = (systemComponents || []).slice(0, 5).map((s: any) => `• System Component: ${s.name} (${s.role || 'Active'})`).join('\n');
         const rawDataSummary = (rawDataList || []).slice(0, 5).map((d: any) => `• Data Asset: ${d.name}`).join('\n');
+        const lastSessionsSummary = (sessions || []).slice(-2).map((s: any, idx: number) => {
+          const lastMsg = s.chatHistory && s.chatHistory.length > 0 ? s.chatHistory[s.chatHistory.length - 1].text?.slice(0, 150) : (s.lastPrompt || 'No messages');
+          return `• Session ${idx + 1} (${s.name || s.id}): ${lastMsg}`;
+        }).join('\n');
 
         const heartbeatPrompt = `[AUTONOMOUS AGENT HEARTBEAT CYCLE - ${timeStr}]
-You are Fabrica's Autonomous AI Agent running in FULL AUTO mode.
-Evaluate current workspace state and decide if any mission or system needs your direct intervention.
+You are Fabrica's Autonomous AI Agent running in DIRECTOR (Full Auto) mode.
+Evaluate current workspace state, databases, and recent session logs, then decide if any mission or system needs your direct intervention.
 
 CURRENT WORKSPACE CONTEXT:
 - Active Tenant/Entity: ${activeEntity || 'default_user'}
@@ -3903,9 +4073,11 @@ ${missionsSummary || 'None'}
 ${systemsSummary || 'None'}
 - Raw Data Sources (${rawDataList?.length || 0}):
 ${rawDataSummary || 'None'}
+- Recent Session Logs (Last 2 Sessions):
+${lastSessionsSummary || 'None'}
 
 AGENT DIRECTIVES:
-1. Examine active missions. If a DRAFT/PLANNING mission is ready to advance based on available context, select it to advance.
+1. Examine active missions and session summaries. If a DRAFT/PLANNING mission is ready to advance based on available context, select it to advance.
 2. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
 3. If no mission requires phase movement right now, provide a 1-sentence status assessment of current infrastructure.
 4. Keep your response brief, professional, and clear.`;
@@ -7140,312 +7312,261 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
       </div>
 
       {/* ================= THREE COLUMN MASTER RESPONSIVE GRID ================= */}
-      <main className={`dashboard-grid ${minLeftSide ? 'min-lside' : ''} ${minSide ? 'min-side' : ''} mobile-tab-${mobileTab}`} style={{
-        ['--left-side' as any]: `${leftSideW}%`,
-        ['--side' as any]: `${sideW}%`,
-        flex: 1
-      }}>
+      <main className={`dashboard-grid ${minCenter ? 'min-center' : ''} ${minSide ? 'min-side' : ''} mobile-tab-${mobileTab}`} style={{ flex: 1, gridTemplateColumns: getGridTemplateColumns() }}>
         
-        {/* ============ LEFT COLUMN: RUNTIME & BOARD METRICS ============ */}
-        <aside className={`col lside ${minLeftSide ? 'min' : ''}`}>
-          <button className="side-toggle" onClick={() => setMinLeftSide(!minLeftSide)} title={minLeftSide ? 'Expand left column' : 'Collapse left column'}>
-            <span className="chev">{minLeftSide ? '›' : '‹'}</span>
-          </button>
-          
-          {minLeftSide ? (
-            <div className="side-rail" onClick={() => setMinLeftSide(false)}>
-              <div className="rail-head"><span className="rail-title">Agent</span></div>
-              <div className="rail-metrics">
-                <span className="mmetric hi" title="Chat Tab">💬</span>
-                <span className="mmetric hi" title="Review Queue count">R<b>{runtime?.review_queue?.length || 0}</b></span>
-                <span className="mmetric hi" title="Backlog count">B<b>{runtime?.backlog?.length || 0}</b></span>
-              </div>
-            </div>
-          ) : (
-            <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* ============ LEFT COLUMN: RUNTIME & AGENT CHAT ============ */}
+        <aside className="col lside">
+          <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px', gap: '6px', position: 'relative' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, paddingLeft: '0px', paddingRight: '0px' }}>
-                  {/* Agent / Cache Switcher */}
-                  <div style={{ display: 'flex', gap: '1px', background: 'var(--surface-alt)', paddingTop: '1px', paddingBottom: '1px', paddingLeft: '0px', paddingRight: '0px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
-                    <button
-                      onClick={() => setLeftTab('agent')}
-                      style={{
-                        padding: '1px 0px',
-                        paddingLeft: '0px',
-                        paddingRight: '0px',
-                        fontSize: '6px',
-                        fontWeight: 800,
-                        borderRadius: '2px',
-                        border: 'none',
-                        background: leftTab === 'agent' ? 'var(--accent)' : 'transparent',
-                        color: leftTab === 'agent' ? '#fff' : 'var(--muted)',
-                        cursor: 'pointer',
-                        textTransform: 'uppercase',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      {dtxt.agentTab}
-                    </button>
-                    <button
-                      onClick={() => setLeftTab('context')}
-                      style={{
-                        padding: '1px 2px',
-                        fontSize: '6px',
-                        fontWeight: 800,
-                        borderRadius: '2px',
-                        border: 'none',
-                        background: leftTab === 'context' ? 'var(--accent)' : 'transparent',
-                        color: leftTab === 'context' ? '#fff' : 'var(--muted)',
-                        cursor: 'pointer',
-                        textTransform: 'uppercase',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      {dtxt.contextTab || '📄 Context'}
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', paddingLeft: '0px', paddingRight: '0px' }}>
-                  {/* UI Language Selector */}
-                  <select
-                    value={uiLang}
-                    onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
-                    title="UI Language Selector (EN / FR / AR)"
-                    style={{
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '3px',
-                      color: 'var(--text)',
-                      fontSize: '7px',
-                      fontFamily: 'var(--mono)',
-                      fontWeight: 800,
-                      outline: 'none',
-                      cursor: 'pointer',
-                      padding: '1px 0px',
-                      paddingLeft: '0px',
-                      paddingRight: '0px',
-                      height: '17px',
-                      textTransform: 'uppercase'
-                    }}
-                  >
-                    <option value="EN">🌐 EN</option>
-                    <option value="FR">🌐 FR</option>
-                    <option value="AR">🌐 AR</option>
-                  </select>
-
-                  {/* Model Selector - Slightly Larger */}
-                  <select
-                    value={chatModel}
-                    onChange={(e) => handleModelChange(e.target.value)}
-                    style={{
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '3px',
-                      color: 'var(--accent)',
-                      fontSize: '7px',
-                      fontFamily: 'var(--mono)',
-                      fontWeight: 800,
-                      outline: 'none',
-                      cursor: 'pointer',
-                      padding: '1px 0px',
-                      paddingLeft: '0px',
-                      paddingRight: '0px',
-                      maxWidth: '85px',
-                      height: '17px',
-                      textTransform: 'uppercase',
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    {renderModelOptions()}
-                  </select>
-
-                  {/* Minimized Active Session Badge */}
-                  <span style={{
-                    fontSize: '6.5px',
-                    fontWeight: 900,
-                    color: 'var(--accent)',
-                    fontFamily: 'var(--mono)',
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '3px',
-                    paddingTop: '1px',
-                    paddingBottom: '1px',
-                    paddingLeft: '2px',
-                    paddingRight: '2px',
-                    maxWidth: '50px',
-                    height: '17px',
-                    lineHeight: '15px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-block',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.02em',
-                    boxSizing: 'border-box'
-                  }} title={sessions.find(s => s.id === activeSessionId)?.name || 'Session 1'}>
-                    {sessions.find(s => s.id === activeSessionId)?.name || 'Session 1'}
-                  </span>
-
-                  {/* Sessions Dropdown Trigger Button */}
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setShowSessionDropdown(!showSessionDropdown)}
-                      style={{
-                        width: '17px',
-                        height: '17px',
-                        borderRadius: '3px',
-                        background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
-                        color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--text)',
-                        border: '1px solid var(--border-soft)',
-                        fontSize: '9px',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        padding: 0
-                      }}
-                      title="Manage Sessions"
-                    >
-                      +
-                    </button>
-
-                    {showSessionDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: '22px',
-                        width: '180px',
-                        background: 'var(--surface)',
-                        border: '1.5px solid var(--border-soft)',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                        zIndex: 999,
-                        padding: '4px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px'
-                      }}>
-                        <div style={{
-                          padding: '4px 8px',
-                          fontSize: '7.5px',
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px' }}>
+                {/* Line 1: Tabs on left, Model selector on right */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                    {/* Agent / Cache Switcher */}
+                    <div style={{ display: 'flex', gap: '1px', background: 'var(--surface-alt)', paddingTop: '1px', paddingBottom: '1px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
+                      <button
+                        onClick={() => setLeftTab('agent')}
+                        style={{
+                          paddingLeft: '0px',
+                          paddingRight: '7px',
+                          paddingTop: '1px',
+                          paddingBottom: '1px',
+                          fontSize: '7px',
                           fontWeight: 800,
-                          color: 'var(--muted)',
-                          borderBottom: '1px solid var(--border-soft)',
+                          borderRadius: '2px',
+                          border: 'none',
+                          background: leftTab === 'agent' ? 'var(--accent)' : 'transparent',
+                          color: leftTab === 'agent' ? '#fff' : 'var(--muted)',
+                          cursor: 'pointer',
                           textTransform: 'uppercase',
-                          marginBottom: '2px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <span>Chat Sessions</span>
-                          <span style={{ 
-                            fontSize: '7px', 
-                            color: customApiKey ? 'var(--status-success)' : 'var(--status-warn)',
-                            fontWeight: 800
-                          }}>
-                            ● {customApiKey ? 'READY' : 'NO KEY'}
-                          </span>
-                        </div>
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {dtxt.agentTab}
+                      </button>
+                      <button
+                        onClick={() => setLeftTab('context')}
+                        style={{
+                          padding: '1px 4px',
+                          fontSize: '7px',
+                          fontWeight: 800,
+                          borderRadius: '2px',
+                          border: 'none',
+                          background: leftTab === 'context' ? 'var(--accent)' : 'transparent',
+                          color: leftTab === 'context' ? '#fff' : 'var(--muted)',
+                          cursor: 'pointer',
+                          textTransform: 'uppercase',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {dtxt.contextTab || '📄 Context'}
+                      </button>
+                    </div>
+                  </div>
 
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    {/* Model Selector */}
+                    <select
+                      value={chatModel}
+                      onChange={(e) => handleModelChange(e.target.value)}
+                      style={{
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '3px',
+                        color: 'var(--accent)',
+                        fontSize: '7px',
+                        fontFamily: 'var(--mono)',
+                        fontWeight: 800,
+                        outline: 'none',
+                        cursor: 'pointer',
+                        padding: '1px 2px',
+                        maxWidth: '90px',
+                        height: '18px',
+                        textTransform: 'uppercase',
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {renderModelOptions()}
+                    </select>
+
+                    {/* Minimized Active Session Badge */}
+                    <span style={{
+                      fontSize: '6.5px',
+                      fontWeight: 900,
+                      color: 'var(--accent)',
+                      fontFamily: 'var(--mono)',
+                      background: 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      borderRadius: '3px',
+                      padding: '1px 4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                      height: '18px'
+                    }}>
+                      ⚡ ONLINE
+                    </span>
+
+                    {/* Sessions Dropdown Trigger Button */}
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => setShowSessionDropdown(!showSessionDropdown)}
+                        style={{
+                          width: '17px',
+                          height: '17px',
+                          borderRadius: '3px',
+                          background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
+                          color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--text)',
+                          border: '1px solid var(--border-soft)',
+                          fontSize: '9px',
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          padding: 0
+                        }}
+                        title="Manage Sessions"
+                      >
+                        +
+                      </button>
+
+                      {showSessionDropdown && (
                         <div style={{
-                          maxHeight: '130px',
-                          overflowY: 'auto',
+                          position: 'absolute',
+                          right: 0,
+                          top: '22px',
+                          width: '180px',
+                          background: 'var(--surface)',
+                          border: '1.5px solid var(--border-soft)',
+                          borderRadius: '6px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                          zIndex: 999,
+                          padding: '4px',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '1px'
+                          gap: '2px'
                         }}>
-                          {sessions.map((s) => (
-                            <div
-                              key={s.id}
-                              onClick={() => {
-                                handleSelectSession(s.id);
-                                setShowSessionDropdown(false);
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                background: s.id === activeSessionId ? 'rgba(var(--accent-rgb, 99, 102, 241), 0.15)' : 'transparent',
-                                color: s.id === activeSessionId ? 'var(--accent)' : 'var(--text)',
-                                fontSize: '8.5px',
-                                fontWeight: s.id === activeSessionId ? 800 : 500,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s'
-                              }}
-                            >
-                              <span style={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                maxWidth: '125px'
-                              }}>
-                                {s.name}
-                              </span>
+                          <div style={{
+                            padding: '4px 8px',
+                            fontSize: '7.5px',
+                            fontWeight: 800,
+                            color: 'var(--muted)',
+                            borderBottom: '1px solid var(--border-soft)',
+                            textTransform: 'uppercase',
+                            marginBottom: '2px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span>Chat Sessions</span>
+                            <span style={{ 
+                              fontSize: '7px', 
+                              color: customApiKey ? 'var(--status-success)' : 'var(--status-warn)',
+                              fontWeight: 800
+                            }}>
+                              ● {customApiKey ? 'READY' : 'NO KEY'}
+                            </span>
+                          </div>
 
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteSession(s.id);
+                          <div style={{
+                            maxHeight: '130px',
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1px'
+                          }}>
+                            {sessions.map((s) => (
+                              <div
+                                key={s.id}
+                                onClick={() => {
+                                  handleSelectSession(s.id);
+                                  setShowSessionDropdown(false);
                                 }}
                                 style={{
-                                  fontSize: '9px',
-                                  opacity: 0.6,
-                                  padding: '2px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
+                                  display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: '12px',
-                                  height: '12px',
-                                  borderRadius: '50%'
+                                  justifyContent: 'space-between',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  background: s.id === activeSessionId ? 'rgba(var(--accent-rgb, 99, 102, 241), 0.15)' : 'transparent',
+                                  color: s.id === activeSessionId ? 'var(--accent)' : 'var(--text)',
+                                  fontSize: '8.5px',
+                                  fontWeight: s.id === activeSessionId ? 800 : 500,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s'
                                 }}
-                                title="Delete Session"
                               >
-                                ✕
-                              </span>
-                            </div>
-                          ))}
+                                <span style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '125px'
+                                }}>
+                                  {s.name}
+                                </span>
+
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSession(s.id);
+                                  }}
+                                  style={{
+                                    fontSize: '9px',
+                                    opacity: 0.6,
+                                    padding: '2px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '12px',
+                                    height: '12px',
+                                    borderRadius: '50%'
+                                  }}
+                                  title="Delete Session"
+                                >
+                                  ✕
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{
+                            height: '1px',
+                            background: 'var(--border-soft)',
+                            margin: '2px 0'
+                          }} />
+
+                          <button
+                            onClick={() => {
+                              handleCreateSession();
+                              setShowSessionDropdown(false);
+                            }}
+                            style={{
+                              padding: '5px 8px',
+                              borderRadius: '4px',
+                              background: 'var(--surface-alt)',
+                              color: 'var(--accent)',
+                              border: '1px dashed var(--accent)',
+                              fontSize: '8.5px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'all 0.15s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              width: '100%'
+                            }}
+                          >
+                            {dtxt.btnNewSession}
+                          </button>
                         </div>
-
-                        <div style={{
-                          height: '1px',
-                          background: 'var(--border-soft)',
-                          margin: '2px 0'
-                        }} />
-
-                        <button
-                          onClick={() => {
-                            handleCreateSession();
-                            setShowSessionDropdown(false);
-                          }}
-                          style={{
-                            padding: '5px 8px',
-                            borderRadius: '4px',
-                            background: 'var(--surface-alt)',
-                            color: 'var(--accent)',
-                            border: '1px dashed var(--accent)',
-                            fontSize: '8.5px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            textAlign: 'center',
-                            transition: 'all 0.15s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px',
-                            width: '100%'
-                          }}
-                        >
-                          {dtxt.btnNewSession}
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -7915,13 +8036,8 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       ) : null}
                     </div>
 
-                    {/* 2 Agent Suggestion Cards - Generated by Actual Agent */}
+                    {/* 2 Agent Suggestion Cards - Line 1 */}
                     <div style={{ marginBottom: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                        <span style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          🤖 AGENT SUGGESTIONS ({agentSuggestions.length > 0 ? 'REAL-TIME AI' : 'STANDARD'})
-                        </span>
-                      </div>
                       <div style={{ 
                         display: 'grid', 
                         gridTemplateColumns: 'repeat(2, 1fr)', 
@@ -7972,139 +8088,472 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       </div>
                     </div>
 
-                    {/* Chat Input with Agent Output Language Selector & Google Search Grounding Icon */}
-                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
-                      {/* Agent Output Language Dropdown */}
-                      <select
-                        value={agentLang}
-                        onChange={(e) => handleAgentLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
-                        title="Agent Output Language (EN / FR / AR)"
+                    {/* Chat Input (Resizable with Top Border Handle) - Line 2 */}
+                    <div style={{ width: '100%', marginBottom: '4px', position: 'relative' }}>
+                      {/* Drag Handle Top Border */}
+                      <div
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setIsDraggingChatInput(true);
+                          document.body.style.userSelect = 'none';
+                          document.body.style.cursor = 'row-resize';
+                        }}
+                        title="Drag top border to adjust chat input height"
                         style={{
-                          height: '22px',
-                          background: 'var(--surface-alt)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '4px',
-                          color: 'var(--accent)',
-                          fontSize: '7.5px',
-                          fontWeight: 800,
-                          padding: '0 2px',
-                          cursor: 'pointer',
-                          outline: 'none',
-                          flexShrink: 0
+                          width: '100%',
+                          height: '6px',
+                          cursor: 'row-resize',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginTop: '-2px',
+                          marginBottom: '2px',
+                          zIndex: 5
                         }}
                       >
-                        <option value="EN">🤖 EN</option>
-                        <option value="FR">🤖 FR</option>
-                        <option value="AR">🤖 AR</option>
-                      </select>
-                      <input
-                        type="text"
+                        <div style={{
+                          width: '32px',
+                          height: '2px',
+                          borderRadius: '1px',
+                          background: isDraggingChatInput ? 'var(--accent)' : 'var(--border-soft)',
+                          transition: 'background 0.15s ease'
+                        }} />
+                      </div>
+
+                      <textarea
+                        id="agent-chat-textarea"
                         placeholder={dtxt.chatPlaceholder}
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSendChat(); }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendChat();
+                          }
+                        }}
+                        onMouseUp={(e) => {
+                          const target = e.currentTarget;
+                          if (target && target.offsetHeight) {
+                            const newH = Math.round(target.offsetHeight);
+                            if (newH !== chatInputHeight) {
+                              setChatInputHeight(newH);
+                              saveLayoutConfig(minCenter, minSide, leftTab, newH);
+                            }
+                          }
+                        }}
                         style={{
-                          flex: 1,
+                          width: '100%',
+                          minHeight: '28px',
+                          height: `${chatInputHeight}px`,
+                          maxHeight: '240px',
+                          resize: 'vertical',
                           background: 'var(--surface-alt)',
                           border: '1.5px solid var(--border-soft)',
                           borderRadius: '6px',
                           color: 'var(--text)',
                           fontSize: '9.5px',
-                          padding: '4px 5px',
-                          paddingLeft: '5px',
-                          paddingRight: '5px',
+                          padding: '5px 8px',
                           outline: 'none',
-                          height: '22px'
+                          boxSizing: 'border-box',
+                          fontFamily: 'inherit',
+                          lineHeight: '1.35',
+                          display: 'block'
                         }}
                       />
-                      <button
-                        onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-                        style={{
-                          background: webSearchEnabled ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface-alt)',
-                          color: webSearchEnabled ? '#3b82f6' : 'var(--text)',
-                          border: `1px solid ${webSearchEnabled ? '#3b82f6' : 'var(--border-soft)'}`,
-                          borderRadius: '4px',
-                          width: '22px',
-                          height: '22px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                          fontSize: '10px',
-                          padding: 0
-                        }}
-                        title={webSearchEnabled ? "Google Search Grounding Enabled" : "Enable Google Search Grounding"}
-                      >
-                        🌐
-                      </button>
-                      <button
-                        className="mini accent"
-                        style={{ padding: '0 0px', paddingLeft: '0px', paddingRight: '0px', height: '22px', fontWeight: 800, fontSize: '8.5px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => handleSendChat()}
-                        disabled={isChatLoading}
-                      >
-                        {dtxt.sendBtn}
-                      </button>
+                    </div>
+
+                    {/* Controls Toolbar (Context Window Usage Bar, Autonomy Switcher, Agent Output Lang Switcher, Internet Icon, Send Button) - Line 3 */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
+                      {/* Left: Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flexShrink: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                        {/* Context Window Usage Meter Bar */}
+                        {(() => {
+                          const approxContextTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
+                          const maxContextWindow = chatModel.includes('gemini') ? 2000000 : chatModel.includes('claude') ? 200000 : 128000;
+                          const contextPct = Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
+                          return (
+                            <div
+                              onClick={() => setLeftTab(leftTab === 'context' ? 'agent' : 'context')}
+                              title={`Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to view Workspace Context.`}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                background: leftTab === 'context' ? 'rgba(99, 102, 241, 0.18)' : 'var(--surface-alt)',
+                                border: `1px solid ${leftTab === 'context' ? 'var(--accent)' : 'var(--border-soft)'}`,
+                                borderRadius: '4px',
+                                padding: '2px 6px',
+                                height: '22px',
+                                fontSize: '8px',
+                                fontFamily: 'var(--mono)',
+                                fontWeight: 800,
+                                color: leftTab === 'context' ? 'var(--accent)' : 'var(--text-bright)',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                                transition: 'all 0.15s'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                                <span style={{ color: 'var(--accent-2)', fontSize: '8px' }}>🧠</span>
+                                <span>CTX: {(approxContextTokens / 1000).toFixed(1)}k / {maxContextWindow >= 1000000 ? `${(maxContextWindow/1000000).toFixed(1)}M` : `${(maxContextWindow/1000).toFixed(0)}k`} ({contextPct}%)</span>
+                              </div>
+                              <div style={{ width: '38px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{ width: `${contextPct}%`, height: '100%', background: contextPct > 80 ? '#ef4444' : '#10b981', transition: 'width 0.3s ease' }} />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Autonomy Level Control with Hover Popover */}
+                        <div
+                          style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                          onMouseEnter={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setAutonomyPos({
+                              bottom: Math.max(10, window.innerHeight - rect.top + 2),
+                              left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
+                            });
+                            setIsAutonomyHoverOpen(true);
+                          }}
+                          onMouseLeave={() => setIsAutonomyHoverOpen(false)}
+                        >
+                          <button
+                            onClick={() => {
+                              const nextState = !isAutonomyOn;
+                              setIsAutonomyOn(nextState);
+                              setToast({
+                                message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                                type: 'info',
+                                isOpen: true
+                              });
+                            }}
+                            className="mini accent"
+                            style={{
+                              padding: '2px 6px',
+                              fontSize: '8.5px',
+                              fontWeight: 800,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: !isAutonomyOn
+                                ? 'linear-gradient(135deg, #475569, #334155)'
+                                : autonomyLevel === 'autonomous'
+                                ? 'linear-gradient(135deg, #10b981, #059669)'
+                                : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                              border: 'none',
+                              color: '#fff',
+                              height: '22px',
+                              flexShrink: 0,
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              transition: 'all 0.15s'
+                            }}
+                            title="Click to toggle Autonomy ON/OFF. Hover to select mode."
+                          >
+                            <span>🤖</span>
+                            <span
+                              style={{
+                                fontSize: '7.5px',
+                                padding: '1px 4px',
+                                borderRadius: '3px',
+                                background: 'rgba(0, 0, 0, 0.3)',
+                                color: !isAutonomyOn ? '#fca5a5' : '#fff',
+                                fontWeight: 900
+                              }}
+                            >
+                              {!isAutonomyOn
+                                ? 'SUPERVISED'
+                                : autonomyLevel === 'autonomous'
+                                ? 'DIRECTOR'
+                                : 'WORKER'}
+                            </span>
+                          </button>
+
+                          {/* Hover Popover Dropdown for Autonomy Modes & Switch */}
+                          {isAutonomyHoverOpen && (
+                            <div
+                              style={{
+                                position: 'fixed',
+                                bottom: `${autonomyPos ? autonomyPos.bottom : 60}px`,
+                                left: `${autonomyPos ? autonomyPos.left : 20}px`,
+                                width: '210px',
+                                background: 'var(--surface)',
+                                border: '1.5px solid var(--border-soft)',
+                                borderRadius: '8px',
+                                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.75)',
+                                padding: '8px',
+                                zIndex: 999999,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
+                                <div style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
+                                  🤖 Autonomy System
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const nextState = !isAutonomyOn;
+                                    setIsAutonomyOn(nextState);
+                                    setToast({
+                                      message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                                      type: 'info',
+                                      isOpen: true
+                                    });
+                                  }}
+                                  style={{
+                                    padding: '2px 6px',
+                                    fontSize: '8px',
+                                    fontWeight: 900,
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: isAutonomyOn ? '#10b981' : '#ef4444',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                >
+                                  <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => handleAutonomyChange('autonomous')}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  padding: '5px 6px',
+                                  borderRadius: '4px',
+                                  border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
+                                  background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16, 185, 129, 0.12)' : 'var(--surface-alt)',
+                                  color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
+                                  cursor: 'pointer',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                                  <span>👑 DIRECTOR Mode</span>
+                                  {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                                </div>
+                                <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>
+                                  Agent wakes up via Heartbeat and executes actions
+                                </div>
+                              </button>
+
+                              <button
+                                onClick={() => handleAutonomyChange('semi-autonomous')}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  padding: '5px 6px',
+                                  borderRadius: '4px',
+                                  border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                                  background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245, 158, 11, 0.12)' : 'var(--surface-alt)',
+                                  color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
+                                  cursor: 'pointer',
+                                  textAlign: 'left'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                                  <span>🛠️ WORKER Mode</span>
+                                  {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                                </div>
+                                <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>
+                                  AI performs planning with approval checkpoints
+                                </div>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Agent Output Language Switcher */}
+                        <select
+                          value={agentLang}
+                          onChange={(e) => setAgentLang(e.target.value as 'EN' | 'FR' | 'AR')}
+                          title="Agent Communication & Prompt Language (EN / FR / AR)"
+                          style={{
+                            height: '22px',
+                            background: 'var(--surface-alt)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '4px',
+                            color: 'var(--accent-2)',
+                            fontSize: '8px',
+                            fontWeight: 800,
+                            padding: '0 3px',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            flexShrink: 0
+                          }}
+                        >
+                          <option value="EN">🗣️ EN</option>
+                          <option value="FR">🗣️ FR</option>
+                          <option value="AR">🗣️ AR</option>
+                        </select>
+                      </div>
+
+                      {/* Right: Internet Icon & Send Button */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                          style={{
+                            background: webSearchEnabled ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface-alt)',
+                            color: webSearchEnabled ? '#3b82f6' : 'var(--text)',
+                            border: `1px solid ${webSearchEnabled ? '#3b82f6' : 'var(--border-soft)'}`,
+                            borderRadius: '4px',
+                            width: '22px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            fontSize: '10px',
+                            padding: 0
+                          }}
+                          title={webSearchEnabled ? "Google Search Grounding Enabled" : "Enable Google Search Grounding"}
+                        >
+                          🌐
+                        </button>
+                        <button
+                          className="mini accent"
+                          style={{ padding: '0 8px', height: '22px', fontWeight: 800, fontSize: '8.5px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => handleSendChat()}
+                          disabled={isChatLoading}
+                        >
+                          {dtxt.sendBtn}
+                        </button>
+                      </div>
                     </div>
             </div>
             </div>
           )}
         </section>
-      )}
-    </aside>
-        <div className="resizer lv"></div>
+      </aside>
+
+        {/* Section Divider 1 (Left / Center) with Minimizer Button & Drag Resizer */}
+        <div 
+          className={`resizer lv ${isDraggingLeftRail ? 'dragging' : ''}`}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('.section-toggle-btn')) return;
+            e.preventDefault();
+            setIsDraggingLeftRail(true);
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+          }}
+          style={{ cursor: minCenter ? 'default' : 'col-resize' }}
+          title={minCenter ? undefined : "Drag handle to resize Left Rail"}
+        >
+          <button
+            type="button"
+            className="section-toggle-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !minCenter;
+              setMinCenter(next);
+              saveLayoutConfig(next, minSide);
+            }}
+            title={minCenter ? "Expand Missions HQ section" : "Minimize Missions HQ section"}
+          >
+            <span>{minCenter ? '›' : '‹'}</span>
+          </button>
+        </div>
 
         {/* ============ CENTER COLUMN: THE MISSIONS HQ BOARD ============ */}
-        <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {minCenter ? (
+          <section className="col top min" onClick={() => { setMinCenter(false); saveLayoutConfig(false, minSide); }}>
+            <div className="side-rail center-rail" title="Click to expand Missions HQ section">
+              <div className="rail-head">
+                <span className="rail-badge" style={{ background: 'var(--accent)', color: '#ffffff', fontSize: '9px', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>HQ</span>
+                <span className="rail-title" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em', margin: '8px 0', fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                  MISSIONS HQ
+                </span>
+              </div>
+              <div className="rail-metrics">
+                <div className="mmetric hi" title="Active / Executing Missions">
+                  <span style={{ fontSize: '11px' }}>🎯</span>
+                  <b>{mExec.length}</b>
+                  <span className="w">EXEC</span>
+                </div>
+                <div className="mmetric" title="Planning & Drafting Missions">
+                  <span style={{ fontSize: '11px' }}>📝</span>
+                  <b>{mDraft.length + mPlan.length}</b>
+                  <span className="w">PLAN</span>
+                </div>
+                <div className="mmetric" title="Completed / Archive Missions">
+                  <span style={{ fontSize: '11px' }}>✓</span>
+                  <b style={{ color: 'var(--accent-2)' }}>{mArchive.length}</b>
+                  <span className="w">DONE</span>
+                </div>
+                <div className="mmetric" title="Total Missions Registered">
+                  <span style={{ fontSize: '11px' }}>📊</span>
+                  <b style={{ color: 'var(--text-bright)' }}>{filteredMissions.length}</b>
+                  <span className="w">TOTAL</span>
+                </div>
+              </div>
+              <div className="rail-expand-prompt" style={{ marginTop: 'auto', fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span>EXPAND ›</span>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             
             {/* Mission bar switcher & controls in a single, compact row */}
             <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '4px', padding: '4px 8px', minHeight: 'auto', flexWrap: 'nowrap', overflowX: 'hidden' }}>
               
               {/* Left Group: View Toggles & Compact Search */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                <div className="mhq-mode-toggle" style={{ display: 'flex', gap: '2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 1, minWidth: 0 }}>
+                <div className="mhq-mode-toggle" style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
                   <button className={`mhq-mode-btn ${centerMode === 'board' ? 'active' : ''}`} onClick={() => setCenterMode('board')} style={{ padding: '2px 5px', fontSize: '7.5px', lineHeight: '1' }}>Board</button>
                   <button className={`mhq-mode-btn ${centerMode === 'graph' ? 'active' : ''}`} onClick={() => setCenterMode('graph')} style={{ padding: '2px 5px', fontSize: '7.5px', lineHeight: '1' }}>Graph</button>
                 </div>
 
-                <div style={{ width: '1px', height: '10px', background: 'var(--border-soft)' }}></div>
+                <div style={{ width: '1px', height: '10px', background: 'var(--border-soft)', flexShrink: 0 }}></div>
 
-                <div className="mhq-search" style={{ height: '16px', padding: '0 3px', gap: '2px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px' }}>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>⌕</span>
+                <div className="mhq-search" style={{ height: '16px', padding: '0 3px', gap: '2px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', flexShrink: 1, minWidth: '30px' }}>
+                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', flexShrink: 0 }}>⌕</span>
                   <input 
                     type="text" 
                     placeholder={dtxt.searchPlaceholder} 
                     value={searchQuery} 
                     onChange={(e) => setSearchQuery(e.target.value)} 
-                    style={{ fontSize: '7.5px', width: '50px', background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
+                    style={{ fontSize: '7.5px', width: '100%', minWidth: 0, background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
                   />
                 </div>
 
                 <button
                   onClick={() => setIsAddMissionOpen(true)}
                   title="Register New Mission"
-                  className="mini accent"
                   style={{
-                    height: '16px',
-                    padding: '0 5px',
-                    fontSize: '7.5px',
-                    fontWeight: 800,
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    border: '1px solid var(--accent-2)',
-                    color: 'var(--accent-2)',
-                    borderRadius: '3px',
+                    height: '22px',
+                    padding: '0 5px 0 2px',
+                    fontSize: '9px',
+                    fontWeight: 900,
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: '1px solid #10b981',
+                    color: '#ffffff',
+                    borderRadius: '5px',
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '2px',
+                    gap: '4px',
                     lineHeight: '1',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
+                    letterSpacing: '0.03em',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  {dtxt.btnNewMission}
+                  <span style={{ fontSize: '11px', fontWeight: '900' }}>✨</span>
+                  <span className="btn-text-label">{dtxt.btnNewMission}</span>
                 </button>
               </div>
 
@@ -8268,8 +8717,47 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         </div>
                       ))}
                       {mDraft.length === 0 && (
-                        <div style={{ border: '1.5px dashed var(--border-soft)', padding: '16px', borderRadius: '8px', textAlign: 'center', fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--sans)' }}>
-                          No new items.
+                        <div style={{
+                          border: '1.5px dashed var(--border-soft)',
+                          padding: '16px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '9px',
+                          color: 'var(--muted)',
+                          fontFamily: 'var(--sans)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>💡</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Drafting Items</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                            Formulate a new strategic directive or concept.
+                          </p>
+                          <button
+                            onClick={() => setIsAddMissionOpen(true)}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              background: 'var(--accent)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 10px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              marginTop: '2px',
+                              boxShadow: '0 2px 6px rgba(99, 102, 241, 0.25)'
+                            }}
+                          >
+                            <span>✨</span>
+                            <span>+ Draft New Mission</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -8318,8 +8806,47 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         </div>
                       ))}
                       {mPlan.length === 0 && (
-                        <div style={{ border: '1.5px dashed var(--border-soft)', padding: '16px', borderRadius: '8px', textAlign: 'center', fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--sans)' }}>
-                          No items in planning phase.
+                        <div style={{
+                          border: '1.5px dashed var(--border-soft)',
+                          padding: '16px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '9px',
+                          color: 'var(--muted)',
+                          fontFamily: 'var(--sans)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🧪</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>Planning Stage Clear</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                            No missions awaiting architectural approval or QA gating.
+                          </p>
+                          {mDraft.length > 0 && (
+                            <button
+                              onClick={() => handleUpdateMissionStatus(mDraft[0], 'planning')}
+                              style={{
+                                fontSize: '8px',
+                                fontWeight: 800,
+                                background: 'rgba(99, 102, 241, 0.12)',
+                                color: 'var(--accent)',
+                                border: '1px solid var(--accent)',
+                                borderRadius: '4px',
+                                padding: '4px 10px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '2px'
+                              }}
+                            >
+                              <span>Promote "{mDraft[0].id.slice(0, 14)}..." ➔</span>
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -8371,8 +8898,68 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         </div>
                       ))}
                       {mExec.length === 0 && (
-                        <div style={{ border: '1.5px dashed var(--border-soft)', padding: '16px', borderRadius: '8px', textAlign: 'center', fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--sans)' }}>
-                          No systems currently executing.
+                        <div style={{
+                          border: '1.5px dashed var(--border-soft)',
+                          padding: '16px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '9px',
+                          color: 'var(--muted)',
+                          fontFamily: 'var(--sans)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>⚡</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Active Execution</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                            All runtime components are standing by.
+                          </p>
+                          {mPlan.length > 0 ? (
+                            <button
+                              onClick={() => handleUpdateMissionStatus(mPlan[0], 'execution')}
+                              style={{
+                                fontSize: '8px',
+                                fontWeight: 800,
+                                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 10px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '2px',
+                                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
+                              }}
+                            >
+                              <span>🚀 Launch "{mPlan[0].id.slice(0, 14)}..."</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setIsAddMissionOpen(true)}
+                              style={{
+                                fontSize: '8px',
+                                fontWeight: 800,
+                                background: 'var(--surface-alt)',
+                                color: 'var(--text-bright)',
+                                border: '1px solid var(--border-soft)',
+                                borderRadius: '4px',
+                                padding: '4px 10px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '2px'
+                              }}
+                            >
+                              <span>+ Quick Register</span>
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -8409,8 +8996,26 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         </div>
                       ))}
                       {mArchive.length === 0 && (
-                        <div style={{ border: '1.5px dashed var(--border-soft)', padding: '16px', borderRadius: '8px', textAlign: 'center', fontSize: '9px', color: 'var(--muted)', fontFamily: 'var(--sans)' }}>
-                          No completed items.
+                        <div style={{
+                          border: '1.5px dashed var(--border-soft)',
+                          padding: '16px 12px',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '9px',
+                          color: 'var(--muted)',
+                          fontFamily: 'var(--sans)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🎯</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>Archive Empty</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                            Completed and archived mission logs will be indexed here.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -8422,22 +9027,74 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
 
           </div>
         </section>
+      )}
 
-        <div className="resizer v"></div>
+        {/* Section Divider 2 (Center / Right) with Minimizer Button & Drag Resizer */}
+        <div 
+          className={`resizer v ${isDraggingRightRail ? 'dragging' : ''}`}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest('.section-toggle-btn')) return;
+            e.preventDefault();
+            setIsDraggingRightRail(true);
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+          }}
+          style={{ cursor: minSide ? 'default' : 'col-resize' }}
+          title={minSide ? undefined : "Drag handle to resize Right Rail"}
+        >
+          <button
+            type="button"
+            className="section-toggle-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              const next = !minSide;
+              setMinSide(next);
+              saveLayoutConfig(minCenter, next);
+            }}
+            title={minSide ? "Expand Data & Systems section" : "Minimize Data & Systems section"}
+          >
+            <span>{minSide ? '‹' : '›'}</span>
+          </button>
+        </div>
 
         {/* ============ RIGHT COLUMN: PIPELINES, INGEST & CONSULTING ============ */}
         <aside className={`col side ${minSide ? 'min' : ''}`}>
-          <button className="side-toggle" onClick={() => setMinSide(!minSide)} title={minSide ? 'Expand right column' : 'Collapse right column'}>
-            <span className="chev">{minSide ? '‹' : '›'}</span>
-          </button>
-
           {minSide ? (
-            <div className="side-rail" onClick={() => setMinSide(false)}>
-              <div className="rail-head"><span className="rail-title">Sources</span></div>
+            <div
+              className="side-rail"
+              onClick={() => { setMinSide(false); saveLayoutConfig(minCenter, false); }}
+              title="Click to expand Data & Systems section"
+            >
+              <div className="rail-head">
+                <span className="rail-badge" style={{ background: '#6366f1', color: '#ffffff', fontSize: '9px', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>SRC</span>
+                <span className="rail-title" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em', margin: '8px 0', fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                  DATA & SYSTEMS
+                </span>
+              </div>
               <div className="rail-metrics">
-                <span style={{ fontSize: '15px' }} title="Signal Ingest">🔌</span>
-                <span className="mmetric hi" title="Raw data count">R<b>{rawDataList.length}</b></span>
-                <span className="mmetric" title="System components count">S<b>{systemComponents.length}</b></span>
+                <div className="mmetric hi" title="Raw Data Inputs Registered">
+                  <span style={{ fontSize: '11px' }}>📁</span>
+                  <b>{rawDataList.length}</b>
+                  <span className="w">INPUTS</span>
+                </div>
+                <div className="mmetric" title="Connected Project Systems">
+                  <span style={{ fontSize: '11px' }}>⚙️</span>
+                  <b style={{ color: '#06b6d4' }}>{systemComponents.length}</b>
+                  <span className="w">SYSTEMS</span>
+                </div>
+                <div className="mmetric" title="Total Combined Data & Systems">
+                  <span style={{ fontSize: '11px' }}>📊</span>
+                  <b style={{ color: '#f59e0b' }}>{rawDataList.length + systemComponents.length}</b>
+                  <span className="w">TOTAL</span>
+                </div>
+                <div className="mmetric" title="Active Signal Context">
+                  <span style={{ fontSize: '11px' }}>⚡</span>
+                  <b style={{ color: '#10b981' }}>{ecomDataItems.length}</b>
+                  <span className="w">SIGNAL</span>
+                </div>
+              </div>
+              <div className="rail-expand-prompt" style={{ marginTop: 'auto', fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span>EXPAND ‹</span>
               </div>
             </div>
           ) : (
@@ -8512,7 +9169,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 </div>
 
                 {/* Header Row 2: Dedicated Active Project Switcher Toolbar */}
-                <div style={{ padding: '6px 12px', borderTop: '1px solid var(--border-soft)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ padding: '6px 4px 6px 3px', borderTop: '1px solid var(--border-soft)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
                       📁 PROJECT:
@@ -8530,7 +9187,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         border: '1px solid var(--border-soft)',
                         borderRadius: '4px',
                         color: 'var(--text-bright)',
-                        padding: '3px 6px',
+                        padding: '3px 0px',
                         outline: 'none',
                         cursor: 'pointer',
                         textOverflow: 'ellipsis',
@@ -8542,7 +9199,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       <option value="all" style={{ background: '#121826', color: '#fff' }}>🌐 ALL PROJECTS ({projectsList.length})</option>
                       {projectsList.map((p: any) => (
                         <option key={p.id} value={p.name} style={{ background: '#121826', color: '#fff' }}>
-                          📁 {p.name} ({p.data?.length || 0} data, {p.systems?.length || 0} systems)
+                          📁 {p.name}
                         </option>
                       ))}
                     </select>
@@ -8554,7 +9211,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         color: '#ffffff',
                         fontSize: '8px',
                         fontWeight: 800,
-                        padding: '3px 8px',
+                        padding: '3px 4px 3px 3px',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
@@ -8568,13 +9225,46 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                     </button>
                   </div>
 
-                  <div style={{ fontSize: '7.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '2px 5px', borderRadius: '3px', color: 'var(--text-bright)' }}>
-                      {rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length} Data
-                    </span>
-                    <span style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '2px 5px', borderRadius: '3px', color: 'var(--text-bright)' }}>
-                      {systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length} Systems
-                    </span>
+                  {/* Moved Import/Export buttons to replace Data/Systems counter text */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button
+                      onClick={() => setIsImportModalOpen(true)}
+                      style={{
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text-bright)',
+                        fontSize: '7.5px',
+                        fontWeight: 800,
+                        padding: '2px 3px 2px 1px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                      title="Import Codebase / Data"
+                    >
+                      📥 IMPORT
+                    </button>
+                    <button
+                      onClick={() => setIsExportModalOpen(true)}
+                      style={{
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--accent)',
+                        fontSize: '7.5px',
+                        fontWeight: 800,
+                        padding: '2px 3px 2px 1px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                      title="Export Project / GitHub Sync"
+                    >
+                      📤 EXPORT
+                    </button>
                   </div>
                 </div>
 
@@ -8619,80 +9309,23 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       paddingBottom: '6px',
                       width: '100%'
                     }}>
-                      {/* Left Half: Your Data + Import */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, minWidth: 0, gap: '3px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                          <span style={{ fontSize: '9px' }}>📥</span>
-                          <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            DATA INPUTS ({rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length})
-                          </h3>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedImportMethod('local');
-                            setIsImportModalOpen(true);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            background: 'var(--accent)',
-                            border: 'none',
-                            borderRadius: '2px',
-                            color: '#ffffff',
-                            padding: '1.5px 4px',
-                            fontSize: '6.5px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            fontFamily: 'var(--sans)',
-                            transition: 'all 0.15s ease',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0
-                          }}
-                        >
-                          {dtxt.importBtn}
-                        </button>
+                      {/* Left Half: Your Data */}
+                      <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '4px' }}>
+                        <span style={{ fontSize: '9px' }}>📥</span>
+                        <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          DATA INPUTS ({rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length})
+                        </h3>
                       </div>
 
                       {/* Header Vertical Divider Line */}
                       <div style={{ width: '1.5px', height: '14px', background: 'var(--border-soft)', flexShrink: 0 }} />
 
-                      {/* Right Half: Export + Your Systems */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, minWidth: 0, gap: '3px' }}>
-                        <button
-                          onClick={() => {
-                            setSelectedExportMethod('github');
-                            setIsExportModalOpen(true);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '2px',
-                            color: 'var(--text-bright)',
-                            padding: '1.5px 4px',
-                            fontSize: '6.5px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            fontFamily: 'var(--sans)',
-                            transition: 'all 0.15s ease',
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0
-                          }}
-                        >
-                          {dtxt.exportBtn}
-                        </button>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                          <span style={{ fontSize: '9px' }}>⚙️</span>
-                          <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            PROJECT SYSTEMS ({systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length})
-                          </h3>
-                        </div>
+                      {/* Right Half: Your Systems */}
+                      <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '4px' }}>
+                        <span style={{ fontSize: '9px' }}>⚙️</span>
+                        <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          PROJECT SYSTEMS ({systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length})
+                        </h3>
                       </div>
                     </div>
 
@@ -9098,8 +9731,43 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                             const s = rd.metadata?.status || 'new';
                             return rawDataFilter === 'all' || s === rawDataFilter;
                           }).length === 0 && (
-                            <div style={{ padding: '16px', border: '1px dashed var(--border-soft)', borderRadius: '6px', textAlign: 'center', fontSize: '8.5px', color: 'var(--muted)' }}>
-                              No data sources match the current project filter ({selectedProjectName}).
+                            <div style={{
+                              padding: '20px 14px',
+                              border: '1.5px dashed var(--border-soft)',
+                              borderRadius: '8px',
+                              textAlign: 'center',
+                              fontSize: '8.5px',
+                              color: 'var(--muted)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: 'rgba(255,255,255,0.015)'
+                            }}>
+                              <div style={{ fontSize: '24px', filter: 'grayscale(0.3) opacity(0.85)' }}>📥</div>
+                              <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Data Inputs Found</div>
+                              <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35' }}>
+                                No data stream matched filter ({selectedProjectName}). Upload a file or import data.
+                              </p>
+                              <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 800,
+                                  background: 'rgba(204,122,74,0.15)',
+                                  color: 'var(--accent)',
+                                  border: '1px solid var(--accent)',
+                                  borderRadius: '4px',
+                                  padding: '4px 10px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  marginTop: '2px'
+                                }}
+                              >
+                                <span>📥 Import Data Source</span>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -9493,8 +10161,46 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                             const s = sc.metadata?.status || 'new';
                             return systemComponentFilter === 'all' || s === systemComponentFilter;
                           }).length === 0 && (
-                            <div style={{ padding: '16px', border: '1px dashed var(--border-soft)', borderRadius: '6px', textAlign: 'center', fontSize: '8.5px', color: 'var(--muted)' }}>
-                              No system components match the current project filter ({selectedProjectName}).
+                            <div style={{
+                              padding: '20px 14px',
+                              border: '1.5px dashed var(--border-soft)',
+                              borderRadius: '8px',
+                              textAlign: 'center',
+                              fontSize: '8.5px',
+                              color: 'var(--muted)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: 'rgba(255,255,255,0.015)'
+                            }}>
+                              <div style={{ fontSize: '24px', filter: 'grayscale(0.3) opacity(0.85)' }}>⚙️</div>
+                              <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Project Systems</div>
+                              <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35' }}>
+                                No active components in project ({selectedProjectName}). Build or generate a system.
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setIsAddMissionOpen(true);
+                                  setNewMissionCategory('system_build');
+                                }}
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 800,
+                                  background: 'rgba(16,185,129,0.15)',
+                                  color: '#10b981',
+                                  border: '1px solid #10b981',
+                                  borderRadius: '4px',
+                                  padding: '4px 10px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  marginTop: '2px'
+                                }}
+                              >
+                                <span>✨ Generate System</span>
+                              </button>
                             </div>
                           )}
                         </div>
@@ -10436,7 +11142,6 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 </div>
               )}
 
-
             </div>
           </div>
         </div>
@@ -10464,16 +11169,18 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
             marginRight: uiLang === 'AR' ? 0 : '8px',
             marginLeft: uiLang === 'AR' ? '8px' : 0
           }}>
-            {/* Backlog segment */}
+            {/* 1. Backlog segment */}
             <div style={{
+              flex: 1,
               display: 'flex',
               alignItems: 'center',
-              height: '100%',
-              flexShrink: 0,
               position: 'relative',
-              zIndex: 3,
-              background: 'var(--surface-alt)'
+              overflow: 'hidden',
+              background: 'rgba(0, 0, 0, 0.08)',
+              borderRight: '1px solid var(--border-soft)',
+              minWidth: 0
             }}>
+              {/* Interactive Count Badge Button for Backlog */}
               <button
                 onClick={() => {
                   setEditedBacklog(runtime?.backlog || []);
@@ -10483,75 +11190,72 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '0 12px',
-                  fontSize: '9px',
-                  fontWeight: 800,
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--muted)',
-                  cursor: 'pointer',
-                  height: '100%',
-                  transition: 'all 0.15s ease',
+                  padding: '0 10px',
+                  background: 'var(--surface-alt)',
                   borderRight: uiLang === 'AR' ? 'none' : '1px solid var(--border-soft)',
                   borderLeft: uiLang === 'AR' ? '1px solid var(--border-soft)' : 'none',
+                  borderTop: 'none',
+                  borderBottom: 'none',
+                  color: 'var(--accent)',
+                  fontWeight: 800,
+                  fontSize: '9px',
+                  height: '100%',
+                  position: 'relative',
+                  zIndex: 3,
+                  flexShrink: 0,
+                  textTransform: 'uppercase',
+                  fontFamily: 'var(--sans)',
+                  cursor: 'pointer',
                   outline: 'none',
-                  fontFamily: 'var(--sans)'
+                  transition: 'all 0.15s ease'
                 }}
-                className="hover:bg-[rgba(255,255,255,0.03)] hover:text-[#10b981]"
-                title={dtxt.editBacklog}
+                className="hover:bg-[rgba(255,255,255,0.03)]"
+                title={dtxt.editBacklog || 'Edit Workspace Backlog'}
               >
-                <span style={{ fontSize: '11px' }}>🗂️</span>
+                <span style={{ fontSize: '10px' }}>📋 BACKLOG</span>
                 <span style={{
-                  background: runtime?.backlog?.length ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: runtime?.backlog?.length ? '#10b981' : 'var(--muted)',
+                  background: 'rgba(99, 102, 241, 0.15)',
+                  color: 'var(--accent)',
                   padding: '1.5px 5px',
                   borderRadius: '3px',
                   fontSize: '9px',
                   fontWeight: 900,
-                  fontFamily: 'var(--sans)'
+                  fontFamily: 'var(--sans)',
+                  marginLeft: '2px'
                 }}>{runtime?.backlog?.length || 0}</span>
-                <span style={{ fontSize: '9px', opacity: 0.6 }}>✏️</span>
+                <span style={{ fontSize: '9px', opacity: 0.6, marginLeft: '2px' }}>✏️</span>
               </button>
-            </div>
 
-            {/* Backlog Items List (moving marquee, green theme) */}
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              position: 'relative',
-              overflow: 'hidden',
-              background: 'rgba(0, 0, 0, 0.05)',
-              borderRight: uiLang === 'AR' ? 'none' : '1px solid var(--border-soft)',
-              borderLeft: uiLang === 'AR' ? '1px solid var(--border-soft)' : 'none'
-            }}>
-              <div className="backlog-marquee" style={{
+              {/* Backlog Ticker marquee */}
+              <div className="review-marquee" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '20px',
                 paddingLeft: uiLang === 'AR' ? 0 : '10px',
                 paddingRight: uiLang === 'AR' ? '10px' : 0,
                 whiteSpace: 'nowrap',
-                animation: 'marqueeLeftToRight 28s linear infinite',
+                animation: runtime?.backlog && runtime.backlog.length > 0 ? 'marqueeLeftToRight 30s linear infinite' : 'none',
                 width: 'max-content'
               }}>
                 {runtime?.backlog && runtime.backlog.length > 0 ? (
                   [...runtime.backlog, ...runtime.backlog].map((item: any, idx: number) => {
-                    const label = typeof item === 'string' ? item : JSON.stringify(item);
+                    const label = typeof item === 'string' ? item : (item.text || item.title || item.name || 'Objective');
+                    const status = typeof item === 'object' ? item.status : 'pending';
+                    const isDone = status === 'completed' || status === 'done';
                     return (
                       <div
                         key={idx}
                         onClick={() => {
                           setActiveBacklogItem(item);
-                          setBacklogFeedbackText('');
+                          setIsBacklogEditorOpen(true);
                         }}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
                           cursor: 'pointer',
-                          background: 'rgba(16, 185, 129, 0.08)',
-                          border: '1px solid #10b981',
+                          background: isDone ? 'rgba(16, 185, 129, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                          border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.3)' : 'rgba(99, 102, 241, 0.25)'}`,
                           padding: '2px 6px',
                           borderRadius: '3px',
                           transition: 'all 0.15s'
@@ -10562,36 +11266,35 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         onMouseLeave={(e) => {
                           e.currentTarget.style.transform = 'scale(1)';
                         }}
-                        title={dtxt.editBacklog}
                       >
                         <span style={{
-                          width: '5px',
-                          height: '5px',
+                          width: '4px',
+                          height: '4px',
                           borderRadius: '50%',
-                          background: '#10b981',
-                          display: 'inline-block',
-                          animation: 'pulse 1.2s infinite'
+                          background: isDone ? '#10b981' : 'var(--accent)',
+                          display: 'inline-block'
                         }} />
                         <span style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '8.5px' }}>{label}</span>
                       </div>
                     );
                   })
                 ) : (
-                  <span style={{ color: 'var(--muted)', fontSize: '8px', fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', opacity: 0.6, fontFamily: 'var(--sans)' }}>
-                    {dtxt.noBacklog}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--muted)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase', opacity: 0.8, paddingLeft: '4px', fontFamily: 'var(--sans)' }}>
+                    <span>{dtxt.noBacklog || 'No active goals set'}</span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Review Queue segment with marquee ticker */}
+            {/* 2. Review Queue / Verifications segment */}
             <div style={{
               flex: 1,
               display: 'flex',
               alignItems: 'center',
               position: 'relative',
               overflow: 'hidden',
-              background: 'rgba(0, 0, 0, 0.08)'
+              background: 'rgba(0, 0, 0, 0.08)',
+              minWidth: 0
             }}>
               {/* Interactive Count Badge Button */}
               <button
@@ -10603,7 +11306,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '0 12px',
+                  padding: '0 10px',
                   background: 'var(--surface-alt)',
                   borderRight: uiLang === 'AR' ? 'none' : '1px solid var(--border-soft)',
                   borderLeft: uiLang === 'AR' ? '1px solid var(--border-soft)' : 'none',
@@ -10622,19 +11325,19 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   outline: 'none',
                   transition: 'all 0.15s ease'
                 }}
-                className="hover:bg-[rgba(255,255,255,0.03)] hover:text-[#ef4444]"
+                className="hover:bg-[rgba(255,255,255,0.03)]"
                 title={dtxt.editReviewQueue}
               >
-                <span style={{ fontSize: '11px', color: runtime?.review_queue?.length ? '#ef4444' : 'var(--muted)' }}>🔍</span>
+                <span style={{ fontSize: '10px', color: runtime?.review_queue && runtime.review_queue.length > 0 ? '#ef4444' : 'var(--muted)' }}>🔍 QUEUE</span>
                 <span style={{
-                  background: runtime?.review_queue?.length ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: runtime?.review_queue?.length ? '#ef4444' : 'var(--muted)',
+                  background: runtime?.review_queue && runtime.review_queue.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  color: runtime?.review_queue && runtime.review_queue.length > 0 ? '#ef4444' : 'var(--muted)',
                   padding: '1.5px 5px',
                   borderRadius: '3px',
                   fontSize: '9px',
                   fontWeight: 900,
                   fontFamily: 'var(--sans)',
-                  marginLeft: '4px'
+                  marginLeft: '2px'
                 }}>{runtime?.review_queue?.length || 0}</span>
                 <span style={{ fontSize: '9px', opacity: 0.6, marginLeft: '2px' }}>✏️</span>
               </button>
@@ -10647,7 +11350,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 paddingLeft: uiLang === 'AR' ? 0 : '10px',
                 paddingRight: uiLang === 'AR' ? '10px' : 0,
                 whiteSpace: 'nowrap',
-                animation: 'marqueeLeftToRight 25s linear infinite',
+                animation: runtime?.review_queue && runtime.review_queue.length > 0 ? 'marqueeLeftToRight 25s linear infinite' : 'none',
                 width: 'max-content'
               }}>
                 {runtime?.review_queue && runtime.review_queue.length > 0 ? (
@@ -10705,282 +11408,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981', fontSize: '8px', fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase', opacity: 0.8, paddingLeft: '4px', fontFamily: 'var(--sans)' }}>
                     <span style={{ display: 'inline-block', width: '4px', height: '4px', borderRadius: '50%', background: '#10b981' }} />
-                    <span>{dtxt.noApprovals}</span>
+                    <span>{dtxt.noApprovals || 'No approvals pending'}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-
-          {/* Autonomy Level Control with Hover Popover & Master ON/OFF Toggle */}
-          <div
-            style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
-            onMouseEnter={() => setIsAutonomyHoverOpen(true)}
-            onMouseLeave={() => setIsAutonomyHoverOpen(false)}
-          >
-            <button
-              onClick={() => {
-                const nextState = !isAutonomyOn;
-                setIsAutonomyOn(nextState);
-                setToast({
-                  message: `Autonomy turned ${nextState ? 'ON' : 'OFF'}!`,
-                  type: 'info',
-                  isOpen: true
-                });
-              }}
-              className="mini accent"
-              style={{
-                padding: '4px 10px',
-                fontSize: '9.5px',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: !isAutonomyOn
-                  ? 'linear-gradient(135deg, #475569, #334155)'
-                  : autonomyLevel === 'autonomous'
-                  ? 'linear-gradient(135deg, #10b981, #059669)'
-                  : autonomyLevel === 'semi-autonomous'
-                  ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                  : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                border: 'none',
-                color: '#fff',
-                height: '24px',
-                flexShrink: 0,
-                cursor: 'pointer',
-                borderRadius: '4px',
-                transition: 'all 0.15s'
-              }}
-              title="Click to toggle Autonomy ON/OFF. Hover to select mode."
-            >
-              <span>🤖 Autonomy</span>
-              <span
-                style={{
-                  fontSize: '8px',
-                  padding: '1px 5px',
-                  borderRadius: '3px',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  color: !isAutonomyOn ? '#fca5a5' : '#fff',
-                  fontWeight: 900
-                }}
-              >
-                {!isAutonomyOn
-                  ? 'OFF'
-                  : autonomyLevel === 'autonomous'
-                  ? 'FULL AUTO'
-                  : autonomyLevel === 'semi-autonomous'
-                  ? 'SEMI-AUTO'
-                  : 'SUPERVISED'}
-              </span>
-            </button>
-
-            {/* Hover Popover Dropdown for Autonomy Modes & Switch */}
-            {isAutonomyHoverOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: 0,
-                  marginBottom: '6px',
-                  width: '240px',
-                  background: 'var(--surface)',
-                  border: '1.5px solid var(--border-soft)',
-                  borderRadius: '8px',
-                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
-                  padding: '10px',
-                  zIndex: 9999,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}
-              >
-                {/* Popover Header with Master ON / OFF Toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-                    🤖 Autonomy System
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextState = !isAutonomyOn;
-                      setIsAutonomyOn(nextState);
-                      setToast({
-                        message: `Autonomy turned ${nextState ? 'ON' : 'OFF'}!`,
-                        type: 'info',
-                        isOpen: true
-                      });
-                    }}
-                    style={{
-                      padding: '2px 8px',
-                      fontSize: '8.5px',
-                      fontWeight: 900,
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: isAutonomyOn ? '#10b981' : '#ef4444',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
-                  </button>
-                </div>
-
-                {/* Option 1: Full Auto */}
-                <button
-                  onClick={() => handleAutonomyChange('autonomous')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    padding: '6px 8px',
-                    borderRadius: '5px',
-                    border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
-                    background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16, 185, 129, 0.12)' : 'var(--surface-alt)',
-                    color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', fontWeight: 800 }}>
-                    <span>🤖 Full Auto (Continuous)</span>
-                    {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '9px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                  </div>
-                  <div style={{ fontSize: '7.5px', color: 'var(--muted)', fontWeight: 600 }}>
-                    AI loops & background tasks run continuously
-                  </div>
-                </button>
-
-                {/* Option 2: Semi-Auto */}
-                <button
-                  onClick={() => handleAutonomyChange('semi-autonomous')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    padding: '6px 8px',
-                    borderRadius: '5px',
-                    border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
-                    background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245, 158, 11, 0.12)' : 'var(--surface-alt)',
-                    color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', fontWeight: 800 }}>
-                    <span>◒ Semi-Auto (Checkpoints)</span>
-                    {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '9px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                  </div>
-                  <div style={{ fontSize: '7.5px', color: 'var(--muted)', fontWeight: 600 }}>
-                    AI performs actions with approval checkpoints
-                  </div>
-                </button>
-
-                {/* Option 3: Supervised */}
-                <button
-                  onClick={() => handleAutonomyChange('manual')}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    padding: '6px 8px',
-                    borderRadius: '5px',
-                    border: isAutonomyOn && autonomyLevel === 'manual' ? '1.5px solid #3b82f6' : '1px solid var(--border-soft)',
-                    background: isAutonomyOn && autonomyLevel === 'manual' ? 'rgba(59, 130, 246, 0.12)' : 'var(--surface-alt)',
-                    color: isAutonomyOn && autonomyLevel === 'manual' ? '#3b82f6' : 'var(--text)',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', fontWeight: 800 }}>
-                    <span>👁️ Supervised (Manual Oversight)</span>
-                    {isAutonomyOn && autonomyLevel === 'manual' && <span style={{ fontSize: '9px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                  </div>
-                  <div style={{ fontSize: '7.5px', color: 'var(--muted)', fontWeight: 600 }}>
-                    Supervised mode under direct manual user command
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Heartbeat Badge - Between Autonomy Level and UI Language Dropdown */}
-          {isAutonomyOn && autonomyLevel === 'autonomous' && heartbeatStatus !== 'no_key' && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: heartbeatStatus === 'no_context'
-                  ? 'rgba(245, 158, 11, 0.08)'
-                  : 'rgba(16, 185, 129, 0.08)',
-                border: heartbeatStatus === 'no_context'
-                  ? '1px solid rgba(245, 158, 11, 0.3)'
-                  : '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '4px',
-                padding: '2px 8px',
-                height: '24px',
-                flexShrink: 0,
-                fontSize: '8.5px',
-                fontWeight: 800,
-                fontFamily: 'var(--sans)',
-                color: heartbeatStatus === 'no_context'
-                  ? 'var(--status-warn)'
-                  : 'var(--accent-2)',
-                transition: 'all 0.2s ease',
-                cursor: 'help'
-              }}
-              title={heartbeatStatusText}
-            >
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: isHeartbeatRunning
-                    ? '#10b981'
-                    : heartbeatStatus === 'no_context'
-                    ? '#f59e0b'
-                    : '#10b981',
-                  boxShadow: isHeartbeatRunning ? '0 0 8px #10b981' : 'none'
-                }}
-              />
-              <span style={{ whiteSpace: 'nowrap' }}>
-                {heartbeatStatus === 'no_context'
-                  ? 'IDLE (NO CONTEXT)'
-                  : lastHeartbeatTime
-                  ? `💓 Heartbeat: ${lastHeartbeatTime}`
-                  : '💓 Testing Key...'}
-              </span>
-            </div>
-          )}
-
-          {/* UI Language Dropdown - Right of Autonomy and Heartbeat */}
-          <select
-            value={uiLang}
-            onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
-            title={dtxt.langTitle}
-            style={{
-              height: '24px',
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: '4px',
-              color: 'var(--text)',
-              fontSize: '8.5px',
-              fontWeight: 800,
-              padding: '0 3px',
-              cursor: 'pointer',
-              outline: 'none',
-              flexShrink: 0
-            }}
-          >
-            <option value="EN">EN</option>
-            <option value="FR">FR</option>
-            <option value="AR">AR</option>
-          </select>
 
         </div>
 
@@ -11027,6 +11460,56 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
               {toolsEnabled ? 'ON' : 'OFF'}
             </span>
           </button>
+
+          {/* UI Language Dropdown - Placed right next to Skills & Extensions */}
+          <select
+            value={uiLang}
+            onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
+            title="UI Interface Language (EN / FR / AR)"
+            style={{
+              height: '24px',
+              background: 'var(--surface-alt)',
+              border: '1px solid var(--border-soft)',
+              borderRadius: '4px',
+              color: 'var(--text)',
+              fontSize: '8.5px',
+              fontWeight: 800,
+              padding: '0 4px',
+              cursor: 'pointer',
+              outline: 'none',
+              flexShrink: 0
+            }}
+          >
+            <option value="EN">🌐 UI: EN</option>
+            <option value="FR">🌐 UI: FR</option>
+            <option value="AR">🌐 UI: AR</option>
+          </select>
+
+          {/* Theme Toggle Button - Placed right next to UI Language Dropdown */}
+          <button 
+            className="theme-toggle" 
+            onClick={toggleTheme} 
+            title={dtxt.themeTitle} 
+            style={{ 
+              height: '24px', 
+              width: '24px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              background: 'var(--surface-alt)',
+              border: '1px solid var(--border-soft)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              color: 'var(--text)',
+              fontSize: '10px',
+              padding: '0',
+              marginLeft: '0',
+              flexShrink: 0
+            }}
+          >
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+
           <div
             style={{ position: 'relative' }}
             onMouseEnter={() => setIsAccountHoverOpen(true)}
@@ -11154,32 +11637,6 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
               </div>
             )}
           </div>
-
-          {/* UI Language Dropdown */}
-          {/* Theme toggle */}
-          <button 
-            className="theme-toggle" 
-            onClick={toggleTheme} 
-            title={dtxt.themeTitle} 
-            style={{ 
-              height: '24px', 
-              width: '24px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              color: 'var(--text)',
-              fontSize: '10px',
-              padding: '0',
-              marginLeft: '0',
-              flexShrink: 0
-            }}
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
 
           <button
             onClick={() => setIsLogsWindowOpen(true)}

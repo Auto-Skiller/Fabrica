@@ -43,7 +43,7 @@ Fabrica organizes all your operational files, datasets, workflows, and code comp
   * Sub-section search filters, import/export triggers, and D3 force-directed dependency visualization toggles.
 
 ### 2. Enterprise Hybrid Backend Engine & 24/7 Autonomous Simulator
-* **24/7 Multi-Tenant Autonomous Simulator (`src/simulator.ts`, `src/sync.ts`)**: Background daemon driving missions through Drafting, QA, Planning, Execution, and Archive stages. Under FULL AUTO, automatically synthesizes new contextual missions from raw data and system components when active queues drop below threshold.
+* **24/7 Multi-Tenant Autonomous Daemon (`src/sync.ts`)**: Background daemon driving missions through Drafting, QA, Planning, Execution, and Archive stages. Under FULL AUTO, automatically synthesizes new contextual missions from raw data and system components when active queues drop below threshold.
 * **VM Sandboxed Execution (`src/execution/sandbox.ts`)**: Dynamically executes user or agent-generated JavaScript/TypeScript in an isolated Node.js `vm` context with global object locks (`process`, `require` blocked) and CPU time budgeting (default `1000ms` timeout).
 * **High-Concurrency Task Orchestrator (`src/pipeline/orchestrator.ts`)**: Queue-based task scheduler managing parallel background syncs and simulation runs with deduplication and thread worker pool limits.
 * **Hybrid Storage & Vertex AI Search (`src/db/hybrid_storage.ts`, `src/utils.ts`)**: Tenant-isolated GCS buckets (`gs://fabrica-tenant-[id]-bucket`) coupled with multi-tenant Vertex AI Search discovery engine query execution (`searchTenantDocuments`) and TTL caching.

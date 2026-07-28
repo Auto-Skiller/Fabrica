@@ -86,28 +86,28 @@ export default function MissionGraph({ missions, filteredMissions }: Props) {
     [safeFilteredMissions]
   );
   const systemBuildFromDataMissions = useMemo(() => 
-    filteredMissions.filter(m => m.category === 'system_build_from_data' || m.category === 'System Build From Data'),
-    [filteredMissions]
+    safeFilteredMissions.filter(m => m.category === 'system_build_from_data' || m.category === 'System Build From Data'),
+    [safeFilteredMissions]
   );
   const systemOptimizationMissions = useMemo(() => 
-    filteredMissions.filter(m => m.category === 'system_optimization' || m.category === 'System Optimization'),
-    [filteredMissions]
+    safeFilteredMissions.filter(m => m.category === 'system_optimization' || m.category === 'System Optimization'),
+    [safeFilteredMissions]
   );
   const systemOptimizationFromDataMissions = useMemo(() => 
-    filteredMissions.filter(m => m.category === 'system_optimization_from_data' || m.category === 'System Optimization From Data'),
-    [filteredMissions]
+    safeFilteredMissions.filter(m => m.category === 'system_optimization_from_data' || m.category === 'System Optimization From Data'),
+    [safeFilteredMissions]
   );
   const systemTestMissions = useMemo(() => 
-    filteredMissions.filter(m => m.category === 'system_test' || m.category === 'System Test'),
-    [filteredMissions]
+    safeFilteredMissions.filter(m => m.category === 'system_test' || m.category === 'System Test'),
+    [safeFilteredMissions]
   );
   const systemTestFromDataMissions = useMemo(() => 
-    filteredMissions.filter(m => m.category === 'system_test_from_data' || m.category === 'System Test From Data'),
-    [filteredMissions]
+    safeFilteredMissions.filter(m => m.category === 'system_test_from_data' || m.category === 'System Test From Data'),
+    [safeFilteredMissions]
   );
   
   // Flatten all missions
-  const allMissions = filteredMissions;
+  const allMissions = safeFilteredMissions;
 
   // Colors based on Status / Progress
   const getStatusColor = (mClass: MissionClass) => {

@@ -248,8 +248,7 @@ export default function ToolboxGraph({ entityName, toolboxes, onRefresh, showToa
         });
       } else {
         const defaultFiles = [
-          { name: 'SKILL.md', content: `# Custom Workspace Skill\n\nInstructions for this skill.` },
-          { name: 'index.ts', content: '// Implementation logic\n' }
+          { name: 'SKILL.md', content: `# ${modal.fields.name || 'custom-skill'}\n\n# SKILL Metadata & Instructions\nWhen to use: Executable workspace skill.\n` }
         ];
         setModalFiles(defaultFiles);
         setModalActiveFile(defaultFiles[0].name);
@@ -500,22 +499,37 @@ export default function ToolboxGraph({ entityName, toolboxes, onRefresh, showToa
                     <b>Trigger:</b> {s.when_to_use}
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button
-                      onClick={() => openFormModal('edit', 'skill', ['domain_general', 'system_mcp'], s.id, { ...s.raw, name: s.id, source: s.source })}
-                      style={{
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        background: 'transparent',
-                        border: '1px solid var(--border-soft)',
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    {isBuiltIn ? (
+                      <span style={{
+                        fontSize: '7.5px',
+                        fontWeight: 800,
+                        fontFamily: 'var(--mono)',
+                        color: 'var(--accent-2)',
+                        background: 'rgba(6, 182, 212, 0.08)',
+                        border: '1px solid rgba(6, 182, 212, 0.2)',
                         borderRadius: '3px',
-                        color: 'var(--muted)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isBuiltIn ? '🔒 View Specs' : '✏️ Edit Skill & Code'}
-                    </button>
+                        padding: '2px 6px'
+                      }}>
+                        ## Metadata (Always Active Kernel Skill)
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => openFormModal('edit', 'skill', ['domain_general', 'system_mcp'], s.id, { ...s.raw, name: s.id, source: s.source })}
+                        style={{
+                          fontSize: '8px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          background: 'transparent',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '3px',
+                          color: 'var(--muted)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✏️ Edit Skill & Code (.pi/skills/{s.id})
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -602,22 +616,37 @@ export default function ToolboxGraph({ entityName, toolboxes, onRefresh, showToa
                     {e.details}
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button
-                      onClick={() => openFormModal('edit', e.kind as any, [], e.id, { ...e.raw, name: e.id, source: e.source })}
-                      style={{
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        background: 'transparent',
-                        border: '1px solid var(--border-soft)',
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                    {isBuiltIn ? (
+                      <span style={{
+                        fontSize: '7.5px',
+                        fontWeight: 800,
+                        fontFamily: 'var(--mono)',
+                        color: 'var(--accent-2)',
+                        background: 'rgba(6, 182, 212, 0.08)',
+                        border: '1px solid rgba(6, 182, 212, 0.2)',
                         borderRadius: '3px',
-                        color: 'var(--muted)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isBuiltIn ? '🔒 View Specs' : '✏️ Edit Config'}
-                    </button>
+                        padding: '2px 6px'
+                      }}>
+                        ## Metadata (Always Active Kernel Extension)
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => openFormModal('edit', e.kind as any, [], e.id, { ...e.raw, name: e.id, source: e.source })}
+                        style={{
+                          fontSize: '8px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          background: 'transparent',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '3px',
+                          color: 'var(--muted)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✏️ Edit Config (.pi/extensions/{e.id})
+                      </button>
+                    )}
                   </div>
                 </div>
               );
