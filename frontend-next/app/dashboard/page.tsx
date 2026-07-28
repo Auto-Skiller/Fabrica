@@ -7365,6 +7365,145 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                    {/* Autonomy Switcher — compact chip in the header bar */}
+                    <div
+                      style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setAutonomyPos({
+                          bottom: Math.max(10, window.innerHeight - rect.bottom + rect.height + 4),
+                          left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
+                        });
+                        setIsAutonomyHoverOpen(true);
+                      }}
+                      onMouseLeave={() => setIsAutonomyHoverOpen(false)}
+                    >
+                      <button
+                        onClick={() => {
+                          const nextState = !isAutonomyOn;
+                          setIsAutonomyOn(nextState);
+                          setToast({
+                            message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                            type: 'info',
+                            isOpen: true
+                          });
+                        }}
+                        title="Click to toggle Autonomy ON/OFF. Hover to select mode."
+                        style={{
+                          height: '18px',
+                          padding: '0 5px',
+                          fontSize: '7px',
+                          fontWeight: 900,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          background: !isAutonomyOn
+                            ? 'linear-gradient(135deg, #475569, #334155)'
+                            : autonomyLevel === 'autonomous'
+                            ? 'linear-gradient(135deg, #10b981, #059669)'
+                            : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          border: 'none',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.15s',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <span style={{ fontSize: '8px' }}>🤖</span>
+                        <span style={{
+                          fontSize: '6.5px',
+                          padding: '1px 3px',
+                          borderRadius: '2px',
+                          background: 'rgba(0,0,0,0.25)',
+                          fontWeight: 900
+                        }}>
+                          {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
+                        </span>
+                      </button>
+
+                      {/* Hover Popover Dropdown for Autonomy Modes */}
+                      {isAutonomyHoverOpen && (
+                        <div
+                          style={{
+                            position: 'fixed',
+                            top: `${autonomyPos ? (window.innerHeight - autonomyPos.bottom + 22) : 60}px`,
+                            left: `${autonomyPos ? autonomyPos.left : 20}px`,
+                            width: '210px',
+                            background: 'var(--surface)',
+                            border: '1.5px solid var(--border-soft)',
+                            borderRadius: '8px',
+                            boxShadow: '0 16px 40px rgba(0,0,0,0.75)',
+                            padding: '8px',
+                            zIndex: 999999,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
+                            <div style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase' }}>🤖 Autonomy System</div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextState = !isAutonomyOn;
+                                setIsAutonomyOn(nextState);
+                                setToast({
+                                  message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                                  type: 'info',
+                                  isOpen: true
+                                });
+                              }}
+                              style={{
+                                padding: '2px 6px', fontSize: '8px', fontWeight: 900, borderRadius: '8px',
+                                border: 'none', background: isAutonomyOn ? '#10b981' : '#ef4444',
+                                color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
+                              }}
+                            >
+                              <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => handleAutonomyChange('autonomous')}
+                            style={{
+                              display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
+                              borderRadius: '4px',
+                              border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
+                              background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16,185,129,0.12)' : 'var(--surface-alt)',
+                              color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
+                              cursor: 'pointer', textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                              <span>👑 DIRECTOR Mode</span>
+                              {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                            </div>
+                            <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>Agent wakes up via Heartbeat and executes actions</div>
+                          </button>
+
+                          <button
+                            onClick={() => handleAutonomyChange('semi-autonomous')}
+                            style={{
+                              display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
+                              borderRadius: '4px',
+                              border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                              background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245,158,11,0.12)' : 'var(--surface-alt)',
+                              color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
+                              cursor: 'pointer', textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                              <span>🛠️ WORKER Mode</span>
+                              {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                            </div>
+                            <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Model Selector */}
                     <select
                       value={chatModel}
@@ -8204,173 +8343,6 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                           );
                         })()}
 
-                        {/* Autonomy Level Control with Hover Popover */}
-                        <div
-                          style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                          onMouseEnter={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setAutonomyPos({
-                              bottom: Math.max(10, window.innerHeight - rect.top + 2),
-                              left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
-                            });
-                            setIsAutonomyHoverOpen(true);
-                          }}
-                          onMouseLeave={() => setIsAutonomyHoverOpen(false)}
-                        >
-                          <button
-                            onClick={() => {
-                              const nextState = !isAutonomyOn;
-                              setIsAutonomyOn(nextState);
-                              setToast({
-                                message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
-                                type: 'info',
-                                isOpen: true
-                              });
-                            }}
-                            className="mini accent"
-                            style={{
-                              padding: '2px 6px',
-                              fontSize: '8.5px',
-                              fontWeight: 800,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              background: !isAutonomyOn
-                                ? 'linear-gradient(135deg, #475569, #334155)'
-                                : autonomyLevel === 'autonomous'
-                                ? 'linear-gradient(135deg, #10b981, #059669)'
-                                : 'linear-gradient(135deg, #f59e0b, #d97706)',
-                              border: 'none',
-                              color: '#fff',
-                              height: '22px',
-                              flexShrink: 0,
-                              cursor: 'pointer',
-                              borderRadius: '4px',
-                              transition: 'all 0.15s'
-                            }}
-                            title="Click to toggle Autonomy ON/OFF. Hover to select mode."
-                          >
-                            <span>🤖</span>
-                            <span
-                              style={{
-                                fontSize: '7.5px',
-                                padding: '1px 4px',
-                                borderRadius: '3px',
-                                background: 'rgba(0, 0, 0, 0.3)',
-                                color: !isAutonomyOn ? '#fca5a5' : '#fff',
-                                fontWeight: 900
-                              }}
-                            >
-                              {!isAutonomyOn
-                                ? 'SUPERVISED'
-                                : autonomyLevel === 'autonomous'
-                                ? 'DIRECTOR'
-                                : 'WORKER'}
-                            </span>
-                          </button>
-
-                          {/* Hover Popover Dropdown for Autonomy Modes & Switch */}
-                          {isAutonomyHoverOpen && (
-                            <div
-                              style={{
-                                position: 'fixed',
-                                bottom: `${autonomyPos ? autonomyPos.bottom : 60}px`,
-                                left: `${autonomyPos ? autonomyPos.left : 20}px`,
-                                width: '210px',
-                                background: 'var(--surface)',
-                                border: '1.5px solid var(--border-soft)',
-                                borderRadius: '8px',
-                                boxShadow: '0 16px 40px rgba(0, 0, 0, 0.75)',
-                                padding: '8px',
-                                zIndex: 999999,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '6px'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
-                                <div style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-                                  🤖 Autonomy System
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const nextState = !isAutonomyOn;
-                                    setIsAutonomyOn(nextState);
-                                    setToast({
-                                      message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
-                                      type: 'info',
-                                      isOpen: true
-                                    });
-                                  }}
-                                  style={{
-                                    padding: '2px 6px',
-                                    fontSize: '8px',
-                                    fontWeight: 900,
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: isAutonomyOn ? '#10b981' : '#ef4444',
-                                    color: '#fff',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '3px'
-                                  }}
-                                >
-                                  <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
-                                </button>
-                              </div>
-
-                              <button
-                                onClick={() => handleAutonomyChange('autonomous')}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '2px',
-                                  padding: '5px 6px',
-                                  borderRadius: '4px',
-                                  border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
-                                  background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16, 185, 129, 0.12)' : 'var(--surface-alt)',
-                                  color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
-                                  cursor: 'pointer',
-                                  textAlign: 'left'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
-                                  <span>👑 DIRECTOR Mode</span>
-                                  {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                                </div>
-                                <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>
-                                  Agent wakes up via Heartbeat and executes actions
-                                </div>
-                              </button>
-
-                              <button
-                                onClick={() => handleAutonomyChange('semi-autonomous')}
-                                style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '2px',
-                                  padding: '5px 6px',
-                                  borderRadius: '4px',
-                                  border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
-                                  background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245, 158, 11, 0.12)' : 'var(--surface-alt)',
-                                  color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
-                                  cursor: 'pointer',
-                                  textAlign: 'left'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
-                                  <span>🛠️ WORKER Mode</span>
-                                  {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                                </div>
-                                <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>
-                                  AI performs planning with approval checkpoints
-                                </div>
-                              </button>
-                            </div>
-                          )}
-                        </div>
 
                         {/* Agent Output Language Switcher */}
                         <select
@@ -8406,14 +8378,14 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                             color: webSearchEnabled ? '#3b82f6' : 'var(--text)',
                             border: `1px solid ${webSearchEnabled ? '#3b82f6' : 'var(--border-soft)'}`,
                             borderRadius: '4px',
-                            width: '22px',
-                            height: '22px',
+                            width: '28px',
+                            height: '28px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
                             transition: 'all 0.15s',
-                            fontSize: '10px',
+                            fontSize: '13px',
                             padding: 0
                           }}
                           title={webSearchEnabled ? "Google Search Grounding Enabled" : "Enable Google Search Grounding"}
@@ -8422,7 +8394,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         </button>
                         <button
                           className="mini accent"
-                          style={{ padding: '0 8px', height: '22px', fontWeight: 800, fontSize: '8.5px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ padding: '0 14px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           onClick={() => handleSendChat()}
                           disabled={isChatLoading}
                         >

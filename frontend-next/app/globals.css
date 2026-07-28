@@ -50,6 +50,25 @@
      unit (see body overflow-x below), so every section always renders at a
      workable size and nothing overlaps or gets clipped past the edge. */
   --app-min-w: 1200px;
+
+  /* ── Per-panel minimum widths ─────────────────────────────────────────────
+     These prevent buttons / controls from overlapping when a panel is either
+     partially dragged narrow OR fully minimised with the toggle button.
+     • Panel A (lsidebar / System Maps)  : wide enough for the autonomy
+       selector row and icon+label sidebar controls.
+     • Panel B (missions / Chat)          : wide enough for the mission board
+       cards and chat input row.
+     • Panel C (sidebar / Data & Systems) : wide enough for the dual-column
+       50/50 header controls and action buttons.
+     The --minw variable is the icon-strip width shown when a panel is fully
+     collapsed — raised from 58 px to 200 px so the strip can still render its
+     buttons without squeezing.  Individual panels that need more room in the
+     collapsed state can override --minw locally via inline style.
+  ────────────────────────────────────────────────────────────────────────── */
+  --panel-a-min-w: 280px;
+  --panel-b-min-w: 320px;
+  --panel-c-min-w: 280px;
+  --minw: 200px;
 }
 [data-theme="dark"] {
   --bg: #121214;
@@ -370,7 +389,7 @@ button.mini.danger:hover { background: #c73a3a; }
    ============================================================ */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 31% 0px minmax(0, 1fr) 0px 27%;
+  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px minmax(var(--panel-b-min-w), 1fr) 0px max(27%, var(--panel-c-min-w));
   grid-template-rows: 1fr;
   grid-template-areas: "lsidebar lvresizer missions vresizer sidebar";
   flex: 1 1 auto;
@@ -378,19 +397,21 @@ button.mini.danger:hover { background: #c73a3a; }
   transition: grid-template-columns 200ms ease-in-out;
 }
 .dashboard-grid.min-side {
-  grid-template-columns: 31% 0px minmax(0, 1fr) 0px var(--minw, 58px);
+  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px minmax(var(--panel-b-min-w), 1fr) 0px var(--minw);
 }
 .dashboard-grid.min-center {
-  grid-template-columns: 31% 0px var(--minw, 58px) 0px minmax(0, 1fr);
+  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px var(--minw) 0px minmax(var(--panel-c-min-w), 1fr);
 }
 .dashboard-grid.min-center.min-side {
-  grid-template-columns: minmax(0, 1fr) 0px var(--minw, 58px) 0px var(--minw, 58px);
+  grid-template-columns: minmax(var(--panel-b-min-w), 1fr) 0px var(--minw) 0px var(--minw);
 }
-.col.top { grid-area: missions; padding-right: 0; }
-.col.side { grid-area: sidebar; overflow: visible; position: relative; padding-left: 0; }
-.col.lside { grid-area: lsidebar; overflow: visible; position: relative; padding-right: 0; }
-.col { display: flex; flex-direction: column; gap: clamp(0.4rem, 0.7vw, 0.7rem); padding: clamp(0.4rem, 0.7vw, 0.7rem); overflow: hidden; min-width: 0; min-height: 0; transition: padding 200ms ease-in-out, gap 200ms ease-in-out; }
-.col.min { padding: 0; }
+.col.top  { grid-area: missions;  padding-right: 0;  min-width: var(--panel-b-min-w); }
+.col.side { grid-area: sidebar;   overflow: visible; position: relative; padding-left: 0;  min-width: var(--panel-c-min-w); }
+.col.lside{ grid-area: lsidebar; overflow: visible; position: relative; padding-right: 0; min-width: var(--panel-a-min-w); }
+/* When a panel is minimised its col gets .min — keep the icon-strip width but
+   still honour the shared --minw floor so nothing clips. */
+.col.min  { padding: 0; min-width: var(--minw); }
+.col { display: flex; flex-direction: column; gap: clamp(0.4rem, 0.7vw, 0.7rem); padding: clamp(0.4rem, 0.7vw, 0.7rem); overflow: hidden; min-height: 0; transition: padding 200ms ease-in-out, gap 200ms ease-in-out; }
 
 .pane {
   position: relative;
