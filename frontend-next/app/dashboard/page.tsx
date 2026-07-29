@@ -3250,21 +3250,61 @@ export default function Dashboard() {
     };
   }, [isDraggingLeftRail, isDraggingRightRail, minCenter, minSide, leftTab, chatInputHeight, agentWin, agentBtnWin, leftSideW, sideW, saveLayoutConfig]);
 
-  // Helper function to calculate fluid responsive 3-column grid template
+  // Mutually Exclusive Collapsing Logic
+  // Rule 1: Vertical (Top Missions HQ vs Bottom Workspace). Only one can be minimized at a time.
+  const toggleMissionsVertical = (targetMin?: boolean) => {
+    const nextMin = targetMin !== undefined ? targetMin : !minCenter;
+    if (nextMin) {
+      setMinCenter(true);
+      setMinBottomVertical(false);
+      saveLayoutConfig(true, minSide);
+    } else {
+      setMinCenter(false);
+      saveLayoutConfig(false, minSide);
+    }
+  };
+
+  const toggleBottomVertical = (targetMin?: boolean) => {
+    const nextMin = targetMin !== undefined ? targetMin : !minBottomVertical;
+    if (nextMin) {
+      setMinBottomVertical(true);
+      setMinCenter(false);
+      saveLayoutConfig(false, minSide);
+    } else {
+      setMinBottomVertical(false);
+      saveLayoutConfig(minCenter, minSide);
+    }
+  };
+
+  // Rule 2: Horizontal (Bottom Left Artifact vs Bottom Right Projects). Only one can be minimized at a time.
+  const toggleArtifactHorizontal = (targetMin?: boolean) => {
+    const nextMin = targetMin !== undefined ? targetMin : !minArtifactSection;
+    if (nextMin) {
+      setMinArtifactSection(true);
+      setMinSide(false);
+      saveLayoutConfig(minCenter, false);
+    } else {
+      setMinArtifactSection(false);
+      saveLayoutConfig(minCenter, minSide);
+    }
+  };
+
+  const toggleProjectsHorizontal = (targetMin?: boolean) => {
+    const nextMin = targetMin !== undefined ? targetMin : !minSide;
+    if (nextMin) {
+      setMinSide(true);
+      setMinArtifactSection(false);
+      saveLayoutConfig(minCenter, true);
+    } else {
+      setMinSide(false);
+      saveLayoutConfig(minCenter, false);
+    }
+  };
+
+  // Master grid column template (Left: Agent Section, Right: Missions & Workspace)
   const getGridTemplateColumns = () => {
     const lw = `${leftSideW}%`;
-    const rw = `${sideW}%`;
-
-    if (minCenter && minSide) {
-      return `minmax(0, 1fr) 1px var(--minw, 58px) 1px var(--minw, 58px)`;
-    }
-    if (minCenter) {
-      return `${lw} 1px var(--minw, 58px) 1px minmax(0, 1fr)`;
-    }
-    if (minSide) {
-      return `${lw} 1px minmax(0, 1fr) 1px var(--minw, 58px)`;
-    }
-    return `${lw} 1px minmax(0, 1fr) 1px ${rw}`;
+    return `${lw} minmax(0, 1fr)`;
   };
 
   // Agent Chat Input Height Resizer Drag Mechanics
@@ -8651,9 +8691,9 @@ ${isDirector ? `
           
           {/* ============ TOP SECTION: MISSIONS HQ BOARD ============ */}
           <div style={{
-            flex: minCenter ? '0 0 auto' : '1 1 50%',
+            flex: minCenter ? '0 0 auto' : (minBottomVertical ? '1 1 100%' : '1 1 50%'),
             minHeight: minCenter ? '36px' : '200px',
-            maxHeight: minCenter ? '36px' : '55%',
+            maxHeight: minCenter ? '36px' : 'none',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -8662,7 +8702,7 @@ ${isDirector ? `
           }}>
             {minCenter ? (
               <div
-                onClick={() => { setMinCenter(false); saveLayoutConfig(false, minSide); }}
+                onClick={() => toggleMissionsVertical(false)}
                 style={{
                   background: 'var(--surface-alt)',
                   padding: '6px 12px',
@@ -8682,7 +8722,7 @@ ${isDirector ? `
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setMinCenter(false); saveLayoutConfig(false, minSide); }}
+                    onClick={(e) => { e.stopPropagation(); toggleMissionsVertical(false); }}
                     style={{
                       background: 'transparent',
                       border: '1px solid var(--border-soft)',
@@ -8870,7 +8910,7 @@ ${isDirector ? `
                 {/* Vertical Collapse 1 Button for Missions Section */}
                 <button
                   type="button"
-                  onClick={() => setMinCenter(true)}
+                  onClick={() => toggleMissionsVertical(true)}
                   title="Collapse Missions HQ section vertically"
                   style={{
                     background: 'transparent',
@@ -9302,6 +9342,7 @@ ${isDirector ? `
           </div>
         </section>
       )}
+    </div>
 
         {/* ================= BOTTOM WORKSPACE WRAPPER (ARTIFACT (LEFT) + PROJECTS (RIGHT)) ================= */}
         <div style={{
@@ -9335,7 +9376,7 @@ ${isDirector ? `
             </div>
             <button
               type="button"
-              onClick={() => setMinBottomVertical(!minBottomVertical)}
+              onClick={() => toggleBottomVertical()}
               title={minBottomVertical ? "Expand Artifacts & Projects section vertically" : "Collapse Artifacts & Projects section vertically"}
               style={{
                 background: 'transparent',
@@ -9370,7 +9411,7 @@ ${isDirector ? `
               }}>
                 {minArtifactSection ? (
                   <div
-                    onClick={() => setMinArtifactSection(false)}
+                    onClick={() => toggleArtifactHorizontal(false)}
                     style={{
                       width: '38px',
                       height: '100%',
@@ -9397,7 +9438,7 @@ ${isDirector ? `
                     </span>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); setMinArtifactSection(false); }}
+                      onClick={(e) => { e.stopPropagation(); toggleArtifactHorizontal(false); }}
                       style={{ marginTop: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '10px', cursor: 'pointer' }}
                     >
                       ▶
@@ -9411,7 +9452,7 @@ ${isDirector ? `
                 📦 ARTIFACT WORKSPACE
               </span>
               <button
-                onClick={() => { setArtifactTab('preview'); setMinArtifactSection(false); }}
+                onClick={() => { setArtifactTab('preview'); toggleArtifactHorizontal(false); }}
                 style={{
                   fontSize: '8px',
                   fontWeight: 800,
@@ -9431,7 +9472,7 @@ ${isDirector ? `
                 <span>👁️ Preview</span>
               </button>
               <button
-                onClick={() => { setArtifactTab('code'); setMinArtifactSection(false); }}
+                onClick={() => { setArtifactTab('code'); toggleArtifactHorizontal(false); }}
                 style={{
                   fontSize: '8px',
                   fontWeight: 800,
@@ -9482,7 +9523,7 @@ ${isDirector ? `
             </select>
             {/* Horizontal Collapse 1 Button for Artifact Section */}
             <button
-              onClick={() => setMinArtifactSection(true)}
+              onClick={() => toggleArtifactHorizontal(true)}
               title="Collapse Artifact section horizontally"
               style={{
                 fontSize: '8px',
@@ -9707,7 +9748,7 @@ ${isDirector ? `
           {minSide ? (
             <div
               className="side-rail"
-              onClick={() => { setMinSide(false); saveLayoutConfig(minCenter, false); }}
+              onClick={() => toggleProjectsHorizontal(false)}
               title="Click to expand Data & Systems section"
             >
               <div className="rail-head">
@@ -9812,7 +9853,7 @@ ${isDirector ? `
                     </button>
                     {/* Horizontal Collapse 2 Button for Projects Section */}
                     <button
-                      onClick={() => setMinSide(true)}
+                      onClick={() => toggleProjectsHorizontal(true)}
                       title="Collapse Projects section horizontally"
                       style={{
                         fontSize: '8px',
