@@ -221,17 +221,25 @@ export const api = {
     answers?: { who: string; workaround: string; success: string; musthave: string },
     raw_text?: string,
     customKey?: string,
-    model?: string
-  ) =>
-    request<{ ok: boolean; spec: string }>('/api/context/distill', {
-      method: 'POST',
-      body: JSON.stringify({ answers, raw_text, customKey, model }),
-    }),
-  validateDiscovery: (feature: string, email?: string) =>
-    request<{ ok: boolean; total: number }>('/api/discovery/validate', {
-      method: 'POST',
-      body: JSON.stringify({ feature, email }),
-    }),
+    model?: string,
+    sessionId?: string,
+    tenantId?: string
+  ) => {
+    const prompt = answers
+      ? `📋 [CONTEXT DISTILLATION REQUEST]\nPlease distill these PM interview answers into an agent-readable specification:\nWHO: ${answers.who}\nWORKAROUND: ${answers.workaround}\nSUCCESS: ${answers.success}\nMUST-HAVE: ${answers.musthave}`
+      : `📋 [SIGNAL DISTILLATION REQUEST]\nPlease convert this user signal text into an agent-readable spec card:\n${raw_text}`;
+    return api.chatAgent(prompt, [], customKey, model, false, 'en', sessionId, tenantId, true).then(res => ({
+      ok: res.ok,
+      spec: res.text || ''
+    }));
+  },
+  validateDiscovery: (feature: string, email?: string, sessionId?: string, tenantId?: string) => {
+    const prompt = `🎯 [ROADMAP VALIDATION REQUEST]\nPlease validate interest and technical feasibility for feature "${feature}"${email ? ` (Requested by: ${email})` : ''}. Output validation criteria and actionable implementation steps.`;
+    return api.chatAgent(prompt, [], undefined, undefined, false, 'en', sessionId, tenantId, true).then(res => ({
+      ok: res.ok,
+      total: 1
+    }));
+  },
 
   // Toolbox workspace file system and LLM auditing
   getToolboxFiles: (entityName: string, kind: string, parents: string[], entryName: string, source?: string) =>
@@ -276,21 +284,16 @@ export const api = {
       body: JSON.stringify({ cmd: 'restart_daemon' }),
     }),
 
-  // Deep Research agentic loop
-  deepResearch: (query: string, model?: string, customKey?: string) =>
-    request<{ ok: boolean; report: string; sources: string[]; steps: string[] }>('/api/research/deep', {
-      method: 'POST',
-      body: JSON.stringify({ query, model, customKey }),
-    }),
-
-  // Context Caching Engine (Option B)
-  getCacheStatus: () =>
-    request<{ ok: boolean; cache: { cacheId: string; status: string; tokenCount: number; lastRefreshed: string; saving: string; speedup: string } }>('/api/cache/status'),
-  refreshCache: (customKey?: string) =>
-    request<{ ok: boolean; cache: any; message: string }>('/api/cache/refresh', {
-      method: 'POST',
-      body: JSON.stringify({ customKey }),
-    }),
+  // Deep Research agentic loop (routed via active Pi CLI session)
+  deepResearch: (query: string, model?: string, customKey?: string, sessionId?: string, tenantId?: string) => {
+    const prompt = `🔍 [DEEP RESEARCH INITIATED]\n\nPlease perform an extensive Deep Research analysis on the following topic:\n"${query}"\n\nDirectives:\n1. Execute real-time web search grounding to gather verified primary source references.\n2. Cross-examine facts, detect domain gaps, and synthesize key insights.\n3. Output a comprehensive, structured Deep Research Report with source citations e.g. [1] (URL).`;
+    return api.chatAgent(prompt, [], customKey, model, true, 'en', sessionId, tenantId, true).then(res => ({
+      ok: res.ok,
+      report: res.text || '',
+      sources: [],
+      steps: ['1. Deep Research query submitted to active Pi CLI agent session...']
+    }));
+  },
 
   // Workspace Directives (AGENTS.md)
   getAgentsMd: () =>

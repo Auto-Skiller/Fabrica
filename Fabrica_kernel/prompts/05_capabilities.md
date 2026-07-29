@@ -51,48 +51,58 @@ Every tool registered in the database carries a performance or completeness rati
 - **Agent Rule**: The agent is STRICTLY FORBIDDEN from executing any tool whose `active` flag is set to `false`. Users toggle tool activation directly from the dashboard bottom control bar.
 - **Security Isolation**: Tools must never expose raw database credentials or Master Secret API keys to the client-side browser. All tool operations must run server-side via proxies.
 
-# Data and Systems Guide
+# Data and Artifacts Guide
 
-This guide describes how Fabrica manages and processes unstructured data inputs, structured system components, and the relationships/dependencies between them.
+This guide describes how Fabrica manages and processes unstructured data inputs, project artifacts, and the relationships/dependencies between them.
 
-## 1. THE DUALITY OF DATA AND SYSTEMS
+## 1. THE DUALITY OF DATA AND ARTIFACTS
 
-In Fabrica, everything is categorized into one of two fundamental pillars:
+In Fabrica, everything is categorized into two fundamental pillars:
 1. **Raw Data (`raw_data` table)**: This contains the user's unstructured inputs. Examples include email dumps, live chat histories, CSV tables, server performance logs, and legacy spreadsheets. It acts as the "source of truth" and "context reservoir".
-2. **System Components (`system_components` table)**: This contains the structured, operational, and executable elements. Examples include database schemas, active API routes, d3 visualizer configurations, prompt templates, and codebase files.
+2. **Artifacts (`artifacts` / `system_components` table)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a project. Projects can include multiple Artifacts of different types located under `projects/<project>/artifacts/<artifact_name>/`. Each Artifact is its own separated domain unit or codebase.
+
+### Artifact Types (`artifact_type`):
+- `codebase`: Full standalone frontend/backend/microservice codebases.
+- `document`: Markdown/Text logic documents, operational specifications, design systems.
+- `plan`: Strategic plans, marketing plans, architecture roadmaps.
+- `workflow`: Automation workflows (n8n, YAML/JSON pipelines, step functions).
+- `component`: Reusable UI modules, database schemas, API routes.
+- `pipeline`: Data ingestion and transformation pipelines.
+- `spec`: API/System specifications and schemas.
+- `other`: Custom user deliverables.
 
 ---
 
 ## 2. PANEL C DUAL-COLUMN LAYOUT & DIVISION
 
-In the workspace interface (Panel C), Raw Data and System Components are displayed side-by-side in an expanded 50/50 split layout:
+In the workspace interface (Panel C), Raw Data and Project Artifacts are displayed side-by-side in an expanded 50/50 split layout:
 
 - **Equal Flex Widths**: Both sections flex to equal widths (`flex: 1, minWidth: 0`), preventing overflow or compression.
-- **Vertical Divider Line**: A crisp `1.5px solid var(--border-soft)` dividing line spans continuously down the center, cleanly separating the Data controls/header on the left from the System controls/header on the right.
+- **Vertical Divider Line**: A crisp `1.5px solid var(--border-soft)` dividing line spans continuously down the center, cleanly separating the Data controls/header on the left from the Artifact controls/header on the right.
 - **Sub-Section Header Controls**:
   - **Left Half (Data)**: Features an Import button, Source Filter dropdown, search input, and List/Graph view toggle.
-  - **Right Half (Systems)**: Features an Export button, System Category Filter dropdown, search input, and List/Graph view toggle.
+  - **Right Half (Artifacts)**: Features an Export button, Artifact Type Filter dropdown, search input, and List/Graph view toggle.
 
 ---
 
 ## 3. INGESTION & PIPELINE METRIC TRACING
 
-When raw unstructured files or streams enter the system, they are processed through dedicated **pipelines** (e.g., System Build From Data, System Optimization From Data, System Test From Data, or Analytics).
+When raw unstructured files or streams enter the system, they are processed through dedicated **pipelines** (e.g., Build From Data, Optimization From Data, Test From Data, or Analytics).
 
 ### Ingestion Flow
 1. **Raw Ingestion**: Documents are written to the `raw_data` table with detailed mime-type headers and origin metadata.
-2. **Analysis and Mapping**: The Analytics or Research phase maps these inputs to active operational systems.
-3. **Upgrades & Normalization**: The optimization or build workflow converts raw inputs into schema definitions, seed queries, or routing modules.
+2. **Analysis and Mapping**: The Analytics or Research phase maps these inputs to active project artifacts.
+3. **Upgrades & Normalization**: The optimization or build workflow converts raw inputs into schema definitions, seed queries, logic documents, or codebase modules.
 
 ---
 
-## 4. DEPENDENCY & SYSTEM FLOW VISUALIZATIONS
+## 4. DEPENDENCY & ARTIFACT FLOW VISUALIZATIONS
 
-The relationships between raw data and active systems are visualized in the workspace via the **Dependency Graph** and **Data/Systems List views**:
+The relationships between raw data and project artifacts are visualized in the workspace via the **Dependency Graph** and **Data/Artifacts List views**:
 
-- **Implicit/Heuristic Links**: Fabrica automatically infers connections between raw data nodes and system component nodes based on keyword matches, file types, or shared status descriptors.
+- **Implicit/Heuristic Links**: Fabrica automatically infers connections between raw data nodes and artifact nodes based on keyword matches, file types, or shared status descriptors.
 - **Custom Links**: Users and agents can declare explicit connections, which are persisted locally inside the user's workspace to define clean DAGs (Directed Acyclic Graphs).
-- **Interactive Modeling**: The workspace utilizes high-contrast d3 force-directed simulations and Cytoscape graphs to model active dependencies, preventing code fragmentation and highlighting single-points-of-failure.
+- **Interactive Modeling**: The workspace utilizes high-contrast d3 force-directed simulations and Cytoscape graphs to model active dependencies, preventing fragmentation and highlighting single-points-of-failure.
 
 
 # Missions Guide
@@ -164,7 +174,7 @@ A mission transitions through four major status blocks, visible in the tracker i
   - *Agent/System-Created Missions*: In **FULL AUTO** mode, the agent automatically evaluates workspace context, answers QA gates, and advances missions to Planning automatically.
 - **PLANNING**: The mission has a clear proposal. The agent has generated a prioritized task list scored on `benefit`, `cost`, and `worth-it: yes|no`.
   - In **FULL AUTO** or **SEMI-AUTO**, the system compiles the implementation blueprint and advances to Execution automatically. In **SUPERVISED**, it waits for user confirmation.
-- **EXECUTION**: The mission is active. The agent sequentially completes tasks, runs verification, and hot-swaps compiled production modules into `system_components`.
+- **EXECUTION**: The mission is active. The agent sequentially completes tasks, runs verification, and hot-swaps compiled production modules or logic documents into `artifacts`.
 - **ARCHIVE**: The task is finished or canceled (`status = 'archive'`). Finished missions are marked as DONE and historical progress is locked in the database.
 
 ---

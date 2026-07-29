@@ -47,7 +47,7 @@ import {
   verifyUserCard 
 } from './src/db/tier_manager.js';
 import { keyPoolManager, FREE_MODELS } from './src/db/llm_key_pool.js';
-import { runPiAgent, stopPiAgent, listPiSessions, createPiSession, deletePiSession, listPiModels, getPiProcessLogs } from './src/pi_runner.js';
+import { runPiAgent, stopPiAgent, listPiSessions, createPiSession, deletePiSession, listPiModels, getPiProcessLogs, listPiDaemons } from './src/pi_runner.js';
 import { uploadToGcs, triggerVertexAiIndexing, searchTenantDocuments } from './src/db/hybrid_storage.js';
 import { executeSandboxedCode } from './src/execution/sandbox.js';
 import { orchestrator } from './src/pipeline/orchestrator.js';
@@ -393,7 +393,6 @@ app.use(async (req: any, res: any, next: any) => {
         path === '/api/config/models' || 
         path === '/api/pipeline/status' ||
         path === '/api/context/agents-md' ||
-        path === '/api/cache/status' ||
         path === '/api/llm/free-models' ||
         path === '/api/llm/key-pool/stats' ||
         path === '/api/user/tier' ||
@@ -1020,6 +1019,7 @@ app.get("/api/entity/:name", async (req, res) => {
       active_mission_id: runtimeState.active_mission_id,
       fill_queue: {
         raw_data: dbRawData.map(r => r.name),
+        artifacts: dbSysComponents.map(s => s.name),
         system_components: dbSysComponents.map(s => s.name)
       },
       metrics: {
@@ -1027,6 +1027,7 @@ app.get("/api/entity/:name", async (req, res) => {
         backlog: (runtimeJson.backlogs || runtimeJson.backlog || []).length,
         suggestions: (runtimeJson.suggestions || []).length,
         raw_data_count: dbRawData.length,
+        artifacts_count: dbSysComponents.length,
         system_components_count: dbSysComponents.length
       },
       suggestions: runtimeJson.suggestions || [],
@@ -2414,6 +2415,17 @@ app.get("/api/pi/cli-logs", (req, res) => {
   }
 });
 
+// GET /api/pi/daemons - List active interactive Pi CLI daemon processes
+app.get("/api/pi/daemons", (req, res) => {
+  try {
+    const tenantId = (req.query.tenantId || req.headers['x-tenant-id'] || 'default_user') as string;
+    const daemons = listPiDaemons(tenantId);
+    res.json({ ok: true, tenantId, daemons });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/pi/cli-exec - Execute direct command or prompt against the real Pi CLI process
 app.post("/api/pi/cli-exec", async (req, res) => {
   try {
@@ -2751,10 +2763,10 @@ app.delete("/api/db/raw-data/:id", async (req, res) => {
   }
 });
 
-app.get("/api/db/system-components", async (req, res) => {
+app.get(["/api/db/artifacts", "/api/db/system-components"], async (req, res) => {
   try {
     const tenantId = req.query.tenantId as string || req.headers['x-tenant-id'] as string || 'default_user';
-    const list = await db.getSystemComponents(tenantId);
+    const list = await db.getArtifacts(tenantId);
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : NaN;
     const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
     
@@ -2773,46 +2785,50 @@ app.get("/api/db/system-components", async (req, res) => {
   }
 });
 
-app.post("/api/db/system-components", async (req, res) => {
+app.post(["/api/db/artifacts", "/api/db/system-components"], async (req, res) => {
   try {
-    const { id, name, role, code_snapshot, metadata } = req.body || {};
+    const { id, name, role, artifact_type, code_snapshot, metadata } = req.body || {};
     const tenantId = metadata?.tenantId || req.headers['x-tenant-id'] as string || 'default_user';
     const finalCode = code_snapshot || '';
-    const finalName = name || 'unnamed_component';
+    const finalName = name || 'unnamed_artifact';
     const finalRole = role || 'service';
+    const finalArtifactType = artifact_type || metadata?.artifact_type || 'codebase';
 
     // 1. Save structured metadata in Supabase (or local fallback)
-    const entry = await db.saveSystemComponent({
+    const entry = await db.saveArtifact({
       id: id || undefined,
       user_id: tenantId,
       name: finalName,
       role: finalRole,
+      artifact_type: finalArtifactType,
       code_snapshot: finalCode,
       metadata: {
         ...(metadata || {}),
+        artifact_type: finalArtifactType,
         tenantId
       }
     });
 
-    console.log(`🔌 [hybrid-storage-system] Structured metadata saved to Supabase (id: ${entry.id})`);
+    console.log(`🔌 [hybrid-storage-system] Structured artifact saved (id: ${entry.id}, type: ${finalArtifactType})`);
 
-    // Ensure system component file is stored in projects/<project_name>/systems/<system_name>/
+    // Ensure artifact file is stored in projects/<project_name>/artifacts/<artifact_name>/
     const projectName = metadata?.project_name || metadata?.project || req.body?.project_name || 'default_project';
-    const systemName = finalName.replace(/\.(ts|js|json)$/, '');
-    const { systemDir } = ensureProjectDirs(tenantId, projectName, systemName);
-    if (systemDir) {
+    const artifactName = finalName.replace(/\.(ts|js|json|md|txt|yaml|yml)$/, '');
+    const { artifactDir } = ensureProjectDirs(tenantId, projectName, artifactName);
+    if (artifactDir) {
       try {
-        const sysFilePath = path.join(systemDir, `${finalName.endsWith('.ts') ? finalName : `${finalName}.ts`}`);
-        fs.writeFileSync(sysFilePath, finalCode, 'utf8');
+        const ext = finalName.includes('.') ? '' : (finalArtifactType === 'document' || finalArtifactType === 'plan' ? '.md' : '.ts');
+        const artFilePath = path.join(artifactDir, `${finalName}${ext}`);
+        fs.writeFileSync(artFilePath, finalCode, 'utf8');
         syncProjectsDb(tenantId);
       } catch (sysErr) {
-        console.warn(`⚠️ Could not write local system component file:`, sysErr);
+        console.warn(`⚠️ Could not write local artifact file:`, sysErr);
       }
     }
 
-    // 2. Upload raw code/system snapshot to tenant-isolated GCS bucket (CMEK configured)
+    // 2. Upload raw code/artifact snapshot to tenant-isolated GCS bucket
     try {
-      const gcsResult = await uploadToGcs(tenantId, `${entry.id}_${finalName}.ts`, finalCode, 'text/typescript');
+      const gcsResult = await uploadToGcs(tenantId, `${entry.id}_${finalName}`, finalCode, 'text/plain');
       
       if (gcsResult.success) {
         entry.metadata = {
@@ -2825,8 +2841,8 @@ app.post("/api/db/system-components", async (req, res) => {
         };
 
         // 3. Trigger Vertex AI Search document indexing on-the-fly
-        console.log(`🔍 [hybrid-storage-system] Triggering on-the-fly Vertex AI Search indexing for system component "${tenantId}"...`);
-        const idxResult = await triggerVertexAiIndexing(tenantId, gcsResult.bucketName, `${entry.id}_${finalName}.ts`);
+        console.log(`🔍 [hybrid-storage-system] Triggering on-the-fly Vertex AI Search indexing for artifact "${tenantId}"...`);
+        const idxResult = await triggerVertexAiIndexing(tenantId, gcsResult.bucketName, `${entry.id}_${finalName}`);
         
         entry.metadata.vertex_ai_indexed = idxResult.success;
         entry.metadata.vertex_ai_datastore_id = idxResult.dataStoreId;
@@ -2835,17 +2851,17 @@ app.post("/api/db/system-components", async (req, res) => {
         }
 
         // Save updated metadata back to Supabase
-        await db.saveSystemComponent(entry);
+        await db.saveArtifact(entry);
         console.log(`🔌 [hybrid-storage-system] Supabase record updated with GCS and Vertex AI Search details.`);
       }
     } catch (gcpErr: any) {
-      console.warn(`⚠️ [hybrid-storage-system] GCS/Vertex AI Search integration skipped or failed (will run in simulation/fallback):`, gcpErr.message);
+      console.warn(`⚠️ [hybrid-storage-system] GCS/Vertex AI Search integration skipped or failed:`, gcpErr.message);
       entry.metadata = {
         ...entry.metadata,
         storage_mode: 'local_fallback',
         storage_warning: gcpErr.message
       };
-      await db.saveSystemComponent(entry);
+      await db.saveArtifact(entry);
     }
 
     res.json(entry);
@@ -2854,10 +2870,10 @@ app.post("/api/db/system-components", async (req, res) => {
   }
 });
 
-app.delete("/api/db/system-components/:id", async (req, res) => {
+app.delete(["/api/db/artifacts/:id", "/api/db/system-components/:id"], async (req, res) => {
   try {
     const tenantId = req.query.tenantId as string || req.headers['x-tenant-id'] as string || 'default_user';
-    const success = await db.deleteSystemComponent(tenantId, req.params.id);
+    const success = await db.deleteArtifact(tenantId, req.params.id);
     res.json({ ok: success });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -3225,15 +3241,7 @@ Use professional enterprise Markdown formatting. Maintain an authoritative tone.
   }
 });
 
-// ── Option B: Context Caching Engine ──
-let activeContextCache: any = {
-  cacheId: "cachedContents/fabrica_enterprise_v2",
-  status: "CACHED",
-  tokenCount: 34812,
-  lastRefreshed: new Date().toISOString(),
-  saving: "75% API Cost Saved",
-  speedup: "10x Latency Reduction (~120ms)"
-};
+// ── Context Directives Management ──
 
 // GET /api/context/agents-md - Read AGENTS.md workspace context file
 app.get("/api/context/agents-md", (req, res) => {
@@ -3290,45 +3298,6 @@ app.post("/api/context/agents-md", (req, res) => {
     }
 
     res.json({ ok: true, message: 'AGENTS.md updated successfully!' });
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-app.get("/api/cache/status", (req, res) => {
-  res.json({ ok: true, cache: activeContextCache });
-});
-
-app.post("/api/cache/refresh", async (req, res) => {
-  try {
-    const { customKey } = req.body || {};
-    const tenantId = req.query.tenantId as string || req.headers['x-tenant-id'] as string || 'default_user';
-    
-    let allText = "Fabrica enterprise baseline specification rules. ";
-    try {
-      const list = await db.getRawDataList(tenantId);
-      for (const item of list) {
-        allText += (item.content || "") + " ";
-      }
-    } catch {}
-    
-    const randomHash = Math.random().toString(36).substring(2, 10);
-    const mockTokenCount = 32768 + Math.floor(Math.random() * 5000);
-    
-    activeContextCache = {
-      cacheId: `cachedContents/fabrica_enterprise_${randomHash}`,
-      status: "CACHED",
-      tokenCount: mockTokenCount,
-      lastRefreshed: new Date().toISOString(),
-      saving: "75% API Cost Saved",
-      speedup: "10x Latency Reduction (~110ms)"
-    };
-    
-    res.json({
-      ok: true,
-      cache: activeContextCache,
-      message: "Touch-to-refresh completed. Context cache successfully refreshed and pointer updated."
-    });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
   }

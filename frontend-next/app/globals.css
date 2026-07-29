@@ -869,63 +869,63 @@ button.mini.danger:hover { background: #c73a3a; }
 }
 .ms-empty-icon { font-size: 1.3rem; opacity: 0.6; }
 
-.mcard.sm {
+.mcard, .mcard.sm {
   background: var(--surface);
-  border: 1.5px solid var(--border-soft);
-  border-left: 0.28rem solid var(--accent-2); /* priority accent, see .prio-* below */
-  border-radius: 10px;
-  padding: clamp(.4rem, .65vw, .62rem);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05), var(--shadow-sm);
+  border: 1px solid var(--border-soft);
+  border-left: 0.22rem solid var(--accent-2); /* priority accent, see .prio-* below */
+  border-radius: 6px;
+  padding: clamp(.25rem, .45vw, .42rem);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04), var(--shadow-sm);
   cursor: grab;
   flex-shrink: 1;
   min-height: 0;
   overflow: hidden;
   position: relative;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-left-color 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease, border-left-color 0.15s ease, border-color 0.15s ease;
   animation: uupm-fade-in-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.mcard.sm:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.12), var(--shadow);
+.mcard:hover, .mcard.sm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1), var(--shadow);
   border-color: var(--border);
 }
-.mcard.sm:active { cursor: grabbing; transform: translateY(-1px); }
-.mcard.sm.prio-crit { border-left-color: var(--status-error); }
-.mcard.sm.prio-crit:hover { border-color: var(--status-error); box-shadow: 0 4px 18px rgba(244, 63, 94, 0.15), var(--shadow); }
-.mcard.sm.prio-high { border-left-color: var(--status-warn); }
-.mcard.sm.prio-high:hover { border-color: var(--status-warn); box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15), var(--shadow); }
-.mcard.sm.prio-low { border-left-color: var(--accent-2); }
-.mcard.sm.prio-low:hover { border-color: var(--accent-2); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.1), var(--shadow); }
-.mcard.sm.prio-draft { border-left-color: var(--muted); }
-.mcard.sm.prio-draft:hover { border-color: var(--muted); }
-.mcard.sm.arch { opacity: .75; border-style: dashed; border-left-style: dashed; }
+.mcard:active, .mcard.sm:active { cursor: grabbing; transform: translateY(-1px); }
+.mcard.prio-crit, .mcard.sm.prio-crit { border-left-color: var(--status-error); }
+.mcard.prio-crit:hover, .mcard.sm.prio-crit:hover { border-color: var(--status-error); box-shadow: 0 3px 12px rgba(244, 63, 94, 0.15), var(--shadow); }
+.mcard.prio-high, .mcard.sm.prio-high { border-left-color: var(--status-warn); }
+.mcard.prio-high:hover, .mcard.sm.prio-high:hover { border-color: var(--status-warn); box-shadow: 0 3px 12px rgba(245, 158, 11, 0.15), var(--shadow); }
+.mcard.prio-low, .mcard.sm.prio-low { border-left-color: var(--accent-2); }
+.mcard.prio-low:hover, .mcard.sm.prio-low:hover { border-color: var(--accent-2); box-shadow: 0 3px 12px rgba(16, 185, 129, 0.1), var(--shadow); }
+.mcard.prio-draft, .mcard.sm.prio-draft { border-left-color: var(--muted); }
+.mcard.prio-draft:hover, .mcard.sm.prio-draft:hover { border-color: var(--muted); }
+.mcard.arch, .mcard.sm.arch { opacity: .75; border-style: dashed; border-left-style: dashed; }
 
-.mcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.35rem; }
+.mcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.3rem; margin-bottom: 0.15rem; }
 .mcard-title-group { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .mcard-title-text {
   font-family: var(--sans);
   font-weight: 700;
-  font-size: clamp(.72rem, .8vw, .92rem);
+  font-size: clamp(.65rem, .72vw, .8rem);
   color: var(--text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .mcard-slug {
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   color: var(--muted);
   opacity: 0.8;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   margin-top: 1px;
 }
-.drag-grip { color: var(--muted); font-size: 0.75rem; opacity: 0.35; flex-shrink: 0; cursor: grab; transition: opacity 0.12s ease; padding-top: 2px; }
-.mcard.sm:hover .drag-grip { opacity: 0.85; }
+.drag-grip { color: var(--muted); font-size: 0.65rem; opacity: 0.35; flex-shrink: 0; cursor: grab; transition: opacity 0.12s ease; padding-top: 1px; }
+.mcard:hover .drag-grip, .mcard.sm:hover .drag-grip { opacity: 0.85; }
 
 /* defensive typography: card body text NEVER spills past its box */
 .mcard-desc {
-  font-size: clamp(.6rem, .68vw, .76rem);
-  color: var(--muted); margin: 0.15rem 0 0.5rem 0; line-height: 1.35;
-  max-height: 2.7em; overflow: hidden;
+  font-size: clamp(.55rem, .6vw, .68rem);
+  color: var(--muted); margin: 0.1rem 0 0.25rem 0; line-height: 1.25;
+  max-height: 2.2em; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 
@@ -934,9 +934,9 @@ button.mini.danger:hover { background: #c73a3a; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin: 0.4rem 0;
-  min-height: 1.8rem;
+  gap: 0.35rem;
+  margin: 0.2rem 0;
+  min-height: 1.4rem;
 }
 .mcard-progress-section {
   flex: 1;
@@ -1133,18 +1133,18 @@ button.mini.danger:hover { background: #c73a3a; }
    Bound via :class="{crowded: isCrowded(...,'missionCol')}" in index.html
    when a column's card count passes the high-volume threshold. */
 .cards.crowded { gap: 0.16rem; padding: 0.05rem; }
-.cards.crowded .mcard.sm { padding: clamp(.24rem, .38vw, .34rem); border-width: 1px; }
-.cards.crowded .mcard-title-text { font-size: clamp(.64rem, .7vw, .76rem); }
-.cards.crowded .mcard-slug { display: none; }
-.cards.crowded .mcard-desc { font-size: clamp(.54rem, .58vw, .62rem); max-height: 1.3em; margin-bottom: 2px; }
+.cards.crowded .mcard.sm { padding: clamp(.2rem, .35vw, .3rem); border-width: 1px; }
+.cards.crowded .mcard-title-text { font-size: clamp(.6rem, .65vw, .72rem); }
+.cards.crowded .mcard-slug { display: block; font-size: 0.52rem; opacity: 0.75; }
+.cards.crowded .mcard-desc { font-size: clamp(.52rem, .56vw, .62rem); max-height: 2.4em; margin-bottom: 2px; -webkit-line-clamp: 2; }
 .cards.crowded .mcard-actions-row { min-height: 0; margin: 2px 0; }
-.cards.crowded .mcard-buttons button.mini { padding: 1px 4px; font-size: 0.5rem; }
-.cards.crowded .mcard-meta-footer { display: none; }
+.cards.crowded .mcard-buttons button.mini { padding: 1px 4px; font-size: 0.52rem; }
+.cards.crowded .mcard-meta-footer { display: flex; padding-top: 0.2rem; margin-top: 0.2rem; }
 .cards.crowded .mcard .bar-row { margin: 0.04rem 0; gap: 0.15rem; }
 .cards.crowded .mcard .bar { height: 3px; }
 .cards.crowded .mcard .bar-pct { font-size: 0.5rem; }
 .cards.crowded .pill { font-size: 0.5rem; padding: 1px 3px; }
-.cards.crowded .drag-grip { display: none; }
+.cards.crowded .drag-grip { display: block; opacity: 0.5; font-size: 0.6rem; }
 
 /* ============================================================
    SOURCES & FLOW — 3-tier swimlane (Inbox → Gateway → Prompts)

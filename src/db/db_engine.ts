@@ -41,16 +41,23 @@ export interface RawData {
   created_at?: string;
 }
 
-// SystemComponent matching Table 2: system_components
-export interface SystemComponent {
+// Artifact Types representing modular deliverables in a project
+export type ArtifactType = 'codebase' | 'document' | 'plan' | 'workflow' | 'component' | 'pipeline' | 'spec' | 'other';
+
+// Artifact (formerly SystemComponent) matching Table: artifacts / system_components
+export interface Artifact {
   id?: string;
   user_id: string;
   name: string;
-  role: string;
+  role?: string;
+  artifact_type?: ArtifactType;
   code_snapshot: string;
   metadata: Record<string, any>;
   created_at?: string;
+  updated_at?: string;
 }
+
+export type SystemComponent = Artifact;
 
 // Mission matching Table 3: missions
 export interface Mission {
@@ -803,63 +810,92 @@ class DatabaseEngine {
     return success;
   }
 
-  // SYSTEM_COMPONENTS CRUD
-  async getSystemComponents(userId: string): Promise<SystemComponent[]> {
-    const cacheKey = `system_components:${userId}`;
-    const cached = this.dbCache.get<SystemComponent[]>(cacheKey);
+  // ARTIFACTS / SYSTEM_COMPONENTS CRUD
+  async getArtifacts(userId: string): Promise<Artifact[]> {
+    const cacheKey = `artifacts:${userId}`;
+    const cached = this.dbCache.get<Artifact[]>(cacheKey);
     if (cached) return cached;
 
-    let result: SystemComponent[];
+    let result: Artifact[];
     if (this.useSupabase) {
-      const { data, error } = await this.supabaseClient
-        .from('system_components')
-        .select('*')
-        .eq('user_id', userId);
-      if (error) throw error;
-      result = data || [];
+      let data: any[] | null = null;
+      let error: any = null;
+      try {
+        const res = await this.supabaseClient.from('artifacts').select('*').eq('user_id', userId);
+        data = res.data;
+        error = res.error;
+      } catch {
+        const res = await this.supabaseClient.from('system_components').select('*').eq('user_id', userId);
+        data = res.data;
+        error = res.error;
+      }
+      if (error && !data) throw error;
+      result = (data || []).map(item => ({
+        ...item,
+        artifact_type: item.artifact_type || item.metadata?.artifact_type || 'codebase'
+      }));
     } else {
       const memorySys = this.cache.system_components.filter(s => s.user_id === userId);
-      const diskSys: SystemComponent[] = [];
+      const diskSys: Artifact[] = [];
       const userProjectsDir = path.join(process.cwd(), 'workspaces', userId, 'projects');
       if (fs.existsSync(userProjectsDir)) {
         try {
           const projs = fs.readdirSync(userProjectsDir);
           for (const pName of projs) {
-            const sysDir = path.join(userProjectsDir, pName, 'systems');
-            if (fs.existsSync(sysDir)) {
-              const items = fs.readdirSync(sysDir);
-              for (const item of items) {
-                if (item.startsWith('.')) continue;
-                const itemPath = path.join(sysDir, item);
-                const stat = fs.statSync(itemPath);
-                let code_snapshot = '';
-                let fileTitle = item;
-                if (stat.isFile()) {
-                  try { code_snapshot = fs.readFileSync(itemPath, 'utf8'); } catch {}
-                } else if (stat.isDirectory()) {
-                  const subFiles = fs.readdirSync(itemPath);
-                  for (const sub of subFiles) {
-                    if (sub.endsWith('.ts') || sub.endsWith('.js') || sub.endsWith('.json')) {
-                      try { code_snapshot = fs.readFileSync(path.join(itemPath, sub), 'utf8'); } catch {}
-                      fileTitle = `${item}/${sub}`;
-                      break;
+            // Check both artifacts/ and legacy systems/
+            const dirsToScan = [
+              { dirPath: path.join(userProjectsDir, pName, 'artifacts'), isLegacy: false },
+              { dirPath: path.join(userProjectsDir, pName, 'systems'), isLegacy: true }
+            ];
+
+            for (const { dirPath } of dirsToScan) {
+              if (fs.existsSync(dirPath)) {
+                const items = fs.readdirSync(dirPath);
+                for (const item of items) {
+                  if (item.startsWith('.')) continue;
+                  const itemPath = path.join(dirPath, item);
+                  const stat = fs.statSync(itemPath);
+                  let code_snapshot = '';
+                  let fileTitle = item;
+                  let detectedType: ArtifactType = 'codebase';
+
+                  if (stat.isFile()) {
+                    try { code_snapshot = fs.readFileSync(itemPath, 'utf8'); } catch {}
+                    if (item.endsWith('.md') || item.endsWith('.txt')) {
+                      detectedType = item.toLowerCase().includes('plan') ? 'plan' : 'document';
+                    } else if (item.endsWith('.yaml') || item.endsWith('.yml') || item.endsWith('.json')) {
+                      detectedType = 'workflow';
+                    } else if (item.endsWith('.spec.ts') || item.endsWith('.schema.ts')) {
+                      detectedType = 'spec';
+                    }
+                  } else if (stat.isDirectory()) {
+                    const subFiles = fs.readdirSync(itemPath);
+                    for (const sub of subFiles) {
+                      if (sub.endsWith('.ts') || sub.endsWith('.js') || sub.endsWith('.json') || sub.endsWith('.md')) {
+                        try { code_snapshot = fs.readFileSync(path.join(itemPath, sub), 'utf8'); } catch {}
+                        fileTitle = `${item}/${sub}`;
+                        if (sub.endsWith('.md')) detectedType = 'document';
+                        break;
+                      }
                     }
                   }
+
+                  diskSys.push({
+                    id: `art_${pName}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                    user_id: userId,
+                    name: fileTitle,
+                    role: 'service',
+                    artifact_type: detectedType,
+                    code_snapshot,
+                    metadata: { project_name: pName, project: pName, artifact_type: detectedType, status: 'active' }
+                  });
                 }
-                diskSys.push({
-                  id: `sys_${pName}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`,
-                  user_id: userId,
-                  name: fileTitle,
-                  role: 'service',
-                  code_snapshot,
-                  metadata: { project_name: pName, project: pName, status: 'active' }
-                });
               }
             }
           }
         } catch {}
       }
-      const map = new Map<string, SystemComponent>();
+      const map = new Map<string, Artifact>();
       for (const s of diskSys) { if (s.id) map.set(s.id, s); }
       for (const s of memorySys) { if (s.id) map.set(s.id, s); }
       result = Array.from(map.values());
@@ -869,54 +905,80 @@ class DatabaseEngine {
     return result;
   }
 
-  async saveSystemComponent(comp: SystemComponent): Promise<SystemComponent> {
-    comp.user_id = this.validateTenantId(comp.user_id);
-    if (!comp.id) {
-      comp.id = 'comp_' + Math.random().toString(36).substring(2, 11);
+  async getSystemComponents(userId: string): Promise<SystemComponent[]> {
+    return this.getArtifacts(userId);
+  }
+
+  async saveArtifact(art: Artifact): Promise<Artifact> {
+    art.user_id = this.validateTenantId(art.user_id);
+    if (!art.id) {
+      art.id = 'art_' + Math.random().toString(36).substring(2, 11);
     }
-    let result: SystemComponent;
+    if (!art.artifact_type) {
+      art.artifact_type = art.metadata?.artifact_type || 'codebase';
+    }
+    let result: Artifact;
     if (this.useSupabase) {
-      const { data, error } = await this.supabaseClient
-        .from('system_components')
-        .upsert(comp)
-        .select()
-        .single();
-      if (error) throw error;
-      result = data;
+      let data: any = null;
+      let error: any = null;
+      try {
+        const res = await this.supabaseClient.from('artifacts').upsert(art).select().single();
+        data = res.data;
+        error = res.error;
+      } catch {
+        const res = await this.supabaseClient.from('system_components').upsert(art).select().single();
+        data = res.data;
+        error = res.error;
+      }
+      if (error && !data) throw error;
+      result = data || art;
     } else {
-      const idx = this.cache.system_components.findIndex(s => s.user_id === comp.user_id && s.id === comp.id);
+      const idx = this.cache.system_components.findIndex(s => s.user_id === art.user_id && s.id === art.id);
       if (idx >= 0) {
-        this.cache.system_components[idx] = comp;
+        this.cache.system_components[idx] = art;
       } else {
-        this.cache.system_components.push(comp);
+        this.cache.system_components.push(art);
       }
       this.saveLocalDb();
-      result = comp;
+      result = art;
     }
 
-    this.dbCache.delete(`system_components:${comp.user_id}`);
+    this.dbCache.delete(`artifacts:${art.user_id}`);
+    this.dbCache.delete(`system_components:${art.user_id}`);
     return result;
   }
 
-  async deleteSystemComponent(userId: string, compId: string): Promise<boolean> {
+  async saveSystemComponent(comp: SystemComponent): Promise<SystemComponent> {
+    return this.saveArtifact(comp);
+  }
+
+  async deleteArtifact(userId: string, artId: string): Promise<boolean> {
     let success = false;
     if (this.useSupabase) {
+      try {
+        await this.supabaseClient.from('artifacts').delete().eq('user_id', userId).eq('id', artId);
+      } catch {}
       const { error } = await this.supabaseClient
         .from('system_components')
         .delete()
         .eq('user_id', userId)
-        .eq('id', compId);
+        .eq('id', artId);
       if (error) throw error;
       success = true;
     } else {
       const initialLen = this.cache.system_components.length;
-      this.cache.system_components = this.cache.system_components.filter(s => !(s.user_id === userId && s.id === compId));
+      this.cache.system_components = this.cache.system_components.filter(s => !(s.user_id === userId && s.id === artId));
       this.saveLocalDb();
       success = this.cache.system_components.length < initialLen;
     }
 
+    this.dbCache.delete(`artifacts:${userId}`);
     this.dbCache.delete(`system_components:${userId}`);
     return success;
+  }
+
+  async deleteSystemComponent(userId: string, compId: string): Promise<boolean> {
+    return this.deleteArtifact(userId, compId);
   }
 }
 

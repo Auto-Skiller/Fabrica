@@ -50,7 +50,7 @@ The relational Supabase PostgreSQL database serves as the primary source of pers
 ### Query Construction Rules
 1. **Multi-User Partitioning**: Every single query MUST explicitly filter by `user_id` matching the authenticated session / `tenantId`.
 2. **Text Indexing for Agent RAG**:
-   - The tables `raw_data` and `system_components` have text search triggers or PGVector embeddings.
+   - The tables `raw_data`, `artifacts`, and `system_components` have text search triggers or PGVector embeddings.
    - Partial match query:
      ```sql
      SELECT id, name, metadata FROM raw_data WHERE user_id = $1 AND name ILIKE $2;
@@ -107,11 +107,14 @@ workspaces/<tenant_id>/
 ### App Configuration & State Mirroring API
 User configuration and state persist across sign-out and re-login sessions and mirror automatically into `db/settings.json`, `db/runtime.json`, `db/projects.json`, and `db/missions.json`:
 
-- **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/prompts/` (loaded by `system_prompt_injector.js` extension). There is no `AGENTS.md` in the workspace — all operating rules live in the kernel prompts.
+- **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/prompts/` (loaded by system prompt extensions) and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/context/agents-md` and `POST /api/context/agents-md`.
 - **Tenant-Isolated Endpoints**:
   - `GET /api/db/app-config?tenantId=[id]` & `POST /api/db/app-config` — settings & app config
   - `GET /api/user/:tenantId/db/runtime` & `POST /api/user/:tenantId/db/runtime` — agent runtime state (suggestions, backlogs, review_queues)
   - `GET /api/user/:tenantId/db/settings` — read-only agent settings
+  - `GET /api/context/agents-md` & `POST /api/context/agents-md` — read and update workspace directives (`AGENTS.md`)
+  - `GET /api/cache/status` & `POST /api/cache/refresh` — Gemini context caching management
+  - `GET /api/llm/key-pool/stats` & `POST /api/llm/key-pool/add-key` — multi-key load balancer statistics & API key pool management
 - **Persisted State Object (`settings` & `runtime`)**:
   - `autonomy`: `'autonomous'` | `'semi-autonomous'` | `'manual'`
   - `chat_sessions`: Full list of ChatSession objects with conversation histories

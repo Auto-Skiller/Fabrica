@@ -29,7 +29,8 @@ Fabrica organizes all your operational files, datasets, workflows, and code comp
   * **Live Voice Trigger (🎙️)**: Adjacent streaming voice channel button providing real-time audio interaction.
 * **Consolidated 2-Section Account & API Modal**:
   * **Section 1 (👤 Account & Workspace)**: Workspace Identity, Token Usage Quota Meters, Stripe Subscription Plans (Starter/Pro/Enterprise), and 256-bit Encrypted Card Payment Link.
-  * **Section 2 (🔑 Tokens & API Credentials)**: BYOK Multi-Provider Keys (Google AI, OpenRouter, Anthropic Claude) with live status verification badges (`✓ VERIFIED`), User Harness Engine & Model Intelligence, Free Tokens Pool & Key Load Balancer, and Managed LLM Credits with PAUG Refills.
+  * **Section 2 (🔑 Tokens & API Credentials)**: BYOK Multi-Provider Keys (Google AI Studio, OpenRouter, Anthropic Claude) with live status verification badges (`✓ VERIFIED`), User Harness Engine & Model Intelligence, Free Tokens Pool & Key Load Balancer, and Managed LLM Credits with PAUG Refills.
+  * **Workspace Directives & Context Manager (`AGENTS.md`)**: Custom workspace directive editor (`GET/POST /api/context/agents-md`) and Gemini Context Caching API manager (`GET/POST /api/cache/status`, `/api/cache/refresh`).
 * **Panel A (System Maps & Configs)**:
   * **3-Level Autonomy Selector**: Switch between **FULL AUTO** (auto-synthesizes new contextual missions, resolves agent QA gates, executes code tasks, and hot-swaps compiled components), **SEMI-AUTO** (auto-executes planned tasks while holding user missions at QA gates), and **SUPERVISED** (manual approval at every gate).
   * **Real-time 5s Polling**: Automatically streams background mission creation, task completions, and component deployments to the screen.
@@ -93,7 +94,7 @@ Fabrica/
 
 ## 🛠️ Technology Stack
 
-* **Frontend Framework**: Next.js 15 (App Router), React 19, Tailwind CSS v4, Lucide React
+* **Frontend Framework**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide React
 * **Graph & Data Visualization**: Cytoscape.js, D3.js, Recharts
 * **Backend Server**: Node.js 22, Express 4, `tsx` / Esbuild
 * **Database & Persistence**: Supabase PostgreSQL (Row-Level Security), Local Schema Fallbacks

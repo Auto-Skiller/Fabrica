@@ -11,7 +11,7 @@ The application utilizes a classic three-panel responsive layout with a compact 
 ├─────────────────┬───────────────────────────────────┬──────────────────────────────────┤
 │                 │                                   │             PANEL C              │
 │     PANEL A     │              PANEL B              │         (Right Section)        │
-│  (Left Section) │         (Middle Section)          │  Raw Data (50%) | Systems (50%)  │
+│  (Left Section) │         (Middle Section)          │  Raw Data (50%) | Artifacts (50%)│
 │                 │                                   │   [Divided by 1.5px Vertical]    │
 │   System Maps   │          Missions Board           │   [Line across header & body]    │
 │    & Configs    │        (Horizontal status)        │                                  │
@@ -54,10 +54,10 @@ The application utilizes a classic three-panel responsive layout with a compact 
   - `Archive`
 - **Quick Injections Panel**: High-density 2-card prompt suggestion panel rendered under chat controls. Uses a compact 2-column grid (`gridTemplateColumns: 'repeat(2, 1fr)'`) with stacked title and description text, truncation, and zero horizontal overflow.
 
-### PANEL C: Right Section (Raw Data & System Management - 50/50 Split)
+### PANEL C: Right Section (Raw Data & Artifact Management - 50/50 Split)
 - **Purpose**: Explicitly designed to handle the core inputs and outputs of our business operating system.
 - **Dual Section Layout**:
-  - Fully expanded flex-stretch container dividing **Your Data** (`raw_data`) and **Your Systems** (`system_components`) into equal 50% width columns.
+  - Fully expanded flex-stretch container dividing **Your Data** (`raw_data`) and **Your Artifacts** (`artifacts` / `system_components`) into equal 50% width columns.
   - **Vertical Divider Line**: A crisp `1.5px solid var(--border-soft)` vertical separator line spans continuously between the left (Data) and right (Systems) sub-sections in both the top action header and the main body list container.
   - **Sub-section Controls**:
     - **Your Data (Left 50%)**: Contains data source filter, semantic search input, import button, and list/graph view toggles.

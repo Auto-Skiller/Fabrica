@@ -1,14 +1,86 @@
-import { execFile, execFileSync, ChildProcess } from 'child_process';
+import { execFile, execFileSync, spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { ensureUserHarness, getPiExecutionOptions, getUserRoot } from './harness.js';
 import { keyPoolManager, FREE_MODELS } from './db/llm_key_pool.js';
 import { getUserTier, deductLlmCredits } from './db/tier_manager.js';
 
+export interface PiDaemonProcessInfo {
+  id: string; // tenantId:sessionId
+  tenantId: string;
+  sessionId: string;
+  model: string;
+  pid?: number;
+  status: 'running' | 'idle' | 'busy' | 'stopped';
+  createdAt: string;
+  lastActiveAt: string;
+  apiKeyStrategy: string;
+}
+
+export class PiDaemonProcess {
+  public id: string;
+  public tenantId: string;
+  public sessionId: string;
+  public model: string;
+  public child: ChildProcess | null = null;
+  public pid?: number;
+  public status: 'running' | 'idle' | 'busy' | 'stopped' = 'stopped';
+  public createdAt: string;
+  public lastActiveAt: string;
+  public apiKeyStrategy: string;
+
+  constructor(tenantId: string, sessionId: string, model: string, apiKeyStrategy: string = 'System Fallback') {
+    this.id = `${tenantId}:${sessionId}`;
+    this.tenantId = tenantId;
+    this.sessionId = sessionId;
+    this.model = model;
+    this.apiKeyStrategy = apiKeyStrategy;
+    this.createdAt = new Date().toISOString();
+    this.lastActiveAt = new Date().toISOString();
+  }
+
+  public getInfo(): PiDaemonProcessInfo {
+    return {
+      id: this.id,
+      tenantId: this.tenantId,
+      sessionId: this.sessionId,
+      model: this.model,
+      pid: this.pid,
+      status: this.status,
+      createdAt: this.createdAt,
+      lastActiveAt: this.lastActiveAt,
+      apiKeyStrategy: this.apiKeyStrategy
+    };
+  }
+
+  public kill(): boolean {
+    if (this.child) {
+      try {
+        this.child.kill('SIGTERM');
+        this.child.kill('SIGKILL');
+      } catch (_) {}
+    }
+    this.status = 'stopped';
+    activePiDaemons.delete(this.id);
+    return true;
+  }
+}
+
+export const activePiDaemons = new Map<string, PiDaemonProcess>();
 const activePiChildProcesses = new Map<string, ChildProcess>();
 
 export function stopPiAgent(tenantId: string, sessionId?: string): boolean {
   let killed = false;
+  
+  // Kill registered daemon processes
+  for (const [key, daemon] of activePiDaemons.entries()) {
+    if (key.startsWith(tenantId) && (!sessionId || key.includes(sessionId))) {
+      daemon.kill();
+      killed = true;
+    }
+  }
+
+  // Kill legacy child processes if any
   for (const [key, child] of activePiChildProcesses.entries()) {
     if (key.startsWith(tenantId) && (!sessionId || key.includes(sessionId))) {
       try {
@@ -21,7 +93,18 @@ export function stopPiAgent(tenantId: string, sessionId?: string): boolean {
       activePiChildProcesses.delete(key);
     }
   }
+
   return killed;
+}
+
+export function listPiDaemons(tenantId?: string): PiDaemonProcessInfo[] {
+  const daemons: PiDaemonProcessInfo[] = [];
+  for (const daemon of activePiDaemons.values()) {
+    if (!tenantId || tenantId === 'all' || daemon.tenantId === tenantId) {
+      daemons.push(daemon.getInfo());
+    }
+  }
+  return daemons;
 }
 
 export interface PiAgentRunOptions {
@@ -177,17 +260,31 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
     ];
 
     const startTime = Date.now();
-    const procKey = `${tenantId}:${sessionId}:${startTime}`;
+    const procKey = `${tenantId}:${sessionId}`;
+    const apiKeyStrategy = options.customKey ? 'BYOK' : (apiKey ? 'Key Pool Rotation' : 'System Fallback');
+
+    // Acquire or update active daemon process item
+    let daemon = activePiDaemons.get(procKey);
+    if (!daemon || daemon.status === 'stopped') {
+      daemon = new PiDaemonProcess(tenantId, sessionId, fullModel, apiKeyStrategy);
+      activePiDaemons.set(procKey, daemon);
+    }
+    daemon.status = 'busy';
+    daemon.lastActiveAt = new Date().toISOString();
+
     return new Promise((resolve, reject) => {
-      // Ensure stdin is closed for non-interactive execution
       const child = execFile(piBin, args, {
         cwd: userRoot,
         env,
         maxBuffer: 20 * 1024 * 1024,
         timeout: 120000
       }, (err, stdout, stderr) => {
-        activePiChildProcesses.delete(procKey);
         const executionTimeMs = Date.now() - startTime;
+        if (daemon) {
+          daemon.status = 'idle';
+          daemon.pid = child.pid;
+        }
+
         recordPiProcessLog({
           id: `proc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           timestamp: new Date().toISOString(),
@@ -202,15 +299,17 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
           stderr: stderr || '',
           ok: !err || Boolean(stdout),
           error: err ? err.message : undefined,
-          apiKeyStrategy: options.customKey ? 'BYOK' : (apiKey ? 'Key Pool Rotation' : 'System Fallback')
+          apiKeyStrategy
         });
 
         if (err && !stdout) {
+          if (daemon) daemon.status = 'stopped';
           return reject(err);
         }
         resolve({ stdout, stderr });
       });
 
+      if (daemon) daemon.child = child;
       activePiChildProcesses.set(procKey, child);
 
       if (child.stdin) {

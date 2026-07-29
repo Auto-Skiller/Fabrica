@@ -207,6 +207,8 @@ export function getPiExecutionOptions(
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'workspace_sync.js'),
     // registry_bridge: programmatic PI registry for skills & extensions discovery
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'registry_bridge.js'),
+    // vm_eval_tool: Agent extension tool for secure V8 sandbox code evaluation
+    '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'vm_eval_tool.js'),
   ];
 
   if (!disableWorkspaceSkills) {
@@ -489,9 +491,9 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
 
   // Ensure default_project folder exists
   const defaultProjData = path.join(projectsDir, 'default_project', 'data');
-  const defaultProjSystems = path.join(projectsDir, 'default_project', 'systems');
+  const defaultProjArtifacts = path.join(projectsDir, 'default_project', 'artifacts');
   fs.mkdirSync(defaultProjData, { recursive: true });
-  fs.mkdirSync(defaultProjSystems, { recursive: true });
+  fs.mkdirSync(defaultProjArtifacts, { recursive: true });
 
   const projectFolders = fs.readdirSync(projectsDir).filter(f => {
     return fs.statSync(path.join(projectsDir, f)).isDirectory();
@@ -500,6 +502,7 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
   const diskProjects = projectFolders.map(pName => {
     const pPath = path.join(projectsDir, pName);
     const dataPath = path.join(pPath, 'data');
+    const artifactsPath = path.join(pPath, 'artifacts');
     const systemsPath = path.join(pPath, 'systems');
 
     const scanFiles = (dirPath: string, prefix: string) => {
@@ -517,14 +520,17 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
     };
 
     const dataFiles = scanFiles(dataPath, `projects/${pName}/data`);
-    const systemsList = scanFiles(systemsPath, `projects/${pName}/systems`);
+    const artifactsList = scanFiles(artifactsPath, `projects/${pName}/artifacts`);
+    const legacySystemsList = fs.existsSync(systemsPath) ? scanFiles(systemsPath, `projects/${pName}/systems`) : [];
+    const combinedArtifacts = [...artifactsList, ...legacySystemsList];
 
     return {
       id: `proj_${pName}`,
       name: pName,
       path: `projects/${pName}`,
       data: dataFiles,
-      systems: systemsList,
+      artifacts: combinedArtifacts,
+      systems: combinedArtifacts,
       updated_at: new Date().toISOString()
     };
   });
@@ -548,9 +554,9 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
  * Creates project folder structure matching:
  * projects/<project_name>/
  * ├── data/
- * └── systems/<system_name>/
+ * └── artifacts/<artifact_name>/
  */
-export function ensureProjectDirs(tenantId: string, projectName: string, systemName?: string) {
+export function ensureProjectDirs(tenantId: string, projectName: string, artifactName?: string) {
   ensureUserHarness(tenantId);
   const safeProjectName = (projectName || 'default_project').replace(/[^a-zA-Z0-9_\-]/g, '_');
   const projectDir = path.join(process.cwd(), 'workspaces', tenantId, 'projects', safeProjectName);
@@ -558,18 +564,18 @@ export function ensureProjectDirs(tenantId: string, projectName: string, systemN
   
   fs.mkdirSync(dataDir, { recursive: true });
 
-  let systemDir: string | null = null;
-  if (systemName) {
-    const safeSystemName = systemName.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    systemDir = path.join(projectDir, 'systems', safeSystemName);
-    fs.mkdirSync(systemDir, { recursive: true });
+  let artifactDir: string | null = null;
+  if (artifactName) {
+    const safeArtifactName = artifactName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    artifactDir = path.join(projectDir, 'artifacts', safeArtifactName);
+    fs.mkdirSync(artifactDir, { recursive: true });
   } else {
-    fs.mkdirSync(path.join(projectDir, 'systems'), { recursive: true });
+    fs.mkdirSync(path.join(projectDir, 'artifacts'), { recursive: true });
   }
 
   syncProjectsDb(tenantId);
 
-  return { projectDir, dataDir, systemDir, projectName: safeProjectName };
+  return { projectDir, dataDir, artifactDir, systemDir: artifactDir, projectName: safeProjectName };
 }
 
 /**

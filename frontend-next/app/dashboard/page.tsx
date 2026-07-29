@@ -1417,6 +1417,22 @@ export default function Dashboard() {
   // Tabs states
   const [mobileTab, setMobileTab] = useState<'center' | 'left' | 'right'>('center');
   const [leftTab, setLeftTab] = useState<'agent' | 'context' | 'cache'>('agent');
+  const [showCommandsMenu, setShowCommandsMenu] = useState<boolean>(false);
+  const [commandsMenuCoords, setCommandsMenuCoords] = useState<{ bottom: number; left: number }>({ bottom: 75, left: 260 });
+  const commandsBtnRef = useRef<HTMLButtonElement>(null);
+  const [commandSearch, setCommandSearch] = useState<string>('');
+
+  const toggleCommandsMenu = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!showCommandsMenu && commandsBtnRef.current) {
+      const rect = commandsBtnRef.current.getBoundingClientRect();
+      setCommandsMenuCoords({
+        bottom: Math.max(50, window.innerHeight - rect.top + 8),
+        left: Math.max(10, Math.min(rect.left, window.innerWidth - 305))
+      });
+    }
+    setShowCommandsMenu(!showCommandsMenu);
+  };
   const [agentsMdContent, setAgentsMdContent] = useState<string>('');
   const [agentsMdPath, setAgentsMdPath] = useState<string>('');
   const [isLoadingAgentsMd, setIsLoadingAgentsMd] = useState<boolean>(false);
@@ -1491,10 +1507,8 @@ export default function Dashboard() {
   const [agentWindowOpen, setAgentWindowOpen] = useState<boolean>(false);
   const [agentWinTab, setAgentWinTab] = useState<'agent' | 'review' | 'backlog' | 'account' | 'logs' | 'realtime'>('agent');
 
-  // AI Capabilities: Web Search Grounding, Context Caching, Deep Research
+  // AI Capabilities: Web Search Grounding, Deep Research
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
-  const [cacheStatus, setCacheStatus] = useState<{ cacheId: string; status: string; tokenCount: number; lastRefreshed: string; saving: string; speedup: string } | null>(null);
-  const [isRefreshingCache, setIsRefreshingCache] = useState<boolean>(false);
   
   const [deepQuery, setDeepQuery] = useState<string>('');
   const [deepReport, setDeepReport] = useState<string>('');
@@ -2251,6 +2265,80 @@ export default function Dashboard() {
   const [selectedProjectName, setSelectedProjectName] = useState<string>('all');
   const [isCreatingProjectModal, setIsCreatingProjectModal] = useState<boolean>(false);
   const [newProjectNameInput, setNewProjectNameInput] = useState<string>('');
+
+  // New Artifact Workspace Section States
+  const [selectedArtifact, setSelectedArtifact] = useState<any | null>(null);
+  const [artifactTab, setArtifactTab] = useState<'preview' | 'code'>('preview');
+  const [minArtifactSection, setMinArtifactSection] = useState<boolean>(false);
+  const [artifactActiveFile, setArtifactActiveFile] = useState<string>('');
+  const [artifactCodeText, setArtifactCodeText] = useState<string>('');
+  const [isSavingArtifactCode, setIsSavingArtifactCode] = useState<boolean>(false);
+  const [artifactPreviewDevice, setArtifactPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+
+  const handleGoToArtifact = (art: any) => {
+    if (!art) return;
+    setSelectedArtifact(art);
+    setArtifactActiveFile(art.name || 'codebase');
+    setArtifactCodeText(art.code_snapshot || '');
+    setMinArtifactSection(false);
+    setArtifactTab('preview');
+    setToast({ message: `Viewing artifact "${art.name}" in Artifact section below`, type: 'info', isOpen: true });
+    setTimeout(() => {
+      const el = document.getElementById('artifact-section-container');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 60);
+  };
+
+  const handleSaveArtifactCode = async () => {
+    if (!selectedArtifact) return;
+    setIsSavingArtifactCode(true);
+    try {
+      const metadata = {
+        ...(selectedArtifact.metadata || {}),
+        tenantId: selectedArtifact.metadata?.tenantId || activeEntity || 'default_user'
+      };
+      const res = await fetch('/api/db/system-components', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedArtifact.id,
+          name: selectedArtifact.name,
+          role: selectedArtifact.role || 'Uploaded System Component',
+          code_snapshot: artifactCodeText,
+          metadata
+        })
+      });
+      if (res.ok) {
+        setToast({ message: `Saved artifact "${selectedArtifact.name}" codebase to disk & database!`, type: 'success', isOpen: true });
+        fetchWorkspaceData();
+      } else {
+        setToast({ message: 'Failed to save artifact code updates.', type: 'error', isOpen: true });
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || 'Error saving artifact code.', type: 'error', isOpen: true });
+    } finally {
+      setIsSavingArtifactCode(false);
+    }
+  };
+
+  // Sync selectedArtifact when systemComponents updates
+  useEffect(() => {
+    if (systemComponents && systemComponents.length > 0) {
+      if (!selectedArtifact) {
+        const first = systemComponents[0];
+        setSelectedArtifact(first);
+        setArtifactActiveFile(first.name || 'codebase');
+        setArtifactCodeText(first.code_snapshot || '');
+      } else {
+        const current = systemComponents.find((sc: any) => sc.id === selectedArtifact.id || sc.name === selectedArtifact.name);
+        if (current) {
+          setSelectedArtifact(current);
+        }
+      }
+    }
+  }, [systemComponents]);
 
   const handleCreateProject = async () => {
     const proj = newProjectNameInput.trim();
@@ -4147,7 +4235,8 @@ AGENT DIRECTIVES:
 3. If no mission requires phase movement right now, provide a 1-sentence status assessment of current infrastructure.
 4. Keep your response brief, professional, and clear.`;
 
-        const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang);
+        const tenantKey = user?.id || activeEntity || 'default_user';
+        const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang, activeSessionId, tenantKey, true);
 
         if (res && res.ok && res.text) {
           const agentText = res.text;
@@ -4283,71 +4372,6 @@ AGENT DIRECTIVES:
     }
   };
 
-  const fetchCacheStatus = async () => {
-    try {
-      const res = await api.getCacheStatus();
-      if (res.ok) {
-        setCacheStatus(res.cache);
-      }
-    } catch (err) {
-      console.error("Failed to fetch cache status", err);
-    }
-  };
-
-  const handleRefreshCache = async () => {
-    setIsRefreshingCache(true);
-    try {
-      const res = await api.refreshCache(customApiKey);
-      if (res.ok) {
-        setCacheStatus(res.cache);
-        setToast({ message: res.message || 'Cache refreshed successfully!', type: 'success', isOpen: true });
-      }
-    } catch (err: any) {
-      setToast({ message: err.message || 'Failed to refresh cache.', type: 'error', isOpen: true });
-    } finally {
-      setIsRefreshingCache(false);
-    }
-  };
-
-  const handleDeepResearch = async () => {
-    if (!deepQuery.trim()) {
-      setToast({ message: 'Please enter a research topic first.', type: 'error', isOpen: true });
-      return;
-    }
-    setIsDeepResearching(true);
-    setDeepSteps([]);
-    setDeepReport('');
-    try {
-      const presetSteps = [
-        "1. Google Grounding Search initiated...",
-        "2. Safely parsing crawled source documents & content blocks...",
-        "3. Designing iteration gap detection query models...",
-        "4. Gathering secondary deep-dive vectors...",
-        "5. Compiling synthesis matrices and compiling intelligence report..."
-      ];
-      
-      presetSteps.forEach((step, idx) => {
-        setTimeout(() => {
-          setDeepSteps(prev => [...prev, step]);
-        }, (idx + 1) * 800);
-      });
-
-      const res = await api.deepResearch(deepQuery, chatModel, customApiKey);
-      if (res.ok) {
-        setDeepReport(res.report);
-        setDeepSources(res.sources);
-        setDeepSteps(res.steps || presetSteps);
-        setToast({ message: 'Auto Deep Research complete!', type: 'success', isOpen: true });
-      } else {
-        setToast({ message: 'Deep Research failed to synthesize.', type: 'error', isOpen: true });
-      }
-    } catch (err: any) {
-      setToast({ message: err.message || 'Error executing deep research.', type: 'error', isOpen: true });
-    } finally {
-      setIsDeepResearching(false);
-    }
-  };
-
   const fetchAgentsMd = async () => {
     setIsLoadingAgentsMd(true);
     try {
@@ -4378,7 +4402,6 @@ AGENT DIRECTIVES:
   };
 
   useEffect(() => {
-    fetchCacheStatus();
     fetchAgentsMd();
   }, []);
 
@@ -8316,10 +8339,169 @@ ${isDirector ? `
                       />
                     </div>
 
-                    {/* Controls Toolbar (Context Window Usage Bar, Autonomy Switcher, Agent Output Lang Switcher, Internet Icon, Send Button) - Line 3 */}
+                    {/* Controls Toolbar (Commands Button, Context Window Usage Bar, Autonomy Switcher, Agent Output Lang Switcher, Internet Icon, Send Button) - Line 3 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
-                      {/* Left: Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
+                      {/* Left: Commands Button, Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flexShrink: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                        {/* Pi Agent CLI /commands Button */}
+                        <div style={{ flexShrink: 0 }}>
+                          <button
+                            ref={commandsBtnRef}
+                            onClick={(e) => toggleCommandsMenu(e)}
+                            title="View & execute Pi Agent CLI commands (/commands)"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: showCommandsMenu ? 'rgba(99, 102, 241, 0.22)' : 'var(--surface-alt)',
+                              border: `1px solid ${showCommandsMenu ? 'var(--accent)' : 'var(--border-soft)'}`,
+                              borderRadius: '4px',
+                              padding: '2px 7px',
+                              height: '22px',
+                              fontSize: '8.5px',
+                              fontFamily: 'var(--mono)',
+                              fontWeight: 800,
+                              color: showCommandsMenu ? 'var(--accent)' : 'var(--text-bright)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                              boxShadow: showCommandsMenu ? '0 0 8px rgba(99, 102, 241, 0.3)' : 'none'
+                            }}
+                          >
+                            <span style={{ color: 'var(--accent)', fontSize: '9px' }}>⚡</span>
+                            <span>/commands</span>
+                            <span style={{ fontSize: '7px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
+                          </button>
+
+                          {/* Dropdown Popup Menu */}
+                          {showCommandsMenu && (
+                            <>
+                              <div
+                                onClick={() => setShowCommandsMenu(false)}
+                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99998 }}
+                              />
+                              <div
+                                style={{
+                                  position: 'fixed',
+                                  bottom: `${commandsMenuCoords.bottom}px`,
+                                  left: `${commandsMenuCoords.left}px`,
+                                  width: '300px',
+                                  maxHeight: '350px',
+                                  background: 'var(--surface)',
+                                  border: '1.5px solid var(--border-soft)',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 16px 48px rgba(0, 0, 0, 0.8)',
+                                  zIndex: 99999,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  overflow: 'hidden',
+                                  fontFamily: 'var(--mono)'
+                                }}
+                              >
+                                <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--accent)' }}>⚡</span>
+                                      <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Pi CLI Commands
+                                      </span>
+                                    </div>
+                                    <span style={{ fontSize: '7.5px', color: 'var(--muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 5px', borderRadius: '3px' }}>
+                                      14 available
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="Search /commands..."
+                                    value={commandSearch}
+                                    onChange={(e) => setCommandSearch(e.target.value)}
+                                    autoFocus
+                                    style={{
+                                      width: '100%',
+                                      background: 'rgba(0,0,0,0.2)',
+                                      border: '1px solid var(--border-soft)',
+                                      borderRadius: '4px',
+                                      padding: '4px 8px',
+                                      fontSize: '9px',
+                                      color: 'var(--text-bright)',
+                                      fontFamily: 'var(--mono)',
+                                      outline: 'none',
+                                      boxSizing: 'border-box'
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ overflowY: 'auto', padding: '4px', flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  {[
+                                    { cmd: '/help', icon: '⚡', desc: 'Display Pi Agent CLI command guide and usage overview' },
+                                    { cmd: '/clear', icon: '🧹', desc: 'Reset conversation session and clear context window' },
+                                    { cmd: '/compact', icon: '📦', desc: 'Compact context history to optimize token memory' },
+                                    { cmd: '/stats', icon: '📊', desc: 'Display live token consumption & context metrics' },
+                                    { cmd: '/models', icon: '🤖', desc: 'List available LLM models & key pool providers' },
+                                    { cmd: '/model gemini-2.5-flash', icon: '🎯', desc: 'Switch active model (e.g. /model gemini-2.5-flash)' },
+                                    { cmd: '/skills', icon: '🧠', desc: 'List active Fabrica kernel skills & behavioral rules' },
+                                    { cmd: '/extensions', icon: '🔌', desc: 'View registered system prompt extensions & hooks' },
+                                    { cmd: '/system', icon: '📜', desc: 'Inspect active AGENTS.md system directives & context' },
+                                    { cmd: '/reload', icon: '🔄', desc: 'Reload skills, extensions & AGENTS.md directives' },
+                                    { cmd: '/sessions', icon: '🗂️', desc: 'List active Pi Agent CLI workspace sessions' },
+                                    { cmd: '/web', icon: '🌐', desc: 'Toggle real-time web search grounding mode' },
+                                    { cmd: '/export', icon: '📥', desc: 'Export full execution session transcript & logs' },
+                                    { cmd: '/stop', icon: '🛑', desc: 'Stop active agent execution process' }
+                                  ].filter(c => 
+                                    c.cmd.toLowerCase().includes(commandSearch.toLowerCase()) || 
+                                    c.desc.toLowerCase().includes(commandSearch.toLowerCase())
+                                  ).map((item) => (
+                                    <button
+                                      key={item.cmd}
+                                      onClick={() => {
+                                        setShowCommandsMenu(false);
+                                        setCommandSearch('');
+                                        if (item.cmd === '/stop') {
+                                          handleStopAgent();
+                                        } else {
+                                          handleSendChat(item.cmd);
+                                        }
+                                      }}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        gap: '8px',
+                                        padding: '6px 8px',
+                                        background: 'transparent',
+                                        border: '1px solid transparent',
+                                        borderRadius: '5px',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        width: '100%',
+                                        transition: 'background 0.12s, border 0.12s',
+                                        outline: 'none'
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.12)';
+                                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.3)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                        e.currentTarget.style.borderColor = 'transparent';
+                                      }}
+                                    >
+                                      <span style={{ fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>{item.icon}</span>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                          <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--accent)' }}>{item.cmd}</span>
+                                          <span style={{ fontSize: '7px', color: 'var(--muted)', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: '3px', flexShrink: 0 }}>SEND ↵</span>
+                                        </div>
+                                        <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: '1.25', whiteSpace: 'normal', wordBreak: 'word-break' }}>
+                                          {item.desc}
+                                        </span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
                         {/* Real PI Agent Context Window Usage Meter Bar */}
                         {(() => {
                           const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
@@ -8480,45 +8662,61 @@ ${isDirector ? `
           </button>
         </div>
 
-        {/* ============ CENTER COLUMN: THE MISSIONS HQ BOARD ============ */}
-        {minCenter ? (
-          <section className="col top min" onClick={() => { setMinCenter(false); saveLayoutConfig(false, minSide); }}>
-            <div className="side-rail center-rail" title="Click to expand Missions HQ section">
-              <div className="rail-head">
-                <span className="rail-badge" style={{ background: 'var(--accent)', color: '#ffffff', fontSize: '9px', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>HQ</span>
-                <span className="rail-title" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em', margin: '8px 0', fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                  MISSIONS HQ
-                </span>
+        {/* ============ MAIN WORKSPACE WRAPPER (TOP: MISSIONS | BOTTOM: ARTIFACT (LEFT) + PROJECTS (RIGHT)) ============ */}
+        <div style={{ gridColumn: '3 / 6', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+          
+          {/* ============ TOP SECTION: MISSIONS HQ BOARD ============ */}
+          <div style={{
+            flex: minCenter ? '0 0 auto' : '1 1 50%',
+            minHeight: minCenter ? '36px' : '200px',
+            maxHeight: minCenter ? '36px' : '55%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            borderBottom: '1px solid var(--border-soft)',
+            transition: 'all 0.2s ease'
+          }}>
+            {minCenter ? (
+              <div
+                onClick={() => { setMinCenter(false); saveLayoutConfig(false, minSide); }}
+                style={{
+                  background: 'var(--surface-alt)',
+                  padding: '6px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  height: '36px',
+                  borderBottom: '1px solid var(--border-soft)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>HQ</span>
+                  <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                    MISSIONS HQ ({mExec.length} EXEC • {mDraft.length + mPlan.length} PLAN • {mArchive.length} DONE • TOTAL {filteredMissions.length})
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMinCenter(false); saveLayoutConfig(false, minSide); }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid var(--border-soft)',
+                      color: 'var(--muted)',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontSize: '8.5px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--sans)'
+                    }}
+                  >
+                    ▲ Expand Missions HQ
+                  </button>
+                </div>
               </div>
-              <div className="rail-metrics">
-                <div className="mmetric hi" title="Active / Executing Missions">
-                  <span style={{ fontSize: '11px' }}>🎯</span>
-                  <b>{mExec.length}</b>
-                  <span className="w">EXEC</span>
-                </div>
-                <div className="mmetric" title="Planning & Drafting Missions">
-                  <span style={{ fontSize: '11px' }}>📝</span>
-                  <b>{mDraft.length + mPlan.length}</b>
-                  <span className="w">PLAN</span>
-                </div>
-                <div className="mmetric" title="Completed / Archive Missions">
-                  <span style={{ fontSize: '11px' }}>✓</span>
-                  <b style={{ color: 'var(--accent-2)' }}>{mArchive.length}</b>
-                  <span className="w">DONE</span>
-                </div>
-                <div className="mmetric" title="Total Missions Registered">
-                  <span style={{ fontSize: '11px' }}>📊</span>
-                  <b style={{ color: 'var(--text-bright)' }}>{filteredMissions.length}</b>
-                  <span className="w">TOTAL</span>
-                </div>
-              </div>
-              <div className="rail-expand-prompt" style={{ marginTop: 'auto', fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <span>EXPAND ›</span>
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            ) : (
+              <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             
             {/* Mission bar switcher & controls in a single, compact row */}
@@ -8707,26 +8905,26 @@ ${isDirector ? `
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>{dtxt.colNew} ({mDraft.length})</span>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mDraft.map(m => (
                         <div
                           key={m.id}
-                          className={`mcard ${getPriorityClass(m.priority)}`}
+                          className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group">
-                              <b className="mcard-title-text">{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono">{m.id}</span>
+                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
+                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc">{m.objective}</p>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                            <span className="mcard-meta-badge model-badge">🧠 {getCategoryLabel(m.type || m.category)}</span>
+                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
                             <button
                               className="mini accent"
-                              style={{ fontSize: '8px', padding: '2px 6px' }}
+                              style={{ fontSize: '7px', padding: '1.5px 5px' }}
                               onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                             >Plan ➔</button>
                           </div>
@@ -8780,41 +8978,41 @@ ${isDirector ? `
                   </div>
 
                   {/* Planning Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--sans)' }}>{dtxt.colPlanning} ({mPlan.length})</span>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mPlan.map(m => (
                         <div
                           key={m.id}
-                          className={`mcard ${getPriorityClass(m.priority)}`}
+                          className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group">
-                              <b className="mcard-title-text">{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono">{m.id}</span>
+                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
+                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc">{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
                           {m.phase === 'qa' && (
-                            <div style={{ fontSize: '8px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                            <div style={{ fontSize: '7px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '1px 4px', borderRadius: '3px', border: '1px solid rgba(244,63,94,0.2)' }}>
                               🛡️ QA Gating Active
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                            <span className="mcard-meta-badge model-badge">🧪 {getCategoryLabel(m.type || m.category)}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧪 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini accent"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Launch ➔</button>
                             </div>
@@ -8869,25 +9067,25 @@ ${isDirector ? `
                   </div>
 
                   {/* Execution Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--sans)' }}>{dtxt.colExecution} ({mExec.length})</span>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mExec.map(m => (
                         <div
                           key={m.id}
-                          className={`mcard ${getPriorityClass(m.priority)}`}
+                          className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '6px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group">
-                              <b className="mcard-title-text">{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono">{m.id}</span>
+                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
+                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc">{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
                           
                           <div className="bar-row">
                             <div className="bar">
@@ -8896,22 +9094,22 @@ ${isDirector ? `
                             <span className="bar-pct">{m.metrics?.progress_percentage || '0%'}</span>
                           </div>
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                            <span className="mcard-meta-badge model-badge">🧬 {getCategoryLabel(m.type || m.category)}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧬 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                               >◀ Plan</button>
                               <button
                                 className="mini accent-2"
-                                style={{ fontSize: '8px', padding: '2px 4px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'archive'); }}
                               >Done ✓</button>
                             </div>
@@ -8987,36 +9185,36 @@ ${isDirector ? `
                   </div>
 
                   {/* Archive Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>{dtxt.colDone} ({mArchive.length})</span>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mArchive.map(m => (
                         <div
                           key={m.id}
-                          className="mcard"
+                          className="mcard sm"
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '6px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group">
-                              <b className="mcard-title-text" style={{ textDecoration: 'line-through' }}>{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono">{m.id}</span>
+                              <b className="mcard-title-text" style={{ textDecoration: 'line-through', fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
+                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc">{m.objective}</p>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                            <span className="mcard-meta-badge model-badge">✓ archived</span>
+                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>✓ archived</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Re-open ↺</button>
                             </div>
@@ -9056,26 +9254,474 @@ ${isDirector ? `
           </div>
         </section>
       )}
+    </div>
 
-        {/* Section Divider 2 (Center / Right) with Minimizer Button */}
-        <div className="resizer v">
-          <button
-            type="button"
-            className="section-toggle-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              const next = !minSide;
-              setMinSide(next);
-              saveLayoutConfig(minCenter, next);
-            }}
-            title={minSide ? "Expand Data & Systems section" : "Minimize Data & Systems section"}
-          >
-            <span>{minSide ? '‹' : '›'}</span>
-          </button>
+    {/* ============ BOTTOM SECTION: SPLIT INTO ARTIFACT (LEFT) AND PROJECTS/DATA (RIGHT) ============ */}
+    <div style={{
+      flex: minCenter ? '1 1 100%' : '1 1 50%',
+      minHeight: 0,
+      display: 'flex',
+      flexDirection: 'row',
+      gap: '6px',
+      overflow: 'hidden',
+      paddingTop: '6px'
+    }}>
+
+      {/* ================= BOTTOM-LEFT: ARTIFACT WORKSPACE SECTION (PREVIEW & CODE) ================= */}
+      <div 
+        id="artifact-section-container"
+        style={{ 
+          flex: '1 1 50%',
+          minWidth: 0,
+          background: 'var(--surface)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-soft)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          height: '100%',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}
+      >
+        {/* Section Header Bar */}
+        <div style={{
+          background: 'var(--surface-alt)',
+          borderBottom: minArtifactSection ? 'none' : '1px solid var(--border-soft)',
+          padding: '6px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          flexShrink: 0,
+          userSelect: 'none'
+        }}>
+          {/* Left: Section Title & Selected Artifact Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <button
+              onClick={() => setMinArtifactSection(!minArtifactSection)}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-soft)',
+                color: 'var(--muted)',
+                borderRadius: '4px',
+                padding: '2px 6px',
+                fontSize: '9px',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title={minArtifactSection ? "Expand Artifact Workspace" : "Minimize Artifact Workspace"}
+            >
+              <span>{minArtifactSection ? '▲ Expand' : '▼ Minimize'}</span>
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+              <span style={{ fontSize: '11px' }}>📦</span>
+              <span style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '0.04em', color: 'var(--text-bright)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                ARTIFACT:
+              </span>
+              {selectedArtifact ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
+                  <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontFamily: 'var(--mono)' }}>
+                    {selectedArtifact.name}
+                  </span>
+                  <span style={{
+                    fontSize: '6.5px',
+                    fontWeight: 800,
+                    background: 'rgba(59, 130, 246, 0.12)',
+                    color: '#3b82f6',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '3px',
+                    padding: '1px 5px',
+                    textTransform: 'uppercase',
+                    fontFamily: 'var(--sans)'
+                  }}>
+                    {selectedArtifact.metadata?.artifact_type || selectedArtifact.artifact_type || selectedArtifact.role || 'CODEBASE'}
+                  </span>
+                </div>
+              ) : (
+                <span style={{ fontSize: '8.5px', color: 'var(--muted)', fontStyle: 'italic' }}>
+                  No Artifact Active
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Tab Controls (Preview / Code) & Quick Select */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            {/* AI Studio Style Tabs Toggle */}
+            <div style={{
+              display: 'flex',
+              background: 'rgba(0,0,0,0.25)',
+              border: '1px solid var(--border-soft)',
+              borderRadius: '5px',
+              padding: '2px',
+              gap: '2px'
+            }}>
+              <button
+                onClick={() => { setArtifactTab('preview'); setMinArtifactSection(false); }}
+                style={{
+                  fontSize: '8px',
+                  fontWeight: 800,
+                  padding: '3px 10px',
+                  borderRadius: '3px',
+                  border: 'none',
+                  background: artifactTab === 'preview' ? 'var(--accent)' : 'transparent',
+                  color: artifactTab === 'preview' ? '#ffffff' : 'var(--muted)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--sans)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>👁️ Preview</span>
+              </button>
+              <button
+                onClick={() => { setArtifactTab('code'); setMinArtifactSection(false); }}
+                style={{
+                  fontSize: '8px',
+                  fontWeight: 800,
+                  padding: '3px 10px',
+                  borderRadius: '3px',
+                  border: 'none',
+                  background: artifactTab === 'code' ? '#8b5cf6' : 'transparent',
+                  color: artifactTab === 'code' ? '#ffffff' : 'var(--muted)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--sans)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>💻 Code</span>
+              </button>
+            </div>
+
+            {/* Artifact Select Dropdown */}
+            <select
+              value={selectedArtifact?.id || ''}
+              onChange={(e) => {
+                const found = systemComponents.find((s: any) => s.id === e.target.value);
+                if (found) handleGoToArtifact(found);
+              }}
+              style={{
+                fontSize: '7.5px',
+                fontWeight: 800,
+                fontFamily: 'var(--mono)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '4px',
+                color: 'var(--text-bright)',
+                padding: '2px 4px',
+                outline: 'none',
+                cursor: 'pointer',
+                maxWidth: '120px'
+              }}
+            >
+              <option value="">Switch Artifact ({systemComponents.length})...</option>
+              {systemComponents.map((sc: any) => (
+                <option key={sc.id} value={sc.id}>
+                  📦 {sc.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
+        {/* Section Body */}
+        {!minArtifactSection && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', padding: '8px' }}>
+            {!selectedArtifact ? (
+              /* Empty State */
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                textAlign: 'center',
+                gap: '10px',
+                border: '1.5px dashed var(--border-soft)',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.01)'
+              }}>
+                <span style={{ fontSize: '28px' }}>📦</span>
+                <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '11px' }}>No Artifact Active</div>
+                <p style={{ margin: 0, fontSize: '8.5px', color: 'var(--muted)', maxWidth: '320px', lineHeight: 1.4 }}>
+                  Click <b style={{ color: '#3b82f6' }}>"🚀 Go To"</b> under any project card on the right to view its live preview or audit codebase.
+                </p>
+                {systemComponents.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
+                    {systemComponents.slice(0, 5).map((sc: any) => (
+                      <button
+                        key={sc.id}
+                        onClick={() => handleGoToArtifact(sc)}
+                        style={{
+                          fontSize: '7.5px',
+                          fontWeight: 700,
+                          background: 'var(--surface-alt)',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '4px',
+                          color: 'var(--text-bright)',
+                          padding: '2px 6px',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--mono)'
+                        }}
+                      >
+                        📦 {sc.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Artifact Content Viewer */
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+                
+                {/* TAB 1: LIVE PREVIEW */}
+                {artifactTab === 'preview' && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>
+                    {/* Preview Sub-toolbar */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border-soft)',
+                      fontSize: '7.5px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontWeight: 800, color: 'var(--accent)' }}>MODE:</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
+                          {selectedArtifact.metadata?.artifact_type || selectedArtifact.artifact_type || 'LIVE PREVIEW'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ display: 'flex', gap: '2px', background: 'var(--surface)', padding: '1px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
+                          <button
+                            onClick={() => setArtifactPreviewDevice('desktop')}
+                            style={{
+                              fontSize: '7px',
+                              padding: '1px 5px',
+                              borderRadius: '2px',
+                              border: 'none',
+                              background: artifactPreviewDevice === 'desktop' ? 'var(--accent)' : 'transparent',
+                              color: artifactPreviewDevice === 'desktop' ? '#fff' : 'var(--muted)',
+                              cursor: 'pointer'
+                            }}
+                            title="Desktop View"
+                          >
+                            🖥️ Desktop
+                          </button>
+                          <button
+                            onClick={() => setArtifactPreviewDevice('mobile')}
+                            style={{
+                              fontSize: '7px',
+                              padding: '1px 5px',
+                              borderRadius: '2px',
+                              border: 'none',
+                              background: artifactPreviewDevice === 'mobile' ? 'var(--accent)' : 'transparent',
+                              color: artifactPreviewDevice === 'mobile' ? '#fff' : 'var(--muted)',
+                              cursor: 'pointer'
+                            }}
+                            title="Mobile View"
+                          >
+                            📱 Mobile
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(artifactCodeText);
+                            setToast({ message: 'Artifact content copied to clipboard!', type: 'success', isOpen: true });
+                          }}
+                          style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            color: 'var(--text-bright)',
+                            fontSize: '7px',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                          title="Copy Code Snapshot"
+                        >
+                          📋 Copy
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            const w = window.open('', '_blank');
+                            if (w) {
+                              w.document.write(artifactCodeText || `<h1>${selectedArtifact.name}</h1><p>No content snapshot available.</p>`);
+                              w.document.close();
+                            }
+                          }}
+                          style={{
+                            background: 'rgba(59,130,246,0.12)',
+                            border: '1px solid #3b82f6',
+                            color: '#3b82f6',
+                            fontSize: '7px',
+                            fontWeight: 800,
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                          title="Open Standalone Preview Window"
+                        >
+                          ↗️ Standalone
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Rendered View Box */}
+                    <div style={{
+                      flex: 1,
+                      minHeight: 0,
+                      background: '#090d16',
+                      border: '1px solid var(--border-soft)',
+                      borderRadius: '6px',
+                      overflow: 'auto',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'stretch',
+                      padding: artifactPreviewDevice === 'mobile' ? '8px' : '0'
+                    }}>
+                      <div style={{
+                        width: artifactPreviewDevice === 'mobile' ? '320px' : '100%',
+                        height: '100%',
+                        background: 'var(--surface)',
+                        border: artifactPreviewDevice === 'mobile' ? '2px solid var(--border-soft)' : 'none',
+                        borderRadius: artifactPreviewDevice === 'mobile' ? '12px' : '0',
+                        boxShadow: artifactPreviewDevice === 'mobile' ? '0 8px 24px rgba(0,0,0,0.5)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                      }}>
+                        {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
+                          <iframe
+                            srcDoc={artifactCodeText}
+                            title={`Preview - ${selectedArtifact.name}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              border: 'none',
+                              background: '#ffffff'
+                            }}
+                            sandbox="allow-scripts allow-modals allow-same-origin"
+                          />
+                        ) : (
+                          <div style={{ flex: 1, padding: '12px', overflowY: 'auto', fontFamily: 'var(--sans)' }}>
+                            <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: '8px', marginBottom: '8px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                                📦 {selectedArtifact.name}
+                              </div>
+                              <div style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '2px' }}>
+                                Role: {selectedArtifact.role || 'Artifact Module'} • Project: {selectedArtifact.metadata?.project_name || selectedProjectName}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-bright)', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)' }}>
+                              {artifactCodeText || 'No snapshot available for this artifact.'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: AUDIT REALTIME CODEBASE */}
+                {artifactTab === 'code' && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>
+                    {/* Code Editor Header */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '4px 8px',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '4px',
+                      border: '1px solid var(--border-soft)',
+                      fontSize: '7.5px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                        <span style={{ fontWeight: 800, color: '#8b5cf6' }}>PATH:</span>
+                        <code style={{ fontSize: '7.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          artifacts/{selectedArtifact.name}/{artifactActiveFile || selectedArtifact.name}
+                        </code>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={handleSaveArtifactCode}
+                          disabled={isSavingArtifactCode}
+                          style={{
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            border: '1px solid #10b981',
+                            color: '#10b981',
+                            fontSize: '7.5px',
+                            fontWeight: 800,
+                            padding: '2px 8px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontFamily: 'var(--sans)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title="Save Codebase to Disk & Database"
+                        >
+                          <span>{isSavingArtifactCode ? 'Saving...' : '💾 Save Code'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Code Textarea Editor */}
+                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                      <textarea
+                        value={artifactCodeText}
+                        onChange={(e) => setArtifactCodeText(e.target.value)}
+                        placeholder="Audit and edit codebase files..."
+                        style={{
+                          width: '100%',
+                          flex: 1,
+                          minHeight: '140px',
+                          fontSize: '8.5px',
+                          fontFamily: 'var(--mono)',
+                          background: '#090d16',
+                          color: '#10b981',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '6px',
+                          padding: '8px 10px',
+                          outline: 'none',
+                          resize: 'none',
+                          lineHeight: 1.45,
+                          tabSize: 2
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ================= BOTTOM-RIGHT: PROJECTS & DATA SECTION ================= */}
+      <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
         {/* ============ RIGHT COLUMN: PIPELINES, INGEST & CONSULTING ============ */}
-        <aside className={`col side ${minSide ? 'min' : ''}`}>
+        <aside className={`col side ${minSide ? 'min' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
           {minSide ? (
             <div
               className="side-rail"
@@ -9518,31 +10164,31 @@ ${isDirector ? `
                                   background: 'var(--surface-alt)',
                                   border: '1px solid var(--border-soft)',
                                   borderRadius: '6px',
-                                  padding: '8px 10px',
+                                  padding: '5px 7px',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  gap: '6px'
+                                  gap: '3px'
                                 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                     <div 
                                       onClick={() => toggleRawDataExpand(rd.id)}
                                       style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', cursor: 'pointer', flex: 1 }}
                                     >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                           {rd.name}
                                         </span>
-                                        <span style={{ fontSize: '7.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
+                                        <span style={{ fontSize: '6.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '0.5px 3px', borderRadius: '2.5px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                                           {statusLabel}
                                         </span>
                                       </div>
                                       
                                       {/* Exact Disk Path Badge */}
-                                      <span style={{ fontSize: '7px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '2px', opacity: 0.9 }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1px', opacity: 0.9 }}>
                                         📁 projects/{itemProj}/data/{rd.name}
                                       </span>
 
-                                      <span style={{ fontSize: '7px', color: 'var(--muted)', marginTop: '1px' }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', marginTop: '0.5px' }}>
                                         {rd.mime_type || 'text/plain'} • {rd.created_at ? new Date(rd.created_at).toLocaleDateString() : 'Just now'}
                                       </span>
 
@@ -9965,12 +10611,12 @@ ${isDirector ? `
                                   background: 'var(--surface-alt)',
                                   border: '1px solid var(--border-soft)',
                                   borderRadius: '6px',
-                                  padding: '8px 10px',
+                                  padding: '5px 7px',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  gap: '6px'
+                                  gap: '3px'
                                 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                                     <div 
                                       onClick={() => {
                                         toggleSystemComponentExpand(sc.id);
@@ -9982,59 +10628,104 @@ ${isDirector ? `
                                       style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', cursor: 'pointer', flex: 1 }}
                                     >
                                       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                                        <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                        <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                                           {sc.name}
                                         </span>
-                                        <span style={{ fontSize: '7.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '0px 4px', borderRadius: '2.5px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
+                                        <span style={{ fontSize: '6.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '0px 3px', borderRadius: '2px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
                                           {statusLabel}
                                         </span>
                                       </div>
 
                                       {/* Exact Disk Folder Badge */}
-                                      <span style={{ fontSize: '7px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '2px', opacity: 0.9 }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1px', opacity: 0.9 }}>
                                         📁 projects/{itemProj}/systems/{sc.name.replace(/[^a-zA-Z0-9_\-]/g, '_')}/
                                       </span>
 
-                                      <span style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '1.5px' }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', marginTop: '0.5px' }}>
                                         Snapshot: {sc.code_snapshot ? sc.code_snapshot.length + ' chars' : 'empty'} {hasLegacyCode && '• Legacy Reference stored'}
                                       </span>
                                     </div>
 
-                                    <button
-                                      onClick={() => {
-                                        toggleSystemComponentExpand(sc.id);
-                                        if (!isExpanded) {
-                                          setTempActiveCode(sc.code_snapshot || '');
-                                          setTempLegacyCode(sc.metadata?.legacy_code || '');
-                                        }
-                                      }}
-                                      style={{
-                                        background: 'transparent',
-                                        border: '1px solid var(--border-soft)',
-                                        color: 'var(--muted)',
-                                        borderRadius: '4px',
-                                        padding: '2px 6px',
-                                        fontSize: '9px',
-                                        cursor: 'pointer'
-                                      }}
-                                    >
-                                      {isExpanded ? '▲' : '▼'}
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleGoToArtifact(sc);
+                                        }}
+                                        style={{
+                                          background: 'rgba(59, 130, 246, 0.15)',
+                                          border: '1px solid #3b82f6',
+                                          color: '#3b82f6',
+                                          borderRadius: '3px',
+                                          padding: '1.5px 5px',
+                                          fontSize: '6.5px',
+                                          fontWeight: 800,
+                                          cursor: 'pointer',
+                                          fontFamily: 'var(--sans)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '2px'
+                                        }}
+                                        title="Go To Artifact - View Live Preview & Audit Real-time Codebase"
+                                      >
+                                        🚀 Go To
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          toggleSystemComponentExpand(sc.id);
+                                          if (!isExpanded) {
+                                            setTempActiveCode(sc.code_snapshot || '');
+                                            setTempLegacyCode(sc.metadata?.legacy_code || '');
+                                          }
+                                        }}
+                                        style={{
+                                          background: 'transparent',
+                                          border: '1px solid var(--border-soft)',
+                                          color: 'var(--muted)',
+                                          borderRadius: '3px',
+                                          padding: '1.5px 4px',
+                                          fontSize: '8px',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        {isExpanded ? '▲' : '▼'}
+                                      </button>
+                                    </div>
                                   </div>
 
-                                  {/* Mission Trigger Bar for System Components */}
+                                  {/* Mission Trigger & Artifact Action Bar */}
                                   <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '4px',
+                                    gap: '3px',
                                     background: 'rgba(0,0,0,0.15)',
-                                    borderRadius: '4px',
-                                    padding: '4px 6px',
+                                    borderRadius: '3px',
+                                    padding: '2px 4px',
                                     border: '1px solid var(--border-soft)',
-                                    marginTop: '2px',
+                                    marginTop: '1px',
                                     flexWrap: 'wrap'
                                   }}>
-                                    <span style={{ fontSize: '6.5px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>MISSIONS:</span>
+                                    <span style={{ fontSize: '6.5px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>ACTIONS:</span>
+                                    <button
+                                      onClick={() => handleGoToArtifact(sc)}
+                                      style={{
+                                        fontSize: '6.5px',
+                                        fontWeight: 800,
+                                        background: 'rgba(59,130,246,0.12)',
+                                        border: '1px solid #3b82f6',
+                                        color: '#3b82f6',
+                                        borderRadius: '3px',
+                                        padding: '1.5px 5px',
+                                        cursor: 'pointer',
+                                        fontFamily: 'var(--sans)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                      }}
+                                      title="Go to Artifact workspace to preview or edit code"
+                                    >
+                                      🚀 Go To Workspace
+                                    </button>
                                     <button
                                       onClick={() => {
                                         setIsAddMissionOpen(true);
@@ -10229,8 +10920,12 @@ ${isDirector ? `
             </section>
           )}
         </aside>
+      </div>
 
-    </main>
+    </div>
+
+  </div>
+</main>
                        {/* Realtime Event Payload Modal */}
       {selectedRealtimeEvent && (
         <div style={{

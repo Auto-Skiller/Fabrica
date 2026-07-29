@@ -69,7 +69,7 @@ export function buildProgrammaticRegistry(tenantId = 'default_user', customCwd) 
     }
   }
 
-  // 2. Programmatically Index Workspace Custom Skills (.pi/skills)
+  // 2. Programmatically Index Workspace Custom Skills (.pi/skills & project system skills)
   if (fs.existsSync(userPiSkillsDir)) {
     try {
       const customSkills = fs.readdirSync(userPiSkillsDir).filter(f => {
@@ -125,7 +125,7 @@ export function buildProgrammaticRegistry(tenantId = 'default_user', customCwd) 
     }
   }
 
-  // 4. Programmatically Index Workspace Custom Extensions (.pi/extensions)
+  // 4. Programmatically Index Workspace Custom Extensions (.pi/extensions & project system extensions)
   if (fs.existsSync(userPiExtDir)) {
     try {
       const userExts = fs.readdirSync(userPiExtDir);
