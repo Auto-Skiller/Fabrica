@@ -188,6 +188,11 @@ export const api = {
 
   // Agent Chat / Boot
   bootAgent: () => request<string[]>('/api/agent/boot', { method: 'POST' }),
+  stopAgent: (tenantId?: string, sessionId?: string) =>
+    request<{ ok: boolean; stopped: boolean }>('/api/agent/stop', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId, sessionId }),
+    }),
   chatAgent: (
     message: string,
     history: { sender: string; text: string }[],
@@ -197,10 +202,12 @@ export const api = {
     agentLang?: string,
     sessionId?: string,
     tenantId?: string,
-    toolsEnabled?: boolean
+    toolsEnabled?: boolean,
+    signal?: AbortSignal
   ) =>
     request<{ ok: boolean; text: string; suggestions: string[]; sessionId?: string; usage?: any }>('/api/agent/chat', {
       method: 'POST',
+      signal,
       body: JSON.stringify({ message, history, customKey, model, webSearchEnabled, agentLang, sessionId, tenantId, tools_enabled: toolsEnabled }),
     }),
 

@@ -211,7 +211,7 @@ export function getPiExecutionOptions(
 
   if (!disableWorkspaceSkills) {
     const userSkillsDir = path.join(userRoot, '.pi', 'skills');
-    if (fs.existsSync(userSkillsDir)) {
+    if (fs.existsSync(userSkillsDir) && fs.readdirSync(userSkillsDir).length > 0) {
       cliFlags.push('--skill', userSkillsDir);
     }
   }
@@ -219,7 +219,10 @@ export function getPiExecutionOptions(
   if (!disableWorkspaceExtensions) {
     const userExtDir = path.join(userRoot, '.pi', 'extensions');
     if (fs.existsSync(userExtDir)) {
-      cliFlags.push('--extension', userExtDir);
+      const extFiles = fs.readdirSync(userExtDir).filter(f => f.endsWith('.js') || f.endsWith('.ts'));
+      for (const extFile of extFiles) {
+        cliFlags.push('--extension', path.join(userExtDir, extFile));
+      }
     }
   }
 
@@ -349,7 +352,16 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
     fs.mkdirSync(missionsDir, { recursive: true });
   }
 
-  const missions: any[] = [];
+  // Load existing missions from db/missions.json to avoid losing records
+  let existingMissions: any[] = [];
+  if (fs.existsSync(dbMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(dbMissionsPath, 'utf8'));
+      existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+    } catch (_) {}
+  }
+
+  const diskMissions: any[] = [];
 
   const mTypes = fs.readdirSync(missionsDir).filter(f => {
     return fs.statSync(path.join(missionsDir, f)).isDirectory();
@@ -358,7 +370,7 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
   for (const mType of mTypes) {
     const typeDir = path.join(missionsDir, mType);
     const mDirs = fs.readdirSync(typeDir).filter(f => {
-      return fs.statSync(path.join(typeDir, f)).isDirectory();
+      return fs.statSync(path.join(typeDir, f)).isDirectory() && f !== 'planning' && f !== 'execution';
     });
 
     for (const mId of mDirs) {
@@ -383,6 +395,11 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
         } catch (_) {}
       }
 
+      // Skip dummy/empty folders without plan, execution or title/objective
+      if (!fs.existsSync(planJsonPath) && !fs.existsSync(execJsonPath) && !planData.title && !planData.objective) {
+        continue;
+      }
+
       const collectFiles = (dir: string): any[] => {
         if (!fs.existsSync(dir)) return [];
         let list: any[] = [];
@@ -404,10 +421,10 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
 
       const workspaceFiles = collectFiles(mPath);
 
-      missions.push({
+      diskMissions.push({
         id: mId,
         title: planData.title || mId,
-        objective: planData.objective || '',
+        objective: planData.objective || planData.title || mId,
         type: mType,
         user_id: tenantId,
         status: planData.status || execData.status || 'drafting',
@@ -431,9 +448,22 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
     }
   }
 
+  // Combine existing DB missions with disk missions, avoiding duplicate IDs/titles
+  const combinedMap = new Map<string, any>();
+  for (const m of existingMissions) {
+    if (m && m.id && m.id !== 'planning' && m.id !== 'execution') {
+      combinedMap.set(m.id, m);
+    }
+  }
+  for (const m of diskMissions) {
+    combinedMap.set(m.id, m);
+  }
+
+  const finalMissions = Array.from(combinedMap.values());
+
   fs.mkdirSync(path.join(userRoot, 'db'), { recursive: true });
-  fs.writeFileSync(dbMissionsPath, JSON.stringify({ missions }, null, 2), 'utf8');
-  return missions;
+  fs.writeFileSync(dbMissionsPath, JSON.stringify({ missions: finalMissions }, null, 2), 'utf8');
+  return finalMissions;
 }
 
 /**
@@ -448,6 +478,15 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
     fs.mkdirSync(projectsDir, { recursive: true });
   }
 
+  // Load existing db projects if present
+  let existingProjects: any[] = [];
+  if (fs.existsSync(dbProjectsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(dbProjectsPath, 'utf8'));
+      existingProjects = Array.isArray(parsed) ? parsed : (parsed.projects || []);
+    } catch (_) {}
+  }
+
   // Ensure default_project folder exists
   const defaultProjData = path.join(projectsDir, 'default_project', 'data');
   const defaultProjSystems = path.join(projectsDir, 'default_project', 'systems');
@@ -458,7 +497,7 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
     return fs.statSync(path.join(projectsDir, f)).isDirectory();
   });
 
-  const projects = projectFolders.map(pName => {
+  const diskProjects = projectFolders.map(pName => {
     const pPath = path.join(projectsDir, pName);
     const dataPath = path.join(pPath, 'data');
     const systemsPath = path.join(pPath, 'systems');
@@ -490,9 +529,19 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
     };
   });
 
+  const combinedMap = new Map<string, any>();
+  for (const p of existingProjects) {
+    if (p && p.name) combinedMap.set(p.name, p);
+  }
+  for (const p of diskProjects) {
+    combinedMap.set(p.name, p);
+  }
+
+  const finalProjects = Array.from(combinedMap.values());
+
   fs.mkdirSync(path.join(userRoot, 'db'), { recursive: true });
-  fs.writeFileSync(dbProjectsPath, JSON.stringify({ projects }, null, 2), 'utf8');
-  return projects;
+  fs.writeFileSync(dbProjectsPath, JSON.stringify({ projects: finalProjects }, null, 2), 'utf8');
+  return finalProjects;
 }
 
 /**

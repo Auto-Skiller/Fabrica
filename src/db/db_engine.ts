@@ -453,7 +453,32 @@ class DatabaseEngine {
       if (error) throw error;
       result = data || [];
     } else {
-      result = this.cache.missions.filter(m => m.user_id === userId);
+      const tenantData = this.readTenantDbFile<any>(userId, 'missions.json', { missions: [] });
+      const diskMissions: Mission[] = Array.isArray(tenantData) ? tenantData : (tenantData?.missions || []);
+      const memoryMissions = this.cache.missions.filter(m => m.user_id === userId);
+
+      const map = new Map<string, Mission>();
+      for (const m of diskMissions) {
+        if (m && m.id && m.id !== 'planning' && m.id !== 'execution') {
+          map.set(m.id, {
+            ...m,
+            user_id: m.user_id || userId,
+            title: m.title || m.objective || m.id,
+            objective: m.objective || m.title || m.id,
+            type: m.type || 'standard',
+            status: m.status || 'drafting',
+            phase: m.phase || 'planning',
+            input_data_ids: m.input_data_ids || [],
+            system_ids: m.system_ids || [],
+            qa_state: m.qa_state || {},
+            workflow_history: m.workflow_history || []
+          });
+        }
+      }
+      for (const m of memoryMissions) {
+        if (m && m.id) map.set(m.id, m);
+      }
+      result = Array.from(map.values());
     }
 
     this.dbCache.set(cacheKey, result, 15000); // 15s cache for missions is highly responsive
@@ -690,7 +715,38 @@ class DatabaseEngine {
       if (error) throw error;
       result = data || [];
     } else {
-      result = this.cache.raw_data.filter(r => r.user_id === userId);
+      const memoryRaw = this.cache.raw_data.filter(r => r.user_id === userId);
+      const diskRaw: RawData[] = [];
+      const userProjectsDir = path.join(process.cwd(), 'workspaces', userId, 'projects');
+      if (fs.existsSync(userProjectsDir)) {
+        try {
+          const projs = fs.readdirSync(userProjectsDir);
+          for (const pName of projs) {
+            const dataDir = path.join(userProjectsDir, pName, 'data');
+            if (fs.existsSync(dataDir)) {
+              const files = fs.readdirSync(dataDir);
+              for (const f of files) {
+                if (f.startsWith('.')) continue;
+                const filePath = path.join(dataDir, f);
+                let content = '';
+                try { content = fs.readFileSync(filePath, 'utf8'); } catch {}
+                diskRaw.push({
+                  id: `raw_${pName}_${f.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                  user_id: userId,
+                  name: f,
+                  mime_type: f.endsWith('.json') ? 'application/json' : f.endsWith('.csv') ? 'text/csv' : 'text/plain',
+                  content,
+                  metadata: { project_name: pName, project: pName, status: 'active' }
+                });
+              }
+            }
+          }
+        } catch {}
+      }
+      const map = new Map<string, RawData>();
+      for (const r of diskRaw) { if (r.id) map.set(r.id, r); }
+      for (const r of memoryRaw) { if (r.id) map.set(r.id, r); }
+      result = Array.from(map.values());
     }
 
     this.dbCache.set(cacheKey, result, 30000);
@@ -762,7 +818,51 @@ class DatabaseEngine {
       if (error) throw error;
       result = data || [];
     } else {
-      result = this.cache.system_components.filter(s => s.user_id === userId);
+      const memorySys = this.cache.system_components.filter(s => s.user_id === userId);
+      const diskSys: SystemComponent[] = [];
+      const userProjectsDir = path.join(process.cwd(), 'workspaces', userId, 'projects');
+      if (fs.existsSync(userProjectsDir)) {
+        try {
+          const projs = fs.readdirSync(userProjectsDir);
+          for (const pName of projs) {
+            const sysDir = path.join(userProjectsDir, pName, 'systems');
+            if (fs.existsSync(sysDir)) {
+              const items = fs.readdirSync(sysDir);
+              for (const item of items) {
+                if (item.startsWith('.')) continue;
+                const itemPath = path.join(sysDir, item);
+                const stat = fs.statSync(itemPath);
+                let code_snapshot = '';
+                let fileTitle = item;
+                if (stat.isFile()) {
+                  try { code_snapshot = fs.readFileSync(itemPath, 'utf8'); } catch {}
+                } else if (stat.isDirectory()) {
+                  const subFiles = fs.readdirSync(itemPath);
+                  for (const sub of subFiles) {
+                    if (sub.endsWith('.ts') || sub.endsWith('.js') || sub.endsWith('.json')) {
+                      try { code_snapshot = fs.readFileSync(path.join(itemPath, sub), 'utf8'); } catch {}
+                      fileTitle = `${item}/${sub}`;
+                      break;
+                    }
+                  }
+                }
+                diskSys.push({
+                  id: `sys_${pName}_${item.replace(/[^a-zA-Z0-9]/g, '_')}`,
+                  user_id: userId,
+                  name: fileTitle,
+                  role: 'service',
+                  code_snapshot,
+                  metadata: { project_name: pName, project: pName, status: 'active' }
+                });
+              }
+            }
+          }
+        } catch {}
+      }
+      const map = new Map<string, SystemComponent>();
+      for (const s of diskSys) { if (s.id) map.set(s.id, s); }
+      for (const s of memorySys) { if (s.id) map.set(s.id, s); }
+      result = Array.from(map.values());
     }
 
     this.dbCache.set(cacheKey, result, 30000);

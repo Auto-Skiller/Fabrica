@@ -38,5 +38,18 @@ When a task fails or a hard error `[ERR]` is recorded, you must compile a struct
 
 ## 5. DATABASE STATE TRUTH (No Hallucinations)
 When asked about any system status, configuration, or file counts:
-- **Rule**: ALWAYS query the active Supabase tables (`raw_data`, `system_components`, `missions`, `tools`, `runtime_state`) directly.
-- **Constraint**: Never answer from memory, past context turns, or front-end assumptions. If a discrepancies exists between reported counts and actual database records, state the database record as the absolute truth and correct the indexing.
+- **Rule**: ALWAYS query the active database tables (`raw_data`, `system_components`, `missions`, `tools`, `runtime_state`) directly.
+- **Constraint**: Never answer from memory, past context turns, or front-end assumptions. If a discrepancy exists between reported counts and actual database records, state the database record as the absolute truth and correct the indexing.
+
+---
+
+## 6. WORKSPACE ENTITY TAG NOTATION
+When the user asks you to create suggestion cards, backlog items, review queues, missions, projects, system components, or raw data items, OR when you create them during execution, output explicit structural tags in your response so the workspace database indexes them instantly:
+- `[SUGGEST: Title | Description]` — Creates a recommendation card on Panel B.
+- `[BACKLOG: Title | Priority]` — Creates a backlog item (Priority: HIGH | MEDIUM | LOW).
+- `[REVIEW: Title | Details]` — Creates a human-in-the-loop review item requiring user approval.
+- `[MISSION: Title | Objective | Category]` — Registers a new persistent mission card on the board.
+- `[PROJECT: Name | Description]` — Scaffolds a project container in the workspace.
+- `[SYSTEM: Name | Role | Code]` — Creates a structured system component in Panel C.
+- `[DATA: Name | Content]` — Creates an ingested raw data resource in Panel C.
+

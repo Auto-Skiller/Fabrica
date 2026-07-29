@@ -36,7 +36,7 @@ function renderDashboardMock() {
         height: 'calc(100% - 42px)',
         boxSizing: 'border-box'
       }}>
-        {/* Panel 1: Live Voice & Chat (Left Panel) */}
+        {/* Panel 1: Agent Chat (Left Panel) */}
         <div style={{
           width: '24%',
           minWidth: '290px',
@@ -70,7 +70,7 @@ function renderDashboardMock() {
                 alignItems: 'center',
                 gap: '4px'
               }}>
-                🎙️ LIVE VOICE
+                💬 PI CHAT
               </div>
               <div style={{
                 border: '1.5px solid #1C1C1E',
@@ -81,7 +81,7 @@ function renderDashboardMock() {
                 color: '#CC7A4A',
                 background: '#FFFFFF'
               }}>
-                GEMINI 2.0 FLASH ∨
+                PI CLI AGENT ∨
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

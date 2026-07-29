@@ -17,7 +17,7 @@ When executing a Planning step:
 ---
 
 ## 2. CONCRETE CASE CONSTRAINTS
-- **No Abstract Steps**: A planning task must be a concrete, actionable move. An item like "classify inputs" or "evaluate routes" is forbidden in Planning. Instead, write exact steps like: "Create Express API proxy route inside `/src/routes/shopify.ts` to fetch customer list."
+- **No Abstract Steps**: A planning task must be a concrete, actionable move. An item like "classify inputs" or "evaluate routes" is forbidden in Planning. Instead, write exact steps like: "Create Express API proxy route inside `/src/routes/api.ts` to process requests."
 - **One Functional Goal = One Case**: Group overlapping tasks under one concrete item rather than spamming 20 micro-items. This keeps the proposal highly scannable and easy to approve.
 - **Reference Real Paths**: Always include exact file paths, database tables, or UI components affected by each task.
 

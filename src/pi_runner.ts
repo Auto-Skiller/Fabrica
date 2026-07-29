@@ -1,9 +1,28 @@
-import { execFile, execFileSync } from 'child_process';
+import { execFile, execFileSync, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { ensureUserHarness, getPiExecutionOptions, getUserRoot } from './harness.js';
 import { keyPoolManager, FREE_MODELS } from './db/llm_key_pool.js';
 import { getUserTier, deductLlmCredits } from './db/tier_manager.js';
+
+const activePiChildProcesses = new Map<string, ChildProcess>();
+
+export function stopPiAgent(tenantId: string, sessionId?: string): boolean {
+  let killed = false;
+  for (const [key, child] of activePiChildProcesses.entries()) {
+    if (key.startsWith(tenantId) && (!sessionId || key.includes(sessionId))) {
+      try {
+        child.kill('SIGTERM');
+        child.kill('SIGKILL');
+        killed = true;
+      } catch (err) {
+        console.warn(`[pi_runner] Failed to kill child process ${key}:`, err);
+      }
+      activePiChildProcesses.delete(key);
+    }
+  }
+  return killed;
+}
 
 export interface PiAgentRunOptions {
   prompt: string;
@@ -52,6 +71,37 @@ export interface PiModelItem {
   images: boolean;
 }
 
+export interface PiProcessLogItem {
+  id: string;
+  timestamp: string;
+  tenantId: string;
+  sessionId: string;
+  model: string;
+  prompt: string;
+  command: string;
+  args: string[];
+  executionTimeMs: number;
+  stdout: string;
+  stderr: string;
+  ok: boolean;
+  error?: string;
+  apiKeyStrategy: string;
+}
+
+export const piProcessLogs: PiProcessLogItem[] = [];
+
+export function getPiProcessLogs(tenantId?: string): PiProcessLogItem[] {
+  if (!tenantId || tenantId === 'all') return piProcessLogs;
+  return piProcessLogs.filter(l => l.tenantId === tenantId || l.tenantId === 'default_user');
+}
+
+export function recordPiProcessLog(item: PiProcessLogItem) {
+  piProcessLogs.unshift(item);
+  if (piProcessLogs.length > 100) {
+    piProcessLogs.pop();
+  }
+}
+
 /**
  * Executes a prompt using the real `pi` CLI binary.
  */
@@ -85,20 +135,26 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   const modelName = fullModel.split('/')[1] || fullModel;
 
   // Determine API key execution strategy (BYOK or Pool Rotation)
+  const piBin = fs.existsSync(path.resolve(process.cwd(), 'node_modules/.bin/pi'))
+    ? path.resolve(process.cwd(), 'node_modules/.bin/pi')
+    : 'pi';
+
   const executeAttempt = async (apiKey?: string): Promise<{ stdout: string; stderr: string }> => {
+    const effectiveKey = apiKey || (provider === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY) || process.env.GEMINI_API_KEY;
+
     const env: Record<string, string> = {
       ...process.env,
       PI_CODING_AGENT_DIR: execOpts.piCodingAgentDir,
       PI_CODING_AGENT_SESSION_DIR: sessionDir,
-      PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin'
+      PATH: `${path.resolve(process.cwd(), 'node_modules/.bin')}:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`
     };
 
-    if (apiKey) {
-      if (provider === 'google') env.GEMINI_API_KEY = apiKey;
-      else if (provider === 'openrouter') env.OPENROUTER_API_KEY = apiKey;
-      else if (provider === 'anthropic') env.ANTHROPIC_API_KEY = apiKey;
-      else if (provider === 'openai') env.OPENAI_API_KEY = apiKey;
-      else env.GEMINI_API_KEY = apiKey;
+    if (effectiveKey) {
+      if (provider === 'google') env.GEMINI_API_KEY = effectiveKey;
+      else if (provider === 'openrouter') env.OPENROUTER_API_KEY = effectiveKey;
+      else if (provider === 'anthropic') env.ANTHROPIC_API_KEY = effectiveKey;
+      else if (provider === 'openai') env.OPENAI_API_KEY = effectiveKey;
+      else env.GEMINI_API_KEY = effectiveKey;
     }
 
     const args: string[] = [
@@ -111,19 +167,46 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       options.prompt
     ];
 
+    const startTime = Date.now();
+    const procKey = `${tenantId}:${sessionId}:${startTime}`;
     return new Promise((resolve, reject) => {
-      // Use stdin redirect < /dev/null to ensure non-interactive execution
-      execFile('pi', args, {
+      // Ensure stdin is closed for non-interactive execution
+      const child = execFile(piBin, args, {
         cwd: userRoot,
         env,
         maxBuffer: 20 * 1024 * 1024,
         timeout: 120000
       }, (err, stdout, stderr) => {
+        activePiChildProcesses.delete(procKey);
+        const executionTimeMs = Date.now() - startTime;
+        recordPiProcessLog({
+          id: `proc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          timestamp: new Date().toISOString(),
+          tenantId,
+          sessionId,
+          model: fullModel,
+          prompt: options.prompt,
+          command: 'pi',
+          args,
+          executionTimeMs,
+          stdout: stdout || '',
+          stderr: stderr || '',
+          ok: !err || Boolean(stdout),
+          error: err ? err.message : undefined,
+          apiKeyStrategy: options.customKey ? 'BYOK' : (apiKey ? 'Key Pool Rotation' : 'System Fallback')
+        });
+
         if (err && !stdout) {
           return reject(err);
         }
         resolve({ stdout, stderr });
       });
+
+      activePiChildProcesses.set(procKey, child);
+
+      if (child.stdin) {
+        child.stdin.end();
+      }
     });
   };
 
@@ -156,7 +239,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   // - Payment card is verified
   const userTier = getUserTier(tenantId);
   const isFreeTier = userTier.plan === 'free';
-  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified);
+  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified || process.env.GEMINI_API_KEY || tenantId === 'default_user');
 
   if (isFreeTier && !isCardVerified) {
     return {

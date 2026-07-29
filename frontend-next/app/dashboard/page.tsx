@@ -252,7 +252,6 @@ const DASHBOARD_TEXT = {
     activeFocus: "Switch active blueprint focus",
 
     // Agent Window / Panel
-    liveVoice: "🎙️ LIVE VOICE",
     chatSessions: "Chat Sessions",
     sessionReady: "READY",
     sessionNoKey: "NO KEY",
@@ -260,6 +259,7 @@ const DASHBOARD_TEXT = {
     clickToInject: "Click to inject as audit query",
     agentInputPlaceholder: "Ask the Fabrica Agent...",
     sendBtn: "Send",
+    stopBtn: "Stop",
     webSearch: "Google Search Grounding",
 
     // Modals
@@ -476,7 +476,6 @@ const DASHBOARD_TEXT = {
     activeFocus: "Changer l'orientation du plan actif",
 
     // Agent Window / Panel
-    liveVoice: "🎙️ VOIX EN DIRECT",
     chatSessions: "Sessions de Chat",
     sessionReady: "PRÊT",
     sessionNoKey: "SANS ClÉ",
@@ -484,6 +483,7 @@ const DASHBOARD_TEXT = {
     clickToInject: "Cliquer pour injecter comme requête d'audit",
     agentInputPlaceholder: "Poser une question à l'Agent Fabrica...",
     sendBtn: "Envoyer",
+    stopBtn: "Arrêter",
     webSearch: "Recherche Google Ancrée",
 
     // Modals
@@ -700,7 +700,6 @@ const DASHBOARD_TEXT = {
     activeFocus: "تبديل تركيز المخطط النشط",
 
     // Agent Window / Panel
-    liveVoice: "🎙️ صوت مباشر",
     chatSessions: "جلسات المحادثة",
     sessionReady: "جاهز",
     sessionNoKey: "بدون مفتاح",
@@ -708,6 +707,7 @@ const DASHBOARD_TEXT = {
     clickToInject: "انقر للإدراج كاستعلام تدقيق",
     agentInputPlaceholder: "اسأل مساعد Fabrica...",
     sendBtn: "إرسال",
+    stopBtn: "إيقاف",
     webSearch: "بحث جوجل المدعوم",
 
     // Modals
@@ -1491,9 +1491,8 @@ export default function Dashboard() {
   const [agentWindowOpen, setAgentWindowOpen] = useState<boolean>(false);
   const [agentWinTab, setAgentWinTab] = useState<'agent' | 'review' | 'backlog' | 'account' | 'logs' | 'realtime'>('agent');
 
-  // AI Capabilities: Web Search Grounding, Live Voice, Context Caching, Deep Research
+  // AI Capabilities: Web Search Grounding, Context Caching, Deep Research
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
-  const [liveAudioActive, setLiveAudioActive] = useState<boolean>(false);
   const [cacheStatus, setCacheStatus] = useState<{ cacheId: string; status: string; tokenCount: number; lastRefreshed: string; saving: string; speedup: string } | null>(null);
   const [isRefreshingCache, setIsRefreshingCache] = useState<boolean>(false);
   
@@ -2005,6 +2004,8 @@ export default function Dashboard() {
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number } | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const chatAbortControllerRef = useRef<AbortController | null>(null);
+  const lastSendTimeRef = useRef<number>(0);
 
   const refreshPiSessions = async (tenantKey: string, targetActiveId?: string) => {
     try {
@@ -2247,7 +2248,7 @@ export default function Dashboard() {
   const [rawDataList, setRawDataList] = useState<any[]>([]);
   const [systemComponents, setSystemComponents] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
-  const [selectedProjectName, setSelectedProjectName] = useState<string>('default_project');
+  const [selectedProjectName, setSelectedProjectName] = useState<string>('all');
   const [isCreatingProjectModal, setIsCreatingProjectModal] = useState<boolean>(false);
   const [newProjectNameInput, setNewProjectNameInput] = useState<string>('');
 
@@ -2462,7 +2463,13 @@ export default function Dashboard() {
   const [isDraggingChatInput, setIsDraggingChatInput] = useState<boolean>(false);
   const [isAccountWindowOpen, setIsAccountWindowOpen] = useState<boolean>(false);
   const [isLogsWindowOpen, setIsLogsWindowOpen] = useState<boolean>(false);
-  const [activeLogTab, setActiveLogTab] = useState<'system' | 'realtime'>('system');
+  const [activeLogTab, setActiveLogTab] = useState<'system' | 'cli'>('system');
+  const [cliLogs, setCliLogs] = useState<any[]>([]);
+  const [isFetchingCliLogs, setIsFetchingCliLogs] = useState<boolean>(false);
+  const [selectedCliLog, setSelectedCliLog] = useState<any>(null);
+  const [cliTerminalInput, setCliTerminalInput] = useState<string>('');
+  const [isCliRunning, setIsCliRunning] = useState<boolean>(false);
+  const [cliTerminalOutput, setCliTerminalOutput] = useState<string>('Pi CLI Child Process Terminal Ready.\nType a prompt or command below to run against the @paiml/pi-coding-agent child process.\n');
   const [accountSubTab, setAccountSubTab] = useState<'details' | 'credits' | 'paug' | 'free_tokens' | 'stripe'>('details');
   const [isStripeLoading, setIsStripeLoading] = useState<boolean>(false);
   const [userPaymentHistory, setUserPaymentHistory] = useState<any[]>([]);
@@ -4254,96 +4261,6 @@ AGENT DIRECTIVES:
     }
   };
 
-  const liveWs = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<any | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioProcessorRef = useRef<any | null>(null);
-
-  const toggleLiveAudio = async () => {
-    if (liveAudioActive) {
-      if (liveWs.current) {
-        liveWs.current.close();
-        liveWs.current = null;
-      }
-      if (audioProcessorRef.current) {
-        audioProcessorRef.current.disconnect();
-        audioProcessorRef.current = null;
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(t => t.stop());
-        mediaStreamRef.current = null;
-      }
-      setLiveAudioActive(false);
-      setToast({ message: 'Bidirectional Live Voice session terminated.', type: 'info', isOpen: true });
-    } else {
-      try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/api/live-bridge`;
-        const ws = new WebSocket(wsUrl);
-        liveWs.current = ws;
-
-        ws.onopen = async () => {
-          setLiveAudioActive(true);
-          setToast({ message: 'Connected to Gemini Multimodal Live Voice Bridge!', type: 'success', isOpen: true });
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaStreamRef.current = stream;
-            
-            const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-            const audioContext = new AudioContextClass({ sampleRate: 24000 });
-            audioContextRef.current = audioContext;
-            
-            const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(2048, 1, 1);
-            audioProcessorRef.current = processor;
-            
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-            
-            processor.onaudioprocess = (e: any) => {
-              if (ws.readyState === WebSocket.OPEN) {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const buffer = new Int16Array(inputData.length);
-                for (let i = 0; i < inputData.length; i++) {
-                  buffer[i] = Math.min(1, Math.max(-1, inputData[i])) * 0x7FFF;
-                }
-                ws.send(buffer.buffer);
-              }
-            };
-          } catch (micErr: any) {
-            console.warn('Microphone stream capture warning:', micErr);
-            const interval = setInterval(() => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'text', text: 'Telemetry synchronization ping.' }));
-              } else {
-                clearInterval(interval);
-              }
-            }, 3000);
-          }
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'transcript') {
-              setChatHistory(prev => [...prev, { sender: 'agent', text: `🗣️ **[LIVE VOICE TRANSCRIPT]**: ${msg.text}` }]);
-            }
-          } catch {}
-        };
-
-        ws.onerror = (err) => {
-          console.error('[Live Bridge] error:', err);
-        };
-
-        ws.onclose = () => {
-          setLiveAudioActive(false);
-        };
-      } catch (err: any) {
-        setToast({ message: `Live Voice connection failed: ${err.message}`, type: 'error', isOpen: true });
-      }
-    }
-  };
-
   const fetchCacheStatus = async () => {
     try {
       const res = await api.getCacheStatus();
@@ -4442,6 +4359,63 @@ AGENT DIRECTIVES:
     fetchCacheStatus();
     fetchAgentsMd();
   }, []);
+
+  const fetchCliLogs = async () => {
+    setIsFetchingCliLogs(true);
+    try {
+      const res = await fetch(`/api/pi/cli-logs?tenantId=${encodeURIComponent(activeEntity || 'default_user')}`);
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.logs)) {
+        setCliLogs(data.logs);
+        if (data.logs.length > 0 && !selectedCliLog) {
+          setSelectedCliLog(data.logs[0]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch CLI process logs', e);
+    } finally {
+      setIsFetchingCliLogs(false);
+    }
+  };
+
+  const handleRunCliCommand = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!cliTerminalInput.trim() || isCliRunning) return;
+    const input = cliTerminalInput.trim();
+    setCliTerminalInput('');
+    setIsCliRunning(true);
+    setCliTerminalOutput(prev => prev + `\n$ pi -p "${input}"\n[Spawning @paiml/pi-coding-agent child process...]\n`);
+    try {
+      const res = await fetch('/api/pi/cli-exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: input,
+          tenantId: activeEntity || 'default_user',
+          model: chatModel || 'google/gemini-3.6-flash'
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setCliTerminalOutput(prev => prev + `${data.text || '[No text response]'}\n[Child process finished - Tokens: ${data.usage?.totalTokens || 0}]\n`);
+      } else {
+        setCliTerminalOutput(prev => prev + `[CLI Process Error] ${data.error || data.text || 'Command execution failed'}\n`);
+      }
+      fetchCliLogs();
+    } catch (err: any) {
+      setCliTerminalOutput(prev => prev + `[Network Error] ${err.message}\n`);
+    } finally {
+      setIsCliRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLogsWindowOpen && activeLogTab === 'cli') {
+      fetchCliLogs();
+      const interval = setInterval(fetchCliLogs, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isLogsWindowOpen, activeLogTab, activeEntity]);
 
   // Helper to safely merge arrays without duplicating or clearing existing items
   const mergeUniqueStrings = (existing: string[], incoming: string[]) => {
@@ -5137,13 +5111,39 @@ ${isDirector ? `
     }
   };
 
+  // Agent Stop trigger
+  const handleStopChat = async () => {
+    // Guard against accidental double-trigger from mouseup/click on swapped button
+    if (Date.now() - lastSendTimeRef.current < 600) {
+      console.log('[handleStopChat] Ignored stop request triggered immediately after send');
+      return;
+    }
+    if (chatAbortControllerRef.current) {
+      try {
+        chatAbortControllerRef.current.abort();
+      } catch (_) {}
+      chatAbortControllerRef.current = null;
+    }
+    const tenantKey = user?.id || activeEntity || 'default_user';
+    try {
+      await api.stopAgent(tenantKey, activeSessionId);
+    } catch (_) {}
+    setIsChatLoading(false);
+    setChatHistory(prev => [...prev, { sender: 'agent', text: '🛑 **[Agent turn stopped by user]**' }]);
+    setToast({ message: 'Agent turn stopped.', type: 'info', isOpen: true });
+  };
+
   // Agent Chat trigger
   const handleSendChat = async (msgOverride?: string) => {
     const msg = (msgOverride || chatMessage).trim();
     if (!msg) return;
 
+    lastSendTimeRef.current = Date.now();
     setChatMessage('');
     setIsChatLoading(true);
+
+    const controller = new AbortController();
+    chatAbortControllerRef.current = controller;
 
     const updatedHistory = [...chatHistory, { sender: 'user' as const, text: msg }];
     setChatHistory(updatedHistory);
@@ -5156,7 +5156,8 @@ ${isDirector ? `
       }));
 
       const tenantKey = user?.id || activeEntity || 'default_user';
-      const res = await api.chatAgent(msg, formattedHistory, customApiKey, chatModel, webSearchEnabled, agentLang, activeSessionId, tenantKey);
+      const activeCustomKey = customApiKey && customApiKey.trim().length > 0 ? customApiKey.trim() : undefined;
+      const res = await api.chatAgent(msg, formattedHistory, activeCustomKey, chatModel, webSearchEnabled, agentLang, activeSessionId, tenantKey, true, controller.signal);
       fetchUserTierData();
       if (res.ok) {
         setChatHistory(prev => [...prev, { sender: 'agent', text: res.text }]);
@@ -5174,22 +5175,30 @@ ${isDirector ? `
           lowerText.includes('quota')
         ) {
           setIsAccountWindowOpen(true);
-          setToast({ message: 'API Key not configured or invalid. Opening settings...', type: 'warn', isOpen: true });
+          setToast({ message: 'API Key notice: Opening settings...', type: 'warn', isOpen: true });
         }
       } else {
-        setChatHistory(prev => [...prev, { sender: 'agent', text: 'Error: Connection lost or invalid API key. Ensure your API Key is configured in settings.' }]);
-        setIsAccountWindowOpen(true);
-        setToast({ message: 'API error: Opening Account & API settings...', type: 'error', isOpen: true });
+        const errorMsg = res.text || res.error || 'Connection lost or API service unavailable. Ensure your API Key is configured in settings.';
+        setChatHistory(prev => [...prev, { sender: 'agent', text: errorMsg }]);
+        if (errorMsg.toLowerCase().includes('key') || errorMsg.toLowerCase().includes('card') || errorMsg.toLowerCase().includes('setting')) {
+          setIsAccountWindowOpen(true);
+          setToast({ message: 'API Key or configuration required. Opening settings...', type: 'warn', isOpen: true });
+        }
       }
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        return;
+      }
       const errText = err.message || 'Check connection settings.';
       setChatHistory(prev => [...prev, { sender: 'agent', text: `Failed to stream response: ${errText}` }]);
       setIsAccountWindowOpen(true);
       setToast({ message: `Agent API Error: ${errText}`, type: 'error', isOpen: true });
     } finally {
+      chatAbortControllerRef.current = null;
       setIsChatLoading(false);
       const tenantKey = user?.id || activeEntity || 'default_user';
       refreshPiContext(tenantKey, activeSessionId);
+      await fetchWorkspaceData();
       await runPostTurnAutomations();
 
       // Dequeue queued mission event if any after turn ends
@@ -8147,90 +8156,7 @@ ${isDirector ? `
                       <div ref={chatBottomRef} />
                     </div>
 
-                    {/* Integrated Review & Backlog Injections */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px', flexShrink: 0 }}>
-                      {/* Review Queue Injections */}
-                      {runtime?.review_queue && runtime.review_queue.length > 0 ? (
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: '#f43f5e', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span>🔍</span> REVIEW QUEUE ({runtime.review_queue.length})
-                            </span>
-                            <span style={{ fontSize: '7px', color: 'var(--muted)' }}>Click to audit via AI Agent</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
-                            {runtime.review_queue.map((item: any, idx: number) => {
-                              const label = typeof item === 'string' ? item : JSON.stringify(item);
-                              return (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleSendChat(`Let's audit and review this component: "${label}"`)}
-                                  style={{
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '8px',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(244, 63, 94, 0.08)',
-                                    border: '1px solid rgba(244, 63, 94, 0.25)',
-                                    color: 'var(--text)',
-                                    cursor: 'pointer',
-                                    maxWidth: '180px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    transition: 'all 0.15s'
-                                  }}
-                                  className="mini-chip"
-                                  title={label}
-                                >
-                                  🎯 {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : null}
 
-                      {/* Backlog Queue Injections */}
-                      {runtime?.backlog && runtime.backlog.length > 0 ? (
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span>📋</span> BACKLOG QUEUE ({runtime.backlog.length})
-                            </span>
-                            <span style={{ fontSize: '7px', color: 'var(--muted)' }}>Click to execute via AI Agent</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
-                            {runtime.backlog.map((item: any, idx: number) => {
-                              const label = typeof item === 'string' ? item : (item.task || item.label || JSON.stringify(item));
-                              return (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleSendChat(`Let's address and execute this backlog task: "${label}"`)}
-                                  style={{
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '8px',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    background: 'rgba(99, 102, 241, 0.08)',
-                                    border: '1px solid rgba(99, 102, 241, 0.25)',
-                                    color: 'var(--text)',
-                                    cursor: 'pointer',
-                                    maxWidth: '180px',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    transition: 'all 0.15s'
-                                  }}
-                                  className="mini-chip"
-                                  title={label}
-                                >
-                                  ⚡ {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
 
                     {/* 2 Agent Suggestion Cards - Line 1 */}
                     <div style={{ marginBottom: '6px' }}>
@@ -8434,14 +8360,49 @@ ${isDirector ? `
                         >
                           🌐
                         </button>
-                        <button
-                          className="mini accent"
-                          style={{ padding: '0 14px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onClick={() => handleSendChat()}
-                          disabled={isChatLoading}
-                        >
-                          {dtxt.sendBtn}
-                        </button>
+                        {isChatLoading ? (
+                          <button
+                            type="button"
+                            className="mini danger"
+                            style={{
+                              padding: '0 12px',
+                              height: '28px',
+                              fontWeight: 800,
+                              fontSize: '10px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              background: '#ef4444',
+                              color: '#ffffff',
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleStopChat();
+                            }}
+                            title="Stop agent turn & halt process"
+                          >
+                            <span style={{ fontSize: '10px' }}>🛑</span>
+                            <span>{dtxt.stopBtn || "Stop"}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="mini accent"
+                            style={{ padding: '0 14px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSendChat();
+                            }}
+                          >
+                            {dtxt.sendBtn}
+                          </button>
+                        )}
                       </div>
                     </div>
             </div>
@@ -10544,6 +10505,47 @@ ${isDirector ? `
                   </span>
                 </div>
               </div>
+
+              {/* Tab Switcher */}
+              <div style={{ display: 'flex', gap: '6px', background: 'var(--surface)', padding: '3px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
+                <button
+                  onClick={() => setActiveLogTab('system')}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: activeLogTab === 'system' ? 'var(--text)' : 'transparent',
+                    color: activeLogTab === 'system' ? 'var(--surface)' : 'var(--muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>📋</span> Audit Stream
+                </button>
+                <button
+                  onClick={() => { setActiveLogTab('cli'); fetchCliLogs(); }}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: activeLogTab === 'cli' ? '#3b82f6' : 'transparent',
+                    color: activeLogTab === 'cli' ? '#ffffff' : 'var(--muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>💻</span> Pi CLI Child Process & Terminal
+                </button>
+              </div>
+
               <button
                 onClick={() => setIsLogsWindowOpen(false)}
                 className="fw-close-btn"
@@ -10569,7 +10571,8 @@ ${isDirector ? `
             {/* Body */}
             <div style={{ flex: 1, padding: '18px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {/* ================= SYSTEM LOGS WORKFLOW ================= */}
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+              {activeLogTab === 'system' && (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
                   {/* Search and filter controls bar */}
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center', flexShrink: 0 }}>
                     <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
@@ -10731,6 +10734,174 @@ ${isDirector ? `
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* ================= PI CLI CHILD PROCESS WORKFLOW ================= */}
+              {activeLogTab === 'cli' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '12px', height: '100%', minHeight: 0 }}>
+                  {/* Left Column: Process History */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderRight: '1px solid var(--border-soft)', paddingRight: '12px', minHeight: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                      <b style={{ fontSize: '10px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        🚀 Executed Child Processes ({cliLogs.length})
+                      </b>
+                      <button
+                        onClick={fetchCliLogs}
+                        disabled={isFetchingCliLogs}
+                        style={{
+                          fontSize: '8px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-soft)',
+                          background: 'var(--surface-alt)',
+                          color: 'var(--text)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isFetchingCliLogs ? '⏳ Refreshing...' : '🔄 Refresh'}
+                      </button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
+                      {cliLogs.length === 0 ? (
+                        <div style={{ fontSize: '9px', color: 'var(--muted)', padding: '12px', textAlign: 'center', border: '1px dashed var(--border-soft)', borderRadius: '6px' }}>
+                          No child processes spawned yet.<br />Send a chat message or run a command below!
+                        </div>
+                      ) : (
+                        cliLogs.map((proc, idx) => {
+                          const isSelected = selectedCliLog?.id === proc.id;
+                          return (
+                            <div
+                              key={proc.id || idx}
+                              onClick={() => setSelectedCliLog(proc)}
+                              style={{
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: isSelected ? '1.5px solid #3b82f6' : '1px solid var(--border-soft)',
+                                background: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--surface-alt)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px',
+                                fontSize: '9px',
+                                transition: 'all 0.15s'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: 800, color: proc.ok ? '#10b981' : '#f43f5e', fontFamily: 'var(--mono)' }}>
+                                  {proc.ok ? '✓ OK' : '✕ ERR'} • {proc.executionTimeMs}ms
+                                </span>
+                                <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
+                                  {new Date(proc.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <div style={{ fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                &quot;{proc.prompt}&quot;
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '8px', color: 'var(--muted)' }}>
+                                <span style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 4px', borderRadius: '3px' }}>
+                                  {proc.model}
+                                </span>
+                                <span>• {proc.apiKeyStrategy}</span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Process Inspector & Terminal */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', minHeight: 0 }}>
+                    {/* Selected Process Command Bar */}
+                    {selectedCliLog ? (
+                      <div style={{ background: '#090d16', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '10px', fontSize: '9px', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', color: '#38bdf8', fontWeight: 800 }}>
+                          <span>💻 CHILD PROCESS: execFile(&apos;pi&apos;, [{selectedCliLog.args?.map((a: string) => `&quot;${a}&quot;`).join(', ')}])</span>
+                          <button onClick={() => setSelectedCliLog(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '8px' }}>[Clear Inspector]</button>
+                        </div>
+                        <div style={{ color: '#94a3b8', display: 'flex', gap: '12px', fontSize: '8.5px' }}>
+                          <span>ID: {selectedCliLog.id}</span>
+                          <span>Session: {selectedCliLog.sessionId}</span>
+                          <span>Key Strategy: {selectedCliLog.apiKeyStrategy}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ background: '#090d16', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px', fontSize: '9px', fontFamily: 'var(--mono)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                        <span>⚡ LIVE PI CLI CHILD PROCESS TERMINAL</span>
+                        <span style={{ fontSize: '8px', color: '#64748b' }}>Connected to /api/pi/cli-exec</span>
+                      </div>
+                    )}
+
+                    {/* Output STDOUT / STDERR Display */}
+                    <div style={{ flex: 1, background: '#090d16', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '12px', fontFamily: 'var(--mono)', fontSize: '9.5px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
+                      {selectedCliLog ? (
+                        <>
+                          <div style={{ color: '#10b981', fontWeight: 800, borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                            === RAW STDOUT FROM @paiml/pi-coding-agent ===
+                          </div>
+                          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#f8fafc', fontSize: '9px', lineHeight: 1.4 }}>
+                            {selectedCliLog.stdout || '[No STDOUT emitted]'}
+                          </pre>
+                          {selectedCliLog.stderr && (
+                            <>
+                              <div style={{ color: '#f43f5e', fontWeight: 800, borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '4px', marginTop: '8px' }}>
+                                === STDERR EMITTED ===
+                              </div>
+                              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#fca5a5', fontSize: '9px' }}>
+                                {selectedCliLog.stderr}
+                              </pre>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#38bdf8', fontSize: '9px', lineHeight: 1.5 }}>
+                          {cliTerminalOutput}
+                        </pre>
+                      )}
+                    </div>
+
+                    {/* Direct Terminal Command Form */}
+                    <form onSubmit={handleRunCliCommand} style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <span style={{ color: '#38bdf8', fontFamily: 'var(--mono)', fontSize: '11px', display: 'flex', alignItems: 'center', paddingLeft: '4px' }}>$</span>
+                      <input
+                        type="text"
+                        placeholder="Type prompt or command e.g. 'hello pi agent'..."
+                        value={cliTerminalInput}
+                        onChange={(e) => setCliTerminalInput(e.target.value)}
+                        disabled={isCliRunning}
+                        style={{
+                          flex: 1,
+                          background: '#090d16',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '6px',
+                          color: '#f8fafc',
+                          fontFamily: 'var(--mono)',
+                          fontSize: '10px',
+                          padding: '6px 10px',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={isCliRunning || !cliTerminalInput.trim()}
+                        style={{
+                          background: isCliRunning ? 'var(--muted)' : '#3b82f6',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '9px',
+                          fontWeight: 800,
+                          padding: '0 14px',
+                          cursor: isCliRunning ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {isCliRunning ? '⏳ Executing...' : '🚀 Execute Child Process'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
               {false && (
                 <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px', height: '100%', minHeight: 0 }}>
                   

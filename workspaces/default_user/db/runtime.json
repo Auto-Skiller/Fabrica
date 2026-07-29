@@ -1,10 +1,97 @@
 {
   "tenant_id": "default_user",
   "status": "running",
-  "suggestions": [],
-  "backlogs": [],
+  "suggestions": [
+    {
+      "id": "sug_1785287564207_0vzo",
+      "title": "Test Extension",
+      "description": "Test Description",
+      "created_at": "2026-07-29T01:12:44.207Z"
+    }
+  ],
+  "backlogs": [
+    {
+      "id": "bl_1785287564207_l8zd",
+      "title": "Audit Kernel Extensions",
+      "priority": "HIGH",
+      "status": "OPEN",
+      "created_at": "2026-07-29T01:12:44.207Z"
+    }
+  ],
   "review_queues": [],
   "recent_events": [
+    {
+      "date": "2026-07-29T01:22:50.243Z",
+      "type": "AGENT_END",
+      "description": "Turn response: Hello. I am ready to assist.  Current workspace status: - **Backlog**: `[OPEN] Audit Kernel Extensions` (HIGH priority) - **Autonomy Mode**: Operation...",
+      "details": "Hello. I am ready to assist. \n\nCurrent workspace status:\n- **Backlog**: `[OPEN] Audit Kernel Extensions` (HIGH priority)\n- **Autonomy Mode**: Operational\n\nHow would you like to proceed? We can begin auditing the kernel extensions, address a specific business task, or configure your workspace systems."
+    },
+    {
+      "date": "2026-07-29T01:22:50.242Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: Hello. I am ready to assist.  Current workspace status: - **Backlog**: `[OPEN] Audit Kernel Extensions` (HIGH priority) - **Autonomy Mode**: Operation...",
+      "details": "Hello. I am ready to assist. \n\nCurrent workspace status:\n- **Backlog**: `[OPEN] Audit Kernel Extensions` (HIGH priority)\n- **Autonomy Mode**: Operational\n\nHow would you like to proceed? We can begin auditing the kernel extensions, address a specific business task, or configure your workspace systems."
+    },
+    {
+      "date": "2026-07-29T01:22:47.479Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: Hello...",
+      "details": "Hello"
+    },
+    {
+      "date": "2026-07-29T01:12:48.882Z",
+      "type": "AGENT_END",
+      "description": "Turn response: ### Active Suggestions & Backlog Items #### 💡 Active Suggestions * **Test Extension**   * **Description:** Test Description   * **ID:** `sug_17852875...",
+      "details": "### Active Suggestions & Backlog Items\n\n#### 💡 Active Suggestions\n* **Test Extension**\n  * **Description:** Test Description\n  * **ID:** `sug_1785287561190_c5zv`\n  * **Status:** Active\n\n---\n\n#### 📋 Active Backlog Items\n* **Audit Kernel Extensions**\n  * **Priority:** `HIGH`\n  * **Status:** `OPEN`\n  * **ID:** `bl_1785287561191_6q7j`"
+    },
+    {
+      "date": "2026-07-29T01:12:48.881Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: ### Active Suggestions & Backlog Items #### 💡 Active Suggestions * **Test Extension**   * **Description:** Test Description   * **ID:** `sug_17852875...",
+      "details": "### Active Suggestions & Backlog Items\n\n#### 💡 Active Suggestions\n* **Test Extension**\n  * **Description:** Test Description\n  * **ID:** `sug_1785287561190_c5zv`\n  * **Status:** Active\n\n---\n\n#### 📋 Active Backlog Items\n* **Audit Kernel Extensions**\n  * **Priority:** `HIGH`\n  * **Status:** `OPEN`\n  * **ID:** `bl_1785287561191_6q7j`"
+    },
+    {
+      "date": "2026-07-29T01:12:44.207Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: {   \"tenant_id\": \"default_user\",   \"status\": \"running\",   \"suggestions\": [     {       \"id\": \"sug_1785287561190_c5zv\",       \"title\": \"Test Extension\"...",
+      "details": "{\n  \"tenant_id\": \"default_user\",\n  \"status\": \"running\",\n  \"suggestions\": [\n    {\n      \"id\": \"sug_1785287561190_c5zv\",\n      \"title\": \"Test Extension\",\n      \"description\": \"Test Description\",\n      \"created_at\": \"2026-07-29T01:12:41.190Z\"\n    }\n  ],\n  \"backlogs\": [\n    {\n      \"id\": \"bl_1785287561191_6q7j\",\n      \"title\": \"Audit Kernel Extensions\",\n      \"priority\": \"HIGH\",\n      \"status\": \"OPEN\",\n      \"created_at\": \"2026-07-29T01:12:41.190Z\"\n    }\n  ],\n  \"review_queues\": [],\n  \"recent_events\": [\n    {\n      \"date\": \"2026-07-29T01:12:43.167Z\",\n      \"type\": \"MESSAGE_END\",\n      \"description\": \"Turn response: total 28 drwxr-xr-x 1 root root   120 Jul 29 00:21 . drwxr-xr-x 1 root root   140 Jul 29 01:12 .. -rw-r--r-- 1 root root 15096 Jul 29 01:11 missions.j...\",\n      \"details\": \"total 28\\ndrwxr-xr-x 1 root root   120 Jul 29 00:21 .\\ndrwxr-xr-x 1 root root   140 Jul 29 01:12 ..\\n-rw-r--r-- 1 root root 15096 Jul 29 01:11 missions.json\\n-rw-r--r-- 1 root root   790 Jul 29 01:12 projects.json\\n-rw-r--r-- 1 root root 10766 Jul 29 01:12 runtime.json\\n-rw-r--r-- 1 root root   352 Jul 29 00:39 settings.json\\n\"\n    },\n    {\n      \"date\": \"2026-07-29T01:12:41.190Z\",\n      \"type\": \"MESSAGE_END\",\n      \"description\": \"Turn response: Show active suggestions and backlog items from extensions [SUGGEST: Test Extension | Test Description] [BACKLOG: Audit Kernel Extensions | HIGH]...\",\n      \"details\": \"Show active suggestions and backlog items from extensions [SUGGEST: Test Extension | Test Description] [BACKLOG: Audit Kernel Extensions | HIGH]\"\n    },\n    {\n      \"date\": \"2026-07-29T01:04:57.657Z\",\n      \"type\": \"AGENT_END\",\n      \"description\": \"Completed turn: Hello! How can I help you with your projects, missions, or code today?...\",\n      \"details\": \"Hello! How can I help you with your projects, missions, or code today?\"\n    },\n    {\n      \"date\": \"2026-07-29T01:04:57.656Z\",\n      \"type\": \"TURN_END\",\n      \"description\": \"Completed turn: Hello! How can I help you with your projects, missions, or code today?...\",\n      \"details\": \"Hello! How can I help you with your projects, missions, or code today?\"\n    },\n    {\n      \"date\": \"2026-07-29T01:01:34.139Z\",\n      \"type\": \"AGENT_END\",\n      \"description\": \"Completed turn: Hello! How can I help you with your project today?...\",\n      \"details\": \"Hello! How can I help you with your project today?\"\n    },\n    {\n      \"date\": \"2026-07-29T01:01:34.138Z\",\n      \"type\": \"TURN_END\",\n      \"description\": \"Completed turn: Hello! How can I help you with your project today?...\",\n      \"details\": \"Hello! How can I help you with your project today?\"\n    },\n    {\n      \"date\": \"2026-07-26T11:10:25.012Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Test Optimization Mission] Executed task: Trace active workspace ports & system constraints\",\n      \"details\": \"Successful run of task task_1 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T11:10:20.011Z\",\n      \"type\": \"PLANNING\",\n      \"description\": \"[Test Optimization Mission] Implementation plan compiled by agent.\",\n      \"details\": \"Constructed 3 tasks for execution under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:51:19.889Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Perform security audit] Agent advanced phase to analytics_2.\",\n      \"details\": \"Progressing mission_ms1ogqcn_ebfq under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:51:14.889Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Perform security audit] Agent advanced phase to research_1.\",\n      \"details\": \"Progressing mission_ms1ogqcn_ebfq under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:48:32.268Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Analyze customer behavior and churn risks] Agent advanced phase to research_1.\",\n      \"details\": \"Progressing mission_ms1od79i_giuu under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:46.296Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to research_1.\",\n      \"details\": \"Progressing mission_auto_ms1o5v9q_swjt under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:46.293Z\",\n      \"type\": \"PLANNING\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Implementation plan compiled by agent.\",\n      \"details\": \"Constructed 3 tasks for execution under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:46.290Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Executed task: Analyze cache hit ratios and identify heavy operations\",\n      \"details\": \"Successful run of task task_1 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:46.290Z\",\n      \"type\": \"AGENT_AUTO_CREATE\",\n      \"description\": \"🤖 [Full Auto] Created new mission: \\\"Autonomous Infrastructure Performance & Cache Hardening\\\"\",\n      \"details\": \"Synthesized automatically from existing workspace context under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:41.290Z\",\n      \"type\": \"QA_GATE\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent answered QA gate automatically for system mission.\",\n      \"details\": \"Agent QA Gatekeeper: Security, feasibility & quality validations PASSED automatically using workspace context.\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:41.286Z\",\n      \"type\": \"PLANNING\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Implementation plan compiled by agent.\",\n      \"details\": \"Constructed 3 tasks for execution under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:36.297Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to qa.\",\n      \"details\": \"Progressing mission_auto_ms1o5fu4_ccqq under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:36.292Z\",\n      \"type\": \"QA_GATE\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent answered QA gate automatically for system mission.\",\n      \"details\": \"Agent QA Gatekeeper: Security, feasibility & quality validations PASSED automatically using workspace context.\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:36.289Z\",\n      \"type\": \"MISSION_COMPLETE\",\n      \"description\": \"🎉 Mission Accomplished: \\\"Autonomous System Integration & Scaffolding\\\"\",\n      \"details\": \"Fully executed all roadmap objectives. Moved to DONE under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:36.289Z\",\n      \"type\": \"DEPLOY\",\n      \"description\": \"Hot-swapped system component: \\\"default_user_system_build_service\\\"\",\n      \"details\": \"Added compiled operational service to components registry under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:36.286Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Compile test suites and run type verification gates\",\n      \"details\": \"Successful run of task task_3 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.300Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to analytics_2.\",\n      \"details\": \"Progressing mission_auto_ms1o5fu4_ccqq under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.296Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to qa.\",\n      \"details\": \"Progressing mission_auto_ms1o5bz6_ubjv under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.292Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Implement core functional services and endpoints\",\n      \"details\": \"Successful run of task task_2 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.289Z\",\n      \"type\": \"MISSION_COMPLETE\",\n      \"description\": \"🎉 Mission Accomplished: \\\"Autonomous System Integration & Scaffolding\\\"\",\n      \"details\": \"Fully executed all roadmap objectives. Moved to DONE under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.289Z\",\n      \"type\": \"DEPLOY\",\n      \"description\": \"Hot-swapped system component: \\\"default_user_system_build_service\\\"\",\n      \"details\": \"Added compiled operational service to components registry under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:31.285Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Compile test suites and run type verification gates\",\n      \"details\": \"Successful run of task task_3 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:26.295Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to research_1.\",\n      \"details\": \"Progressing mission_auto_ms1o5fu4_ccqq under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:26.293Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to analytics_2.\",\n      \"details\": \"Progressing mission_auto_ms1o5bz6_ubjv under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:26.290Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Scaffold clean module structure and package configs\",\n      \"details\": \"Successful run of task task_1 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:26.287Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Implement core functional services and endpoints\",\n      \"details\": \"Successful run of task task_2 for tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:26.287Z\",\n      \"type\": \"AGENT_AUTO_CREATE\",\n      \"description\": \"🤖 [Full Auto] Created new mission: \\\"Autonomous Infrastructure Performance & Cache Hardening\\\"\",\n      \"details\": \"Synthesized automatically from existing workspace context under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:21.290Z\",\n      \"type\": \"AGENT\",\n      \"description\": \"[Autonomous Infrastructure Performance & Cache Hardening] Agent advanced phase to research_1.\",\n      \"details\": \"Progressing mission_auto_ms1o5bz6_ubjv under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:21.287Z\",\n      \"type\": \"PLANNING\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Implementation plan compiled by agent.\",\n      \"details\": \"Constructed 3 tasks for execution under tenant \\\"default_user\\\".\"\n    },\n    {\n      \"date\": \"2026-07-26T10:42:21.284Z\",\n      \"type\": \"EXECUTION\",\n      \"description\": \"[Autonomous System Integration & Scaffolding] Executed task: Scaffold clean module structure and package configs\",\n      \"details\": \"Successful run of task task_1 for tenant \\\"default_user\\\".\"\n    }\n  ],\n  \"active_mission_id\": null,\n  \"last_active\": \"2026-07-29T01:12:43.167Z\"\n}"
+    },
+    {
+      "date": "2026-07-29T01:12:43.167Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: total 28 drwxr-xr-x 1 root root   120 Jul 29 00:21 . drwxr-xr-x 1 root root   140 Jul 29 01:12 .. -rw-r--r-- 1 root root 15096 Jul 29 01:11 missions.j...",
+      "details": "total 28\ndrwxr-xr-x 1 root root   120 Jul 29 00:21 .\ndrwxr-xr-x 1 root root   140 Jul 29 01:12 ..\n-rw-r--r-- 1 root root 15096 Jul 29 01:11 missions.json\n-rw-r--r-- 1 root root   790 Jul 29 01:12 projects.json\n-rw-r--r-- 1 root root 10766 Jul 29 01:12 runtime.json\n-rw-r--r-- 1 root root   352 Jul 29 00:39 settings.json\n"
+    },
+    {
+      "date": "2026-07-29T01:12:41.190Z",
+      "type": "MESSAGE_END",
+      "description": "Turn response: Show active suggestions and backlog items from extensions [SUGGEST: Test Extension | Test Description] [BACKLOG: Audit Kernel Extensions | HIGH]...",
+      "details": "Show active suggestions and backlog items from extensions [SUGGEST: Test Extension | Test Description] [BACKLOG: Audit Kernel Extensions | HIGH]"
+    },
+    {
+      "date": "2026-07-29T01:04:57.657Z",
+      "type": "AGENT_END",
+      "description": "Completed turn: Hello! How can I help you with your projects, missions, or code today?...",
+      "details": "Hello! How can I help you with your projects, missions, or code today?"
+    },
+    {
+      "date": "2026-07-29T01:04:57.656Z",
+      "type": "TURN_END",
+      "description": "Completed turn: Hello! How can I help you with your projects, missions, or code today?...",
+      "details": "Hello! How can I help you with your projects, missions, or code today?"
+    },
+    {
+      "date": "2026-07-29T01:01:34.139Z",
+      "type": "AGENT_END",
+      "description": "Completed turn: Hello! How can I help you with your project today?...",
+      "details": "Hello! How can I help you with your project today?"
+    },
+    {
+      "date": "2026-07-29T01:01:34.138Z",
+      "type": "TURN_END",
+      "description": "Completed turn: Hello! How can I help you with your project today?...",
+      "details": "Hello! How can I help you with your project today?"
+    },
     {
       "date": "2026-07-26T11:10:25.012Z",
       "type": "EXECUTION",
@@ -187,5 +274,5 @@
     }
   ],
   "active_mission_id": null,
-  "last_active": "2026-07-26T11:10:25.012Z"
+  "last_active": "2026-07-29T01:22:50.243Z"
 }

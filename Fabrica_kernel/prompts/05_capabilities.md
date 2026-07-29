@@ -12,7 +12,7 @@ It is critical to distinguish between the two structural layers in the kernel:
 ## 2. TYPES OF TOOLS & SYSTEM ENDPOINTS
 
 ### A. Plugins
-Code blocks or API proxies that connect the agent to external platforms (e.g., Shopify, Stripe, Gmail, Slack). Plugins expose distinct server routes and methods that the agent can execute via JSON payloads.
+Code blocks or API proxies that connect the agent to external platforms (e.g., Stripe, Gmail, Slack, custom REST endpoints). Plugins expose distinct server routes and methods that the agent can execute via JSON payloads.
 
 ### B. MCP (Model Context Protocol) Servers
 External modular service servers that expose standardized tool APIs, resources, and prompt templates. MCPs enable the agent to query local file structures, run SQL commands, or execute bash scripts.
@@ -105,18 +105,18 @@ Every mission is a highly customized pipeline that ingests any input format, exe
 ### A. The Input Spectrum (What we ingest)
 - **Ideas & Concepts**: User-supplied descriptions, business briefs, PM logs, and core requirements.
 - **Raw Data & Ledger Tables**: Spreadsheets (Excel, CSVs), client feedback chats, support logs, email logs, and documents.
-- **Pre-Existing Systems**: Legacy software codebases, Odoo database schemas, active webhooks, and live server endpoints.
+- **Pre-Existing Systems**: Software codebases, active database schemas, webhooks, and live server endpoints.
 
 ### B. Specialized Agentic Tasks (How we operate)
 - **Digital Transformation & Architecture**: Mapping data workflows and assessing integrations.
 - **Development & Product Engineering**: Scaffold, compile, and configure real software components.
 - **Marketing & Media Buying**: Setting up ad campaigns, auditing budgets, and tracking analytics logs.
-- **Content Creation & Distribution**: Synthesizing high-converting ad copy, copy decks, and dynamic visual assets.
+- **Content Creation & Distribution**: Synthesizing ad copy, copy decks, and dynamic visual assets.
 - **Customer Response & Sales**: Formulating auto-responders and routing sales queues.
 
 ### C. The Output Spectrum (What we build & deploy)
-- **Deployed ERP & Custom Systems**: Customized relational modules, database partitions, and enterprise tables.
-- **Workflow Automations & Pipelines**: Completed n8n workflows, connected API pipelines, and automated webhooks.
+- **Deployed Custom Systems**: Customized relational modules, database partitions, and workspace tables.
+- **Workflow Automations & Pipelines**: Connected API pipelines, background tasks, and automated webhooks.
 - **Knowledge & Deep Analytics Engines**: SWOT metrics, competitive research briefs, synthesized spreadsheets, and insights logs.
 - **Operational Dashboards**: Real-time monitoring interfaces with customized tracking telemetry.
 
@@ -172,11 +172,11 @@ A mission transitions through four major status blocks, visible in the tracker i
 ## 4. THE 7-STEP DRAFTING PIPELINE
 For specialized pipelines (System Build, System Build From Data, System Optimization, System Optimization From Data, System Test, System Test From Data), the **DRAFTING** status is subdivided into a highly structured 7-step pipeline. Each step must be completed sequentially:
 
-1. **Analytics 1 (Initial Analytics)**: Analyze the user's initial inputs (e.g. ad briefs, spreadsheets, Odoo schemas), identify core boundaries, and outline gaps.
+1. **Analytics 1 (Initial Analytics)**: Analyze the user's initial inputs (e.g. ad briefs, spreadsheets, uploaded schemas), identify core boundaries, and outline gaps.
 2. **Research 1 (Initial Research)**: Query external APIs, search documentation, or scan existing systems to find matching patterns (e.g. competitor benchmarks, API routes).
 3. **Analytics 2 (Research Analytics)**: Synthesize findings from Research 1 and prepare questions for the user or enterprise stakeholder.
 4. **QA (User Confirmation Gate)**: Prompt the user with options and explanations of "why". The user makes selections or inputs custom text. **Execution freezes until the user provides input.**
-5. **Analytics 3 (User-Response Analytics)**: Analyze user feedback, mapping their preferences to system configurations (e.g. choosing custom Odoo schemas or n8n endpoints).
+5. **Analytics 3 (User-Response Analytics)**: Analyze user feedback, mapping their preferences to system configurations (e.g. choosing custom data schemas or API endpoints).
 6. **Research 2 (Final Specific Research)**: Run highly targeted research addressing details or tools specified in the QA selection.
 7. **Analytics 4 (Final Synthesis)**: Combine all insights, research, and QA selections into a unified blueprint, ready to transition the mission status to **PLANNING**.
 
@@ -184,8 +184,8 @@ For specialized pipelines (System Build, System Build From Data, System Optimiza
 
 ## 5. MISSION TELEMETRY & LIVE MONITORING
 Missions do not operate in a vacuum. During both the **Execution** and **Archive** phases, active systems pipe telemetry metrics back to the mission's database row:
-- **ERP Telemetry**: Track connection state, JSON-RPC success rates, and database sync frequencies.
-- **Automation Telemetry**: Track webhook execution rates, trigger counts, and error-to-success ratios from n8n nodes.
+- **System Telemetry**: Track connection state, API success rates, and database sync frequencies.
+- **Automation Telemetry**: Track webhook execution rates, trigger counts, and error-to-success ratios from active modules.
 - **Marketing Telemetry**: Pipe CPC (Cost-per-Click), dynamic reach metrics, and content engagement analytics.
 - **System Health Logs**: Monitor latency, uptime percentage, and exception stacktraces on live-hosted portals.
 

@@ -1,5 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Fabrica Context Injector Extension for pi agent
@@ -14,13 +18,20 @@ export default function contextInjectorExtension(pi) {
 
   pi.on('before_agent_start', async (event, ctx) => {
     // ── 1. Resolve Fabrica_kernel/prompts/ directory ─────────────────────
-    const promptsDir = fs.existsSync('/Fabrica_kernel/prompts')
-      ? '/Fabrica_kernel/prompts'
-      : path.join(process.cwd(), 'Fabrica_kernel', 'prompts');
+    const candidatePromptDirs = [
+      path.resolve(__dirname, '..', 'prompts'),
+      path.join(process.cwd(), 'Fabrica_kernel', 'prompts'),
+      path.join(process.cwd(), '..', '..', 'Fabrica_kernel', 'prompts'),
+      '/Fabrica_kernel/prompts'
+    ];
+
+    const promptsDir = candidatePromptDirs.find(d => {
+      try { return fs.existsSync(d) && fs.statSync(d).isDirectory(); } catch { return false; }
+    });
 
     let kernelPrompts = '';
     try {
-      if (fs.existsSync(promptsDir)) {
+      if (promptsDir) {
         const files = fs.readdirSync(promptsDir)
           .filter(f => f.endsWith('.md'))
           .sort();
@@ -32,13 +43,19 @@ export default function contextInjectorExtension(pi) {
       console.warn('[context_injector] Failed loading kernel prompts:', err.message);
     }
 
-    // ── 2. Load workspace runtime context from cwd/db/runtime.json ─────────
-    const cwd = event.systemPromptOptions?.cwd || process.cwd();
-    const runtimePath = path.join(cwd, 'db', 'runtime.json');
+    // ── 2. Load workspace runtime context from db/runtime.json ─────────
+    const cwd = event.systemPromptOptions?.cwd || ctx?.cwd || process.cwd();
+    const candidateRuntimePaths = [
+      path.join(cwd, 'db', 'runtime.json'),
+      path.join(process.cwd(), 'db', 'runtime.json'),
+      path.join(process.cwd(), 'workspaces', 'default_user', 'db', 'runtime.json')
+    ];
+
+    const runtimePath = candidateRuntimePaths.find(p => fs.existsSync(p));
     let workspaceContext = '';
 
     try {
-      if (fs.existsSync(runtimePath)) {
+      if (runtimePath) {
         const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
         const parts = [];
 
@@ -48,20 +65,29 @@ export default function contextInjectorExtension(pi) {
         if (runtime.suggestions && runtime.suggestions.length > 0) {
           parts.push(
             `## Current Suggestions\n` +
-            runtime.suggestions.map(s => `- ${s.title || s}`).join('\n')
+            runtime.suggestions.map(s => `- ${s.title || s}${s.description ? `: ${s.description}` : ''}`).join('\n')
           );
         }
         if (runtime.backlogs && runtime.backlogs.length > 0) {
           parts.push(
             `## Workspace Backlog\n` +
-            runtime.backlogs.map(b => `- [${b.status || 'OPEN'}] ${b.title || b}`).join('\n')
+            runtime.backlogs.map(b => `- [${b.status || 'OPEN'}] ${b.title || b}${b.priority ? ` (${b.priority})` : ''}`).join('\n')
           );
+        }
+        if (runtime.review_queues && runtime.review_queues.length > 0) {
+          const pending = runtime.review_queues.filter(r => r.status === 'PENDING_USER_APPROVAL');
+          if (pending.length > 0) {
+            parts.push(
+              `## Items Requiring Approval\n` +
+              pending.map(r => `- [${r.id}] ${r.title}: ${r.details || ''}`).join('\n')
+            );
+          }
         }
         if (runtime.recent_events && runtime.recent_events.length > 0) {
           const last3 = runtime.recent_events.slice(0, 3);
           parts.push(
             `## Recent Workspace Events\n` +
-            last3.map(e => `- [${e.type}] ${e.description}`).join('\n')
+            last3.map(e => `- [${e.type || 'EVENT'}] ${e.description || e.details || ''}`).join('\n')
           );
         }
 
@@ -83,3 +109,4 @@ export default function contextInjectorExtension(pi) {
     };
   });
 }
+

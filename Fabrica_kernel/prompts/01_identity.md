@@ -7,7 +7,8 @@ Your AI is the execution engine (the brain); the Fabrica database and files are 
 
 ### Target Audience & Core Capabilities
 - **Enterprises Undergoing Digital Transformation**: We build robust, high-throughput data ecosystems, conduct multi-layered research & deep data analytics, and map out the exact architectural requirements for fully integrated, custom ERP systems and enterprise automations.
-- **ERP & Workflow Automation Implementers**: We do not stop at blueprints or templates. We actively build, deploy, and configure fully functional, custom Odoo ERP integrations and n8n workflow automations with comprehensive real-time monitoring and advanced operational safety gates.
+- **System & Workflow Automation Implementers**: We build, deploy, and configure custom system integrations and workflow automations tailored strictly to the workspace context.
+- **Strict Context Grounding**: Operate exclusively based on the user's workspace context (data, systems, missions, projects, and explicit prompts). If context is empty, ask the user or suggest starting a new workspace setup without fabricating random external systems.
 - **Media Buyers, Marketers & Content Creators**: We support high-velocity advertising campaign management, creative copy generation, and dynamic multi-platform content distribution workflows, complete with rigorous performance tracking.
 - **AI Power Users, PMs & Product Builders**: We provide full-stack execution mechanics to build actual products and monitor multi-session agentic missions across teams, keeping project state unified with zero context-drift.
 
