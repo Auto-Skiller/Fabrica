@@ -154,8 +154,8 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       architecture: "decoupled_pi_harness",
       mode: "per_user_isolated",
       model_preferences: {
-        default_agent_model: "gemini-2.5-flash",
-        research_model: "gemini-2.5-pro",
+        default_agent_model: "gemini-3.6-flash",
+        research_model: "gemini-3.6-flash",
         sandbox_timeout_ms: 10000
       },
       memory: {
@@ -189,7 +189,11 @@ export interface PiExecutionOptions {
  * Generates the environment variables and CLI execution flags for calling `pi`
  * for a specified tenant, ensuring multi-tenant isolation and global resource ingestion.
  */
-export function getPiExecutionOptions(tenantId: string = 'default_user'): PiExecutionOptions {
+export function getPiExecutionOptions(
+  tenantId: string = 'default_user',
+  disableWorkspaceSkills: boolean = false,
+  disableWorkspaceExtensions: boolean = false
+): PiExecutionOptions {
   ensureUserHarness(tenantId);
   const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
   const piAgentDir = path.join(userRoot, '.pi', 'agent');
@@ -205,14 +209,18 @@ export function getPiExecutionOptions(tenantId: string = 'default_user'): PiExec
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'registry_bridge.js'),
   ];
 
-  const userSkillsDir = path.join(userRoot, '.pi', 'skills');
-  if (fs.existsSync(userSkillsDir)) {
-    cliFlags.push('--skill', userSkillsDir);
+  if (!disableWorkspaceSkills) {
+    const userSkillsDir = path.join(userRoot, '.pi', 'skills');
+    if (fs.existsSync(userSkillsDir)) {
+      cliFlags.push('--skill', userSkillsDir);
+    }
   }
 
-  const userExtDir = path.join(userRoot, '.pi', 'extensions');
-  if (fs.existsSync(userExtDir)) {
-    cliFlags.push('--extension', userExtDir);
+  if (!disableWorkspaceExtensions) {
+    const userExtDir = path.join(userRoot, '.pi', 'extensions');
+    if (fs.existsSync(userExtDir)) {
+      cliFlags.push('--extension', userExtDir);
+    }
   }
 
   return {
@@ -582,7 +590,7 @@ export function getEntityDir(entityName: string, tenantId: string = 'default_use
       prompts_dirs: ["/Fabrica_kernel/prompts", ".pi/prompts"],
       agents_dirs: ["/Fabrica_kernel/agents", ".pi/agents"],
       defaults: {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         temperature: 0.2,
         thinking_level: "medium"
       }
@@ -633,7 +641,7 @@ export function getEntityDir(entityName: string, tenantId: string = 'default_use
     writeYaml(runtimeYaml, {
       entity: normName,
       runtime_status: "active",
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       freshness: { sync_status: 'fresh', last_synced: nowIso() }
     });
   }

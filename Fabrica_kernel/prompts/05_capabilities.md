@@ -24,7 +24,7 @@ A secure VM execution channel allowing agents to run dynamically generated JavaS
 Exposes live task queue metrics, worker thread pool stats, and background mission simulation health.
 
 ### E. Model Selection & Live Streaming Voice
-- **Model Selector (`chatModel`)**: Dynamic model provider switching (`gemini-2.0-flash`, `claude-3-5-sonnet`, `openrouter/`).
+- **Model Selector (`chatModel`)**: Dynamic model provider switching (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`).
 - **Live Voice Stream (🎙️)**: Real-time bi-directional voice streaming channel adjacent to active session controls.
 
 ### F. Domain Skills & Secondary Agents

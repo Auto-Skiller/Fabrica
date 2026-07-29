@@ -13,6 +13,7 @@ const MissionGraph = dynamic(() => import('../../components/flow/MissionGraph'),
 
 const DependencyGraph = dynamic(() => import('../../components/flow/DependencyGraph'), { ssr: false });
 import { AccountWorkspaceModal } from '../../components/AccountWorkspaceModal';
+import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } from '../../lib/pi-models';
 import { UserHarnessService } from '../../lib/user-harness';
 import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../lib/workspace-api';
 import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../lib/github-api';
@@ -1510,6 +1511,28 @@ export default function Dashboard() {
   const [anthropicApiKey, setAnthropicApiKey] = useState<string>('');
   const [backendKeys, setBackendKeys] = useState<{ gemini: boolean; openrouter: boolean; anthropic: boolean }>({ gemini: false, openrouter: false, anthropic: false });
   const [chatModel, setChatModel] = useState<string>('gemini-3.6-flash');
+  const [tokenBillingMode, setTokenBillingMode] = useState<'managed' | 'paug' | 'byok' | 'pool'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('fabrica_llm_method');
+      if (saved === 'pool' || saved === 'byok' || saved === 'managed' || saved === 'paug') {
+        return saved;
+      }
+    }
+    return 'pool';
+  });
+  const [piModelsList, setPiModelsList] = useState<any[]>(DEFAULT_PI_CLI_MODELS);
+
+  const handleTokenBillingModeChange = (mode: 'managed' | 'paug' | 'byok' | 'pool') => {
+    setTokenBillingMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fabrica_llm_method', mode);
+    }
+    if (mode === 'pool') {
+      if (!FABRICA_POOL_MODELS.some(m => m.id === chatModel)) {
+        setChatModel('gemini-3.6-flash');
+      }
+    }
+  };
   const [fetchedModels, setFetchedModels] = useState<{
     gemini: any[];
     openrouter: any[];
@@ -1913,6 +1936,14 @@ export default function Dashboard() {
     }
   }, [autoFreeFallback, chatModel, fetchedModels, geminiApiKey, openrouterApiKey, backendKeys]);
 
+  useEffect(() => {
+    api.getPiModels().then((res) => {
+      if (res && res.ok && Array.isArray(res.models) && res.models.length > 0) {
+        setPiModelsList(res.models);
+      }
+    }).catch(() => {});
+  }, []);
+
   const loadRealModels = async (
     gKey: string = geminiApiKey,
     oKey: string = openrouterApiKey,
@@ -1925,8 +1956,28 @@ export default function Dashboard() {
     setFetchModelsError('');
     try {
       const res = await api.getModels(gKey, oKey, aKey, oaiKey, grKey, dsKey);
+      let piModelsRes: any = null;
+      try {
+        piModelsRes = await api.getPiModels();
+        if (piModelsRes && piModelsRes.ok && Array.isArray(piModelsRes.models) && piModelsRes.models.length > 0) {
+          setPiModelsList(piModelsRes.models);
+        }
+      } catch (e) {}
+
       if (res.ok && res.providers) {
-        setFetchedModels(res.providers);
+        const mergedProviders: any = { ...res.providers };
+        if (piModelsRes && piModelsRes.ok && Array.isArray(piModelsRes.models)) {
+          for (const piM of piModelsRes.models) {
+            const providerKey = piM.provider || 'gemini';
+            if (!mergedProviders[providerKey]) {
+              mergedProviders[providerKey] = [];
+            }
+            if (!mergedProviders[providerKey].some((m: any) => m.id === piM.id)) {
+              mergedProviders[providerKey].unshift(piM);
+            }
+          }
+        }
+        setFetchedModels(mergedProviders);
       } else {
         setFetchModelsError('Failed to fetch models from server');
       }
@@ -1938,7 +1989,7 @@ export default function Dashboard() {
     }
   };
 
-  // Agent Chat states
+  // Agent Chat states & PI session management
   interface ChatSession {
     id: string;
     name: string;
@@ -1952,47 +2003,94 @@ export default function Dashboard() {
   const [chatHistory, setChatHistory] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
   const [agentSuggestions, setAgentSuggestions] = useState<string[]>([]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
+  const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number } | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const refreshPiSessions = async (tenantKey: string, targetActiveId?: string) => {
+    try {
+      const res = await api.getPiSessions(tenantKey);
+      if (res && res.ok && Array.isArray(res.sessions)) {
+        if (res.sessions.length === 0) {
+          const created = await api.createPiSession(tenantKey, 'Session 1');
+          if (created && created.ok && created.session) {
+            const formatted = [{
+              id: created.session.id,
+              name: created.session.name || 'Session 1',
+              history: created.session.history || []
+            }];
+            setSessions(formatted);
+            setActiveSessionId(created.session.id);
+            setChatHistory(created.session.history || []);
+            refreshPiContext(tenantKey, created.session.id);
+            return;
+          }
+        }
+
+        const formatted = res.sessions.map((s: any) => ({
+          id: s.id,
+          name: s.name || `Session (${s.id.slice(-6)})`,
+          history: s.history || []
+        }));
+        setSessions(formatted);
+
+        const currentActive = targetActiveId || activeSessionId;
+        const nextId = currentActive && formatted.some((s: any) => s.id === currentActive)
+          ? currentActive
+          : formatted[0].id;
+
+        setActiveSessionId(nextId);
+        const activeSess = formatted.find((s: any) => s.id === nextId);
+        if (activeSess) {
+          setChatHistory(activeSess.history);
+        }
+        refreshPiContext(tenantKey, nextId);
+      }
+    } catch (err) {
+      console.warn("Failed to refresh pi sessions:", err);
+    }
+  };
+
+  const refreshPiContext = async (tenantKey: string, sessId?: string) => {
+    try {
+      const targetId = sessId || activeSessionId;
+      if (!targetId) return;
+      const res = await api.getPiContext(tenantKey, targetId);
+      if (res && res.ok) {
+        setPiContext({
+          tokensUsed: res.tokensUsed,
+          maxTokens: res.maxTokens,
+          percentUsed: res.percentUsed,
+          messageCount: res.messageCount
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to refresh pi context:", err);
+    }
+  };
 
   const handleSelectSession = (id: string) => {
     const s = sessions.find(x => x.id === id);
     if (s) {
       setActiveSessionId(id);
       setChatHistory(s.history);
-      localStorage.setItem('pboot_active_session_id', id);
+      const tenantKey = user?.id || activeEntity || 'default_user';
+      refreshPiContext(tenantKey, id);
     }
   };
 
-  const handleCreateSession = () => {
-    const newId = 'session_' + Date.now();
-    const newNum = sessions.length + 1;
-    const newSession: ChatSession = {
-      id: newId,
-      name: `Session ${newNum}`,
-      history: [
-        { sender: 'agent', text: 'Hello! This is a new clean chat session. Ask me anything!' }
-      ]
-    };
-    const updated = [...sessions, newSession];
-    setSessions(updated);
-    setActiveSessionId(newId);
-    setChatHistory(newSession.history);
+  const handleCreateSession = async () => {
     const tenantKey = user?.id || activeEntity || 'default_user';
-    localStorage.setItem(`pboot_chat_sessions_${tenantKey}`, JSON.stringify(updated));
-    localStorage.setItem(`pboot_active_session_id_${tenantKey}`, newId);
-    api.saveAppConfig({
-      user_id: tenantKey,
-      settings: {
-        autonomy: autonomyLevel,
-        notifications: {},
-        sync_daemon: true,
-        chat_sessions: updated,
-        active_session_id: newId,
-        tools_enabled: toolsEnabled,
-        theme: theme,
-        ui_lang: uiLang
+    try {
+      const res = await api.createPiSession(tenantKey, `Session ${sessions.length + 1}`);
+      if (res && res.ok && res.session) {
+        await refreshPiSessions(tenantKey, res.session.id);
+        setShowSessionDropdown(false);
+        setToast({ message: '✨ Created new real PI session on disk.', type: 'success', isOpen: true });
       }
-    }).catch(err => console.warn('Failed to sync chat sessions to app_config:', err));
+    } catch (err: any) {
+      console.error("Error creating real pi session:", err);
+      setToast({ message: 'Failed to create pi session.', type: 'error', isOpen: true });
+    }
   };
 
   const handleDeleteSession = (id: string) => {
@@ -2000,58 +2098,21 @@ export default function Dashboard() {
     setConfirmModal({
       isOpen: true,
       title: 'Delete Chat Session',
-      message: `Are you sure you want to delete "${sessionName}"? This action cannot be undone and will permanently erase this conversation's context.`,
+      message: `Are you sure you want to delete "${sessionName}"? This action cannot be undone and will permanently delete the session file from disk.`,
       confirmText: 'Delete',
       isDestructive: true,
-      onConfirm: () => {
-        const updated = sessions.filter(s => s.id !== id);
-        let nextActiveId = activeSessionId;
-        let nextHistory = chatHistory;
-
-        if (id === activeSessionId) {
-          if (updated.length > 0) {
-            nextActiveId = updated[updated.length - 1].id;
-            nextHistory = updated[updated.length - 1].history;
-          } else {
-            const fallbackId = 'session_' + Date.now();
-            const fallbackSession: ChatSession = {
-              id: fallbackId,
-              name: 'Session 1',
-              history: [
-                { sender: 'agent', text: 'Hello! I am your Fabrica build assistant. I learn how your business actually works, structure your data, and help you watch your company get built. Ask me anything or select one of the suggested paths below!' }
-              ]
-            };
-            updated.push(fallbackSession);
-            nextActiveId = fallbackId;
-            nextHistory = fallbackSession.history;
-          }
-        }
-
-        setSessions(updated);
-        setActiveSessionId(nextActiveId);
-        setChatHistory(nextHistory);
+      onConfirm: async () => {
         const tenantKey = user?.id || activeEntity || 'default_user';
-        localStorage.setItem(`pboot_chat_sessions_${tenantKey}`, JSON.stringify(updated));
-        localStorage.setItem(`pboot_active_session_id_${tenantKey}`, nextActiveId);
-        api.saveAppConfig({
-          user_id: tenantKey,
-          settings: {
-            autonomy: autonomyLevel,
-            notifications: {},
-            sync_daemon: true,
-            chat_sessions: updated,
-            active_session_id: nextActiveId,
-            tools_enabled: toolsEnabled,
-            theme: theme,
-            ui_lang: uiLang
-          }
-        }).catch(err => console.warn('Failed to sync deleted chat sessions to app_config:', err));
-        setConfirmModal(null);
-        setToast({
-          message: 'Chat session deleted successfully.',
-          type: 'success',
-          isOpen: true
-        });
+        try {
+          await api.deletePiSession(id, tenantKey);
+          await refreshPiSessions(tenantKey);
+          setConfirmModal(null);
+          setToast({ message: 'Session deleted from disk.', type: 'success', isOpen: true });
+        } catch (err: any) {
+          console.error("Error deleting pi session:", err);
+          setConfirmModal(null);
+          setToast({ message: 'Failed to delete session.', type: 'error', isOpen: true });
+        }
       }
     });
   };
@@ -2826,10 +2887,18 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (isAccountWindowOpen) {
+    fetchUserTierData();
+  }, [user]);
+
+  useEffect(() => {
+    if (isAccountWindowOpen || isAccountHoverOpen) {
       fetchUserTierData();
+      const interval = setInterval(() => {
+        fetchUserTierData();
+      }, 4000);
+      return () => clearInterval(interval);
     }
-  }, [isAccountWindowOpen, user]);
+  }, [isAccountWindowOpen, isAccountHoverOpen, user]);
 
   // Load payment history from local storage on modal open
   useEffect(() => {
@@ -2907,9 +2976,9 @@ export default function Dashboard() {
     setAnthropicApiKey(savedAnthropicKey);
     originalAnthropicKey.current = savedAnthropicKey;
 
-    let savedModel = localStorage.getItem('pb_chat_model') || 'gemini-2.0-flash';
+    let savedModel = localStorage.getItem('pb_chat_model') || 'gemini-3.6-flash';
     if (savedModel === 'gemini-2.5-flash') {
-      savedModel = 'gemini-2.0-flash';
+      savedModel = 'gemini-3.6-flash';
     } else if (savedModel === 'gemini-2.5-pro') {
       savedModel = 'gemini-2.0-pro-exp-02-05';
     }
@@ -2931,48 +3000,9 @@ export default function Dashboard() {
       })
       .catch(err => console.warn('Failed to load initial app config:', err));
 
-    // Load tenant-specific config & chat sessions
+    // Load tenant-specific real PI agent sessions from CLI harness
     const tenantKey = user?.id || activeEntity || 'default_user';
-    let loadedSessions: ChatSession[] = [];
-    let loadedActiveId = '';
-    const savedSessions = localStorage.getItem(`pboot_chat_sessions_${tenantKey}`) || localStorage.getItem('pboot_chat_sessions');
-    const savedActiveId = localStorage.getItem(`pboot_active_session_id_${tenantKey}`) || localStorage.getItem('pboot_active_session_id');
-    if (savedSessions) {
-      try {
-        const parsed = JSON.parse(savedSessions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          loadedSessions = parsed;
-          if (savedActiveId && parsed.some((s: any) => s.id === savedActiveId)) {
-            loadedActiveId = savedActiveId;
-          } else {
-            loadedActiveId = parsed[0].id;
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing saved sessions:", e);
-      }
-    }
-
-    if (loadedSessions.length === 0) {
-      const initialSession: ChatSession = {
-        id: 'session_' + Date.now(),
-        name: 'Session 1',
-        history: [
-          { sender: 'agent', text: 'Hello! I am your Fabrica build assistant. I learn how your business actually works, structure your data, and help you watch your company get built. Ask me anything or select one of the suggested paths below!' }
-        ]
-      };
-      loadedSessions = [initialSession];
-      loadedActiveId = initialSession.id;
-    }
-
-    setSessions(loadedSessions);
-    setActiveSessionId(loadedActiveId);
-    const currentActiveSess = loadedSessions.find((s: any) => s.id === loadedActiveId);
-    if (currentActiveSess) {
-      setChatHistory(currentActiveSess.history);
-    }
-    localStorage.setItem(`pboot_chat_sessions_${tenantKey}`, JSON.stringify(loadedSessions));
-    localStorage.setItem(`pboot_active_session_id_${tenantKey}`, loadedActiveId);
+    refreshPiSessions(tenantKey);
 
     return () => {
       document.documentElement.classList.remove('dashboard-html');
@@ -3130,15 +3160,15 @@ export default function Dashboard() {
     const rw = `${sideW}%`;
 
     if (minCenter && minSide) {
-      return `minmax(0, 1fr) 6px var(--minw, 58px) 6px var(--minw, 58px)`;
+      return `minmax(0, 1fr) 1px var(--minw, 58px) 1px var(--minw, 58px)`;
     }
     if (minCenter) {
-      return `${lw} 6px var(--minw, 58px) 6px minmax(0, 1fr)`;
+      return `${lw} 1px var(--minw, 58px) 1px minmax(0, 1fr)`;
     }
     if (minSide) {
-      return `${lw} 6px minmax(0, 1fr) 6px var(--minw, 58px)`;
+      return `${lw} 1px minmax(0, 1fr) 1px var(--minw, 58px)`;
     }
-    return `${lw} 6px minmax(0, 1fr) 6px ${rw}`;
+    return `${lw} 1px minmax(0, 1fr) 1px ${rw}`;
   };
 
   // Agent Chat Input Height Resizer Drag Mechanics
@@ -3942,6 +3972,9 @@ export default function Dashboard() {
           type: 'success',
           isOpen: true
         });
+        const targetM = (missions || []).find((m: any) => m.id === missionId) || { id: missionId, category };
+        const updatedM = { ...targetM, state: { ...(targetM.state || {}), class: nextClass } };
+        triggerMissionAgentNotification('MOVED', updatedM, `Patched mission state class to '${nextClass}'`);
       }
     } catch (err: any) {
       setToast({
@@ -3988,17 +4021,20 @@ export default function Dashboard() {
       if (res.ok) {
         setToast({ message: `Mission state updated to ${nextStatus.toUpperCase()}!`, type: 'success', isOpen: true });
         fetchWorkspaceData();
+        const updatedMission = {
+          ...mission,
+          status: nextStatus,
+          phase: nextStatus,
+          state: {
+            ...(mission.state || {}),
+            class: nextClass
+          }
+        };
         setSelectedMission((prev: any) => {
           if (!prev || prev.id !== mission.id) return prev;
-          return {
-            ...prev,
-            status: nextStatus,
-            state: {
-              ...prev.state,
-              class: nextClass
-            }
-          };
+          return updatedMission;
         });
+        triggerMissionAgentNotification('MOVED', updatedMission, `Moved mission status to '${nextStatus.toUpperCase()}' (${nextClass})`);
       }
     } catch (e: any) {
       setToast({ message: e.message || 'Failed to update status', type: 'error', isOpen: true });
@@ -4205,6 +4241,8 @@ AGENT DIRECTIVES:
           await api.patchEntity(activeEntity, 'missions', [mission.type || mission.category || 'standard', mission.id, 'state', 'class'], nextClass);
           updatedMission.state = { ...updatedMission.state, class: nextClass };
           updatedMission.status = nextClass === 'DONE' ? 'archive' : nextClass.toLowerCase();
+
+          triggerMissionAgentNotification('MOVED', updatedMission, `QA Assessment completed (${selection}). Phase updated to '${updatedMission.phase}' (${nextClass})`);
         }
 
         setToast({ message: 'Assessment saved and business workflow aligned!', type: 'success', isOpen: true });
@@ -4708,10 +4746,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         setSelectedMission(createdMission);
 
         setToast({
-          message: `Mission "${formattedId}" added to NEW section! You can inspect and edit its inputs below.`,
+          message: `Mission "${formattedId}" added to workspace! Notifying Agent...`,
           type: 'success',
           isOpen: true
         });
+
+        triggerMissionAgentNotification('ADDED', createdMission, `Added via UI in category '${newMissionCategory}' with priority '${newMissionPriority}'`);
       } else {
         setToast({ message: 'Failed to register new mission in workspace.', type: 'error', isOpen: true });
       }
@@ -5047,6 +5087,56 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
     }
   };
 
+  // Mission Event Queue for non-interruptive real-time Agent notifications
+  const missionEventQueueRef = useRef<Array<{ action: 'ADDED' | 'MOVED'; mission: any; extraInfo?: string }>>([]);
+
+  const processMissionEvent = async (action: 'ADDED' | 'MOVED', mission: any, extraInfo?: string) => {
+    const isDirector = autonomyLevel === 'autonomous' || autonomyLevel === 'director' || (typeof isAutonomyOn !== 'undefined' && isAutonomyOn);
+    const modeStr = isDirector ? 'DIRECTOR (Autonomous Mode)' : 'WORKER (Interactive / Semi-Autonomous Mode)';
+
+    const missionTitle = mission.title || mission.objective || mission.id || 'Untitled Mission';
+    const missionId = mission.id || 'N/A';
+    const missionCategory = mission.category || mission.type || 'standard';
+    const missionPhase = mission.phase || mission.status || mission.state?.class || 'DRAFT';
+
+    const promptMessage = `[REAL-TIME MISSION EVENT]
+⚡ Action: User ${action} mission in UI
+🆔 Mission ID: ${missionId}
+📌 Title / Objective: "${missionTitle}"
+🏷️ Category / Type: ${missionCategory}
+📊 Current Phase / Status: ${missionPhase}
+🤖 Active Autonomy Mode: ${modeStr}
+${extraInfo ? `ℹ️ Details: ${extraInfo}` : ''}
+
+DIRECTIVE FOR AGENT:
+You are the Fabrica Agent Kernel handling workspace missions in ${modeStr}.
+${isDirector ? `
+1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.
+2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.
+3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.
+4. Begin execution on this mission immediately under DIRECTOR mode.
+` : `
+1. Review this mission's objective, specs, goals, tasks, and system inputs.
+2. Analyze if anything is missing or incomplete (objective details, goals, tasks, target stack, or verification gates).
+3. Provide a concise, professional review summary to the operator. Point out any identified gaps or suggested additions, and ask for operator approval before advancing or starting execution.
+`}`;
+
+    await handleSendChat(promptMessage);
+  };
+
+  const triggerMissionAgentNotification = (action: 'ADDED' | 'MOVED', mission: any, extraInfo?: string) => {
+    if (isChatLoading) {
+      missionEventQueueRef.current.push({ action, mission, extraInfo });
+      setToast({
+        message: `⚡ Mission ${action} queued for Agent review after active turn.`,
+        type: 'info',
+        isOpen: true
+      });
+    } else {
+      processMissionEvent(action, mission, extraInfo);
+    }
+  };
+
   // Agent Chat trigger
   const handleSendChat = async (msgOverride?: string) => {
     const msg = (msgOverride || chatMessage).trim();
@@ -5065,7 +5155,9 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         text: h.text
       }));
 
-      const res = await api.chatAgent(msg, formattedHistory, customApiKey, chatModel, webSearchEnabled, agentLang);
+      const tenantKey = user?.id || activeEntity || 'default_user';
+      const res = await api.chatAgent(msg, formattedHistory, customApiKey, chatModel, webSearchEnabled, agentLang, activeSessionId, tenantKey);
+      fetchUserTierData();
       if (res.ok) {
         setChatHistory(prev => [...prev, { sender: 'agent', text: res.text }]);
         if (res.suggestions && Array.isArray(res.suggestions) && res.suggestions.length > 0) {
@@ -5096,7 +5188,19 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
       setToast({ message: `Agent API Error: ${errText}`, type: 'error', isOpen: true });
     } finally {
       setIsChatLoading(false);
+      const tenantKey = user?.id || activeEntity || 'default_user';
+      refreshPiContext(tenantKey, activeSessionId);
       await runPostTurnAutomations();
+
+      // Dequeue queued mission event if any after turn ends
+      if (missionEventQueueRef.current.length > 0) {
+        const nextEvent = missionEventQueueRef.current.shift();
+        if (nextEvent) {
+          setTimeout(() => {
+            processMissionEvent(nextEvent.action, nextEvent.mission, nextEvent.extraInfo);
+          }, 400);
+        }
+      }
     }
   };
 
@@ -5312,7 +5416,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
 
     if (!isCurrentModelOk) {
       if (isGeminiConfigured) {
-        setChatModel('gemini-2.0-flash');
+        setChatModel('gemini-3.6-flash');
       } else if (isOpenRouterConfigured) {
         setChatModel('openrouter/meta-llama/llama-3.3-70b-instruct:free');
       } else if (isAnthropicConfigured) {
@@ -5322,6 +5426,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
   }, [geminiApiKey, openrouterApiKey, anthropicApiKey, backendKeys, chatModel]);
 
   const modelMetadata: Record<string, { provider: string; limit: string; cost: string; desc: string }> = {
+    'gemini-3.6-flash': {
+      provider: 'Google AI Studio',
+      limit: '15 RPM / 1M TPB / 1500 RPD (Free)',
+      cost: '100% Free via AI Studio',
+      desc: 'Google flagship Gemini 3.6 Flash model. Ultra-fast, highly intelligent, and optimized for complex reasoning.'
+    },
     'gemini-2.0-flash': {
       provider: 'Google AI Studio',
       limit: '15 RPM / 1M TPB / 1500 RPD (Free)',
@@ -5415,96 +5525,43 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
   };
 
   const renderModelOptions = () => {
-    const isGeminiConfigured = !!geminiApiKey || backendKeys.gemini;
-    const isOpenRouterConfigured = !!openrouterApiKey || backendKeys.openrouter;
-    const isAnthropicConfigured = !!anthropicApiKey || backendKeys.anthropic;
-
-    if (!isGeminiConfigured && !isOpenRouterConfigured && !isAnthropicConfigured) {
+    if (tokenBillingMode === 'pool') {
       return (
-        <option value="" disabled style={{ background: 'var(--surface)', color: 'var(--muted)' }}>
-          ⚠️ NO CONFIGURED PROVIDERS (SAVE KEYS BELOW)
+        <optgroup label="🏊 Fabrica System Pool (Free Allocation)" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+          {FABRICA_POOL_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </optgroup>
+      );
+    }
+
+    const providers = buildProvidersFromPiCli(piModelsList);
+
+    if (!providers || providers.length === 0) {
+      return (
+        <option value="gemini-3.6-flash">
+          google/gemini-3.6-flash (Agent CLI Default)
         </option>
       );
     }
 
     return (
       <>
-        {isGeminiConfigured && (
-          <optgroup label="Direct Google Gemini (AI Studio Keys) - Free Tier" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-            {fetchedModels.gemini && fetchedModels.gemini.length > 0 ? (
-              fetchedModels.gemini
-                .filter((m: any) => !showOnlyFree || !isModelPaid(m.id))
-                .map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))
-            ) : (
-              <>
-                <option value="gemini-2.0-flash">gemini-2.0-flash (Recommended Speed)</option>
-                <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (Ultra-Fast)</option>
-                <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro (High Reasoning)</option>
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Legacy Fast)</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro (Legacy Analytical)</option>
-              </>
-            )}
-          </optgroup>
-        )}
-        {isOpenRouterConfigured && (
-          <optgroup label="OpenRouter Proxy" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-            {fetchedModels.openrouter && fetchedModels.openrouter.length > 0 ? (
-              (() => {
-                const filtered = fetchedModels.openrouter.filter((m: any) => !showOnlyFree || !isModelPaid(m.id));
-                return filtered.length > 0 ? (
-                  filtered.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))
-                ) : (
-                  <option disabled style={{ color: 'var(--muted)' }}>
-                    No free OpenRouter models found
-                  </option>
-                );
-              })()
-            ) : (
-              <>
-                <option value="openrouter/meta-llama/llama-3.3-70b-instruct:free">openrouter: llama-3.3-70b (Free)</option>
-                <option value="openrouter/nousresearch/hermes-3-llama-3.1-405b:free">openrouter: hermes-3 Llama-3.1-405b (Free)</option>
-                <option value="openrouter/nousresearch/hermes-3-llama-3.1-8b:free">openrouter: hermes-3 Llama-3.1-8b (Free)</option>
-                <option value="openrouter/deepseek/deepseek-r1:free">openrouter: deepseek-r1 (Free Reasoner)</option>
-                {!showOnlyFree && (
-                  <>
-                    <option value="openrouter/deepseek/deepseek-chat">openrouter: deepseek-v3 (Low Cost Chat)</option>
-                    <option value="openrouter/google/gemini-2.0-flash">openrouter: gemini-2.0-flash</option>
-                    <option value="openrouter/google/gemini-1.5-pro">openrouter: gemini-1.5-pro</option>
-                  </>
-                )}
-              </>
-            )}
-          </optgroup>
-        )}
-        {isAnthropicConfigured && (
-          <optgroup label="Direct Anthropic (Claude Keys)" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
-            {showOnlyFree ? (
-              <option disabled style={{ color: 'var(--muted)' }}>
-                Anthropic has no free tier models
+        {providers.map((prov) => (
+          <optgroup
+            key={prov.id}
+            label={`${prov.name} — [${prov.badge}]`}
+            style={{ background: 'var(--surface)', color: 'var(--text)' }}
+          >
+            {prov.models.map((m: any) => (
+              <option key={m.id} value={m.id}>
+                {m.name || m.id}
               </option>
-            ) : fetchedModels.anthropic && fetchedModels.anthropic.length > 0 ? (
-              fetchedModels.anthropic.map((m: any) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))
-            ) : (
-              <>
-                <option value="anthropic/claude-3-5-sonnet-latest">anthropic: claude-3.5-sonnet (High-IQ)</option>
-                <option value="anthropic/claude-3-5-haiku-latest">anthropic: claude-3.5-haiku (Direct Speed)</option>
-                <option value="anthropic/claude-3-opus-latest">anthropic: claude-3-opus (Legacy Creative)</option>
-              </>
-            )}
+            ))}
           </optgroup>
-        )}
+        ))}
       </>
     );
   };
@@ -8227,37 +8284,17 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       </div>
                     </div>
 
-                    {/* Chat Input (Resizable with Top Border Handle) - Line 2 */}
+                    {/* Chat Input Top Border Divider */}
                     <div style={{ width: '100%', marginBottom: '4px', position: 'relative' }}>
-                      {/* Drag Handle Top Border */}
                       <div
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          setIsDraggingChatInput(true);
-                          document.body.style.userSelect = 'none';
-                          document.body.style.cursor = 'row-resize';
-                        }}
-                        title="Drag top border to adjust chat input height"
                         style={{
                           width: '100%',
-                          height: '6px',
-                          cursor: 'row-resize',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginTop: '-2px',
-                          marginBottom: '2px',
-                          zIndex: 5
+                          height: '1px',
+                          background: 'var(--border-soft)',
+                          marginTop: '4px',
+                          marginBottom: '6px'
                         }}
-                      >
-                        <div style={{
-                          width: '32px',
-                          height: '2px',
-                          borderRadius: '1px',
-                          background: isDraggingChatInput ? 'var(--accent)' : 'var(--border-soft)',
-                          transition: 'background 0.15s ease'
-                        }} />
-                      </div>
+                      />
 
                       <textarea
                         id="agent-chat-textarea"
@@ -8305,15 +8342,20 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
                       {/* Left: Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flexShrink: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                        {/* Context Window Usage Meter Bar */}
+                        {/* Real PI Agent Context Window Usage Meter Bar */}
                         {(() => {
-                          const approxContextTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
-                          const maxContextWindow = chatModel.includes('gemini') ? 2000000 : chatModel.includes('claude') ? 200000 : 128000;
-                          const contextPct = Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
+                          const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
+                          const approxContextTokens = piContext ? piContext.tokensUsed : fallbackTokens;
+                          const maxContextWindow = piContext ? piContext.maxTokens : (chatModel.includes('gemini') ? 1000000 : chatModel.includes('claude') ? 200000 : 128000);
+                          const contextPct = piContext ? piContext.percentUsed : Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
                           return (
                             <div
-                              onClick={() => setLeftTab(leftTab === 'context' ? 'agent' : 'context')}
-                              title={`Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to view Workspace Context.`}
+                              onClick={() => {
+                                const tenantKey = user?.id || activeEntity || 'default_user';
+                                refreshPiContext(tenantKey);
+                                setLeftTab(leftTab === 'context' ? 'agent' : 'context');
+                              }}
+                              title={`Real PI Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & switch view.`}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -8408,19 +8450,8 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         </section>
       </aside>
 
-        {/* Section Divider 1 (Left / Center) with Minimizer Button & Drag Resizer */}
-        <div 
-          className={`resizer lv ${isDraggingLeftRail ? 'dragging' : ''}`}
-          onMouseDown={(e) => {
-            if ((e.target as HTMLElement).closest('.section-toggle-btn')) return;
-            e.preventDefault();
-            setIsDraggingLeftRail(true);
-            document.body.style.userSelect = 'none';
-            document.body.style.cursor = 'col-resize';
-          }}
-          style={{ cursor: minCenter ? 'default' : 'col-resize' }}
-          title={minCenter ? undefined : "Drag handle to resize Left Rail"}
-        >
+        {/* Section Divider 1 (Left / Center) with Minimizer Button */}
+        <div className="resizer lv">
           <button
             type="button"
             className="section-toggle-btn"
@@ -9001,19 +9032,8 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         </section>
       )}
 
-        {/* Section Divider 2 (Center / Right) with Minimizer Button & Drag Resizer */}
-        <div 
-          className={`resizer v ${isDraggingRightRail ? 'dragging' : ''}`}
-          onMouseDown={(e) => {
-            if ((e.target as HTMLElement).closest('.section-toggle-btn')) return;
-            e.preventDefault();
-            setIsDraggingRightRail(true);
-            document.body.style.userSelect = 'none';
-            document.body.style.cursor = 'col-resize';
-          }}
-          style={{ cursor: minSide ? 'default' : 'col-resize' }}
-          title={minSide ? undefined : "Drag handle to resize Right Rail"}
-        >
+        {/* Section Divider 2 (Center / Right) with Minimizer Button */}
+        <div className="resizer v">
           <button
             type="button"
             className="section-toggle-btn"
@@ -10407,6 +10427,9 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         onClose={() => setIsAccountWindowOpen(false)}
         uiLang={uiLang}
         dtxt={dtxt}
+        tokenBillingMode={tokenBillingMode}
+        setTokenBillingMode={handleTokenBillingModeChange}
+        piModelsList={piModelsList}
         geminiApiKey={geminiApiKey}
         openrouterApiKey={openrouterApiKey}
         anthropicApiKey={anthropicApiKey}
@@ -10448,6 +10471,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         renderQuotaWarningAlert={renderQuotaWarningAlert}
         handleTopUpCredits={handleTopUpCredits}
         isTierLoading={isTierLoading}
+        fetchUserTierData={fetchUserTierData}
         freeModelsList={freeModelsList}
         fetchFreeModels={fetchFreeModels}
         keyPoolStats={keyPoolStats}

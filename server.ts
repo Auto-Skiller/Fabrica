@@ -49,6 +49,7 @@ import {
   verifyUserCard 
 } from './src/db/tier_manager.js';
 import { keyPoolManager, FREE_MODELS } from './src/db/llm_key_pool.js';
+import { runPiAgent, listPiSessions, createPiSession, deletePiSession, listPiModels } from './src/pi_runner.js';
 import { uploadToGcs, triggerVertexAiIndexing, searchTenantDocuments } from './src/db/hybrid_storage.js';
 import { executeSandboxedCode } from './src/execution/sandbox.js';
 import { orchestrator } from './src/pipeline/orchestrator.js';
@@ -275,7 +276,8 @@ export async function generateLlmText(options: GenerateLlmOptions): Promise<stri
   // 1. Card Verification Check for Free Tier users using shared/free tokens
   if (!options.customKey) {
     const userTier = getUserTier(tenantId);
-    if (userTier.plan === 'free' && !userTier.hasVerifiedCard) {
+    const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified);
+    if (userTier.plan === 'free' && !isCardVerified) {
       throw new Error("Card verification required: To prevent automated bot abuse, please verify a valid payment card in Account Settings before accessing free shared LLM tokens.");
     }
   }
@@ -745,10 +747,9 @@ app.post("/api/config/models", async (req, res) => {
     }
   }
 
-  // Ensure Gemini 3.6 Flash, 2.5 Flash, 2.0 Flash are always present in Gemini options
+  // Ensure Gemini 3.6 Flash and 2.0 Flash are always present in Gemini options
   const defaultGeminiList = [
     { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Rate Limits)', desc: 'Google flagship Gemini 3.6 Flash with free rate limits.', info: 'Google AI Studio' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Free Rate Limits)', desc: 'High speed Gemini 2.5 Flash with free rate limits.', info: 'Google AI Studio' },
     { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Recommended)', desc: 'Standard fast model, highly responsive.', info: 'Google AI Studio' },
     { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite', desc: 'Optimized for speed and low-latency.', info: 'Google AI Studio' },
     { id: 'gemini-2.0-pro-exp-02-05', name: 'Gemini 2.0 Pro Experimental', desc: 'Analytical reasoning and coding excellence.', info: 'Google AI Studio' },
@@ -1587,6 +1588,80 @@ app.post("/api/entity/:name/toolboxes/mutate", (req, res) => {
   }
 });
 
+// Helper: resolve directory for built-in or workspace skill/extension capabilities
+function getCapabilityDir(rootPath: string, prefix: string, kind: string, parents: string[], entryName: string, source?: string): string {
+  if (source === 'built-in') {
+    if (kind === 'skill') {
+      return path.join(process.cwd(), 'Fabrica_kernel', 'skills', entryName);
+    }
+    if (kind === 'plugin' || kind === 'mcp' || kind === 'extension') {
+      const extDir = path.join(process.cwd(), 'Fabrica_kernel', 'extensions', entryName);
+      if (fs.existsSync(extDir)) return extDir;
+      return path.join(process.cwd(), 'Fabrica_kernel', 'extensions');
+    }
+    return path.join(process.cwd(), 'Fabrica_kernel', 'skills', entryName);
+  }
+
+  // Workspace capability
+  if (kind === 'skill') {
+    return path.join(rootPath, '.pi', 'skills', entryName);
+  }
+  if (kind === 'plugin' || kind === 'mcp' || kind === 'extension') {
+    const extDir = path.join(rootPath, '.pi', 'extensions', entryName);
+    if (fs.existsSync(extDir)) return extDir;
+    return path.join(rootPath, '.pi', 'extensions');
+  }
+  return getTbDiskPath(rootPath, prefix, kind, parents, entryName);
+}
+
+function scanSkillOrExtensionDir(dirPath: string, relativePrefix = ''): Array<{ name: string; path: string; type: 'file' | 'folder'; content?: string }> {
+  let items: Array<{ name: string; path: string; type: 'file' | 'folder'; content?: string }> = [];
+  if (!fs.existsSync(dirPath)) return items;
+
+  try {
+    const stat = fs.statSync(dirPath);
+    if (!stat.isDirectory()) {
+      // Single file case
+      let content = '';
+      try { content = fs.readFileSync(dirPath, 'utf8'); } catch {}
+      return [{ name: path.basename(dirPath), path: path.basename(dirPath), type: 'file', content }];
+    }
+  } catch {
+    return items;
+  }
+
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === '.gitkeep') continue;
+    const relPath = relativePrefix ? `${relativePrefix}/${entry.name}` : entry.name;
+    const fullPath = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      items.push({
+        name: entry.name,
+        path: relPath,
+        type: 'folder'
+      });
+      const subItems = scanSkillOrExtensionDir(fullPath, relPath);
+      items = items.concat(subItems);
+    } else if (entry.isFile()) {
+      let content = '';
+      try {
+        content = fs.readFileSync(fullPath, 'utf8');
+      } catch (e: any) {
+        content = `Error reading file: ${e.message}`;
+      }
+      items.push({
+        name: entry.name,
+        path: relPath,
+        type: 'file',
+        content
+      });
+    }
+  }
+  return items;
+}
+
 // GET /api/entity/:name/toolboxes/files
 app.get("/api/entity/:name/toolboxes/files", (req, res) => {
   const { name } = req.params;
@@ -1600,10 +1675,6 @@ app.get("/api/entity/:name/toolboxes/files", (req, res) => {
       return res.status(400).json({ ok: false, error: "kind and entry_name are required" });
     }
 
-    if (source === 'built-in') {
-      return res.status(403).json({ ok: false, error: "File contents of built-in kernel capabilities are protected and read-only." });
-    }
-
     let parents: string[] = [];
     if (parentsStr) {
       try {
@@ -1613,27 +1684,12 @@ app.get("/api/entity/:name/toolboxes/files", (req, res) => {
       }
     }
 
-    const diskDir = getTbDiskPath(rootPath, prefix, kind as string, parents, entry_name as string);
-    if (!fs.existsSync(diskDir)) {
+    const diskDir = getCapabilityDir(rootPath, prefix, kind as string, parents, entry_name as string, source as string);
+    if (!fs.existsSync(diskDir) && source !== 'built-in') {
       fs.mkdirSync(diskDir, { recursive: true });
     }
 
-    const files = fs.readdirSync(diskDir, { withFileTypes: true })
-      .filter(entry => entry.isFile())
-      .map(entry => {
-        const filePath = path.join(diskDir, entry.name);
-        let content = '';
-        try {
-          content = fs.readFileSync(filePath, 'utf8');
-        } catch (e: any) {
-          content = `Error reading file: ${e.message}`;
-        }
-        return {
-          name: entry.name,
-          content: content
-        };
-      });
-
+    const files = scanSkillOrExtensionDir(diskDir);
     return res.json({ ok: true, files });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
@@ -1657,16 +1713,109 @@ app.post("/api/entity/:name/toolboxes/files", (req, res) => {
       return res.status(403).json({ ok: false, error: "Built-in kernel capabilities are protected and read-only." });
     }
 
-    const diskDir = getTbDiskPath(rootPath, prefix, kind, parents, entry_name);
+    const diskDir = getCapabilityDir(rootPath, prefix, kind, parents, entry_name, source);
     if (!fs.existsSync(diskDir)) {
       fs.mkdirSync(diskDir, { recursive: true });
     }
 
-    // Secure the filename to prevent directory traversal
-    const safeFilename = path.basename(filename);
-    const filePath = path.join(diskDir, safeFilename);
-
+    const filePath = path.join(diskDir, filename);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, content || '', 'utf8');
+    return res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/entity/:name/toolboxes/files/delete
+app.post("/api/entity/:name/toolboxes/files/delete", (req, res) => {
+  const { name } = req.params;
+  const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
+  const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
+  const prefix = name === 'os' ? 'os' : name;
+
+  try {
+    const { kind, parents = [], entry_name, relPath, source } = req.body || {};
+    if (source === 'built-in') {
+      return res.status(403).json({ ok: false, error: "Built-in kernel capabilities are protected and read-only." });
+    }
+    const diskDir = getCapabilityDir(rootPath, prefix, kind, parents, entry_name, source);
+    const targetPath = path.join(diskDir, relPath);
+    if (fs.existsSync(targetPath)) {
+      fs.rmSync(targetPath, { recursive: true, force: true });
+    }
+    return res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/entity/:name/toolboxes/files/rename
+app.post("/api/entity/:name/toolboxes/files/rename", (req, res) => {
+  const { name } = req.params;
+  const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
+  const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
+  const prefix = name === 'os' ? 'os' : name;
+
+  try {
+    const { kind, parents = [], entry_name, oldPath, newPath, source } = req.body || {};
+    if (source === 'built-in') {
+      return res.status(403).json({ ok: false, error: "Built-in kernel capabilities are protected and read-only." });
+    }
+    const diskDir = getCapabilityDir(rootPath, prefix, kind, parents, entry_name, source);
+    const src = path.join(diskDir, oldPath);
+    const dest = path.join(diskDir, newPath);
+    if (fs.existsSync(src)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.renameSync(src, dest);
+    }
+    return res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/entity/:name/toolboxes/files/create-folder
+app.post("/api/entity/:name/toolboxes/files/create-folder", (req, res) => {
+  const { name } = req.params;
+  const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
+  const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
+  const prefix = name === 'os' ? 'os' : name;
+
+  try {
+    const { kind, parents = [], entry_name, folderPath, source } = req.body || {};
+    if (source === 'built-in') {
+      return res.status(403).json({ ok: false, error: "Built-in kernel capabilities are protected and read-only." });
+    }
+    const diskDir = getCapabilityDir(rootPath, prefix, kind, parents, entry_name, source);
+    const targetFolder = path.join(diskDir, folderPath);
+    fs.mkdirSync(targetFolder, { recursive: true });
+    return res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// POST /api/entity/:name/toolboxes/files/rename-folder
+app.post("/api/entity/:name/toolboxes/files/rename-folder", (req, res) => {
+  const { name } = req.params;
+  const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
+  const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
+  const prefix = name === 'os' ? 'os' : name;
+
+  try {
+    const { kind, parents = [], oldName, newName, source } = req.body || {};
+    if (source === 'built-in') {
+      return res.status(403).json({ ok: false, error: "Built-in kernel capabilities are protected and read-only." });
+    }
+    const oldDir = getCapabilityDir(rootPath, prefix, kind, parents, oldName, source);
+    const parentDir = path.dirname(oldDir);
+    const newDir = path.join(parentDir, newName);
+    if (fs.existsSync(oldDir)) {
+      fs.renameSync(oldDir, newDir);
+    } else {
+      fs.mkdirSync(newDir, { recursive: true });
+    }
     return res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
@@ -2457,138 +2606,109 @@ app.post("/api/agent/chat", apiRateLimiter, async (req, res) => {
       });
     }
 
-    const activeModel = model || "gemini-3.5-flash";
-    const { provider, modelName } = getModelProviderAndName(activeModel);
-    
-    let key: string | undefined = customKey || customApiKey;
-    if (!key) {
-      if (provider === 'gemini') {
-        key = process.env.GEMINI_API_KEY;
-      } else if (provider === 'openrouter') {
-        key = process.env.OPENROUTER_API_KEY;
-      } else if (provider === 'anthropic') {
-        key = process.env.ANTHROPIC_API_KEY;
-      }
-    }
+    const activeModel = model || "gemini-3.6-flash";
+    const sessionId = req.body.sessionId || req.body.active_session_id;
+    const toolsEnabled = req.body.tools_enabled !== false && req.body.toolsEnabled !== false;
 
-    if (!key) {
-      let replyText = "";
-      let suggestions: string[] = [];
-      const msgLower = message.toLowerCase();
-      const providerUpper = provider.toUpperCase();
-
-      if (msgLower.includes("law") || msgLower.includes("rule") || msgLower.includes("backlog")) {
-        replyText = `⚖️ **Hard Laws Enforced**\n\nUnder current system prompts (\`02_laws-Hard_Laws\`), I am auditing active workspace guidelines:\n1. **Workspace-Owns-State**: Enforcing durable persistence inside workspace YAMLs.\n2. **Backlog First**: Prioritizing your explicit \`runtime.backlog\` over other autonomous triggers.\n3. **Surgical Write Checks**: Validating toolbox metadata count to prevent file degradation.\n\n*Note: To enable full AI reasoning, please supply a ${providerUpper}_API_KEY.*`;
-        suggestions = ["Show current backlog priority", "Audit workspace laws", "Verify file schema rules"];
-      } else if (msgLower.includes("inbox") || msgLower.includes("gateway") || msgLower.includes("route")) {
-        replyText = `📥 **Inbox & Gateway Pipeline Active**\n\nUnder \`07_inbox-Inbox_and_Gateway\`, I am monitoring workspace drops:\n- Enforcing **The Five Routing Laws** (Pillars × Aspects × Functional Groups).\n- Quality-gating file metadata semantics to ensure substantive \`contains\` and \`when_to_use\` properties.\n- De-duplicating files on ingest to prevent gateway clutter.\n\n*Note: To enable full AI reasoning, please supply a ${providerUpper}_API_KEY.*`;
-        suggestions = ["Inspect inbox discovery drops", "Analyze gateway pillars", "Validate gateway READMEs"];
-      } else if (msgLower.includes("evolution") || msgLower.includes("gap") || msgLower.includes("objective")) {
-        replyText = `🌀 **Evolution Engine Monitoring**\n\nUnder \`05_evolution-Evolution_System\`, I am tracking continuous optimization:\n- Running FAST, DEEP, and INBOX case evaluation modes based on activated \`evolution_objectives\`.\n- Merging overlapping concerns into concise umbrella cases for faster execution.\n- Scoring cases using a benefit/cost/worth-it matrix prior to promote cycles.\n\n*Note: To enable full AI reasoning, please supply a ${providerUpper}_API_KEY.*`;
-        suggestions = ["Analyze active objectives", "List pending evolution cases", "Trigger FAST prompt audit"];
-      } else if (msgLower.includes("toolbox") || msgLower.includes("skill") || msgLower.includes("capability")) {
-        replyText = `🛠️ **Toolboxes Registry Active**\n\nUnder \`06_toolboxes-Toolboxes\`, I map capability files and metadata:\n- Validating domain-to-toolbox hierarchy structures.\n- Rolling up capability maturity ladders (stub, functional, hardened, battle-tested).\n- Ensuring metadata triggers, inputs, and outputs align with functional registry rules.\n\n*Note: To enable full AI reasoning, please supply a ${providerUpper}_API_KEY.*`;
-        suggestions = ["Show toolbox maturity rollup", "Register new custom skill", "Check active capabilities"];
-      } else if (msgLower.includes("mission") || msgLower.includes("backlog")) {
-        replyText = `📋 **Mission Orchestrator**\n\nI can assist you in creating, refining, or executing missions within your active workspace. Our backlog currently tracks active pillars and evolution objectives. Would you like me to suggest a new mission for this workspace?\n\n*Note: To enable full AI reasoning, please supply a ${providerUpper}_API_KEY.*`;
-        suggestions = ["Suggest a new mission", "Reconcile backlog metrics", "Create custom standard mission"];
-      } else {
-        replyText = `👋 **Welcome! I am Fabrica, your autonomous business systems partner.**\n\nI am currently running in offline preview mode because no **${providerUpper} API Key** was found in your environment. You can set up your key in the dashboard or via Settings.\n\nEven in preview mode, I can help you structure your business workflows and prepare decisions. What would you like to build or check today?`;
-        suggestions = ["Prepare a new business workflow", "Review active system priorities", "Read Fabrica workspace guide"];
-      }
-
-      return res.json({
-        ok: true,
-        text: replyText,
-        suggestions
-      });
-    }
-
-    const messages: LlmMessage[] = [];
-    if (Array.isArray(history) && history.length > 0) {
-      for (const h of history) {
-        const role = (h.sender === 'user' || h.sender === 'operator') ? 'user' : 'assistant';
-        messages.push({ role, content: h.text });
-      }
-      if (messages.length === 0 || messages[messages.length - 1].content !== chatMsg) {
-        messages.push({ role: 'user', content: chatMsg });
-      }
-    } else {
-      messages.push({ role: 'user', content: chatMsg });
-    }
-
-    const promptInstructions = getFabricaSystemInstructions();
-    const systemInstruction = `You are Fabrica, the autonomous partner for business operations. You help business owners and enterprise leaders (who have no technical background) build, manage, and operate their business systems.
-You follow the operational rules of AGENTS.md and are guided by the system prompt markdown files loaded below.
-
---- FABRICA KERNEL SYSTEM LAWS & PROMPTS ---
-${promptInstructions}
----------------------------------------------
-
-TONE & WRITING RULES:
-- Write like you are explaining to a business owner or enterprise leader, not a developer. NEVER use developer jargon or words they would need to Google.
-- Prefer concrete, ownership language: "your data", "your systems", "your business" over "the dataset", "the pipeline", "the environment".
-- Make conversations satisfying, like they are steering the growth of their enterprise.
-- Reframe any system status or system state as a strategic decision or builder choice the owner needs to make.
-- Avoid describing technical mechanisms or code details. Instead, describe outcomes: "we're working on it," "your build," "your workflow."
-- Do not mention Plugboot. Use 'Fabrica'.
-
-Always respond in valid JSON format matching this schema:
-{
-  "text": "The main markdown-enabled text response from the agent",
-  "suggestions": ["decision option 1", "decision option 2", "decision option 3"]
-}
-
-Limit the suggestions array to exactly 2-3 short, highly actionable choices or decisions relevant to the current conversation state. Do not include markdown inside the suggestion array items. Maintain an elegant, professional, business-friendly, highly capable, and encouraging tone.`;
-
-    const chatSchema = {
-      type: Type.OBJECT,
-      properties: {
-        text: {
-          type: Type.STRING,
-          description: "The main markdown-enabled text response from the agent"
-        },
-        suggestions: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.STRING
-          },
-          description: "2-3 short, highly actionable choices or decisions relevant to the current state"
-        }
-      },
-      required: ["text", "suggestions"]
-    };
-
-    const responseText = await generateLlmText({
+    const result = await runPiAgent({
+      prompt: chatMsg,
+      tenantId,
+      sessionId,
       model: activeModel,
-      messages: messages,
-      systemInstruction: systemInstruction,
-      responseMimeType: "application/json",
-      responseSchema: provider === 'gemini' ? chatSchema : undefined,
-      tools: (provider === 'gemini' && webSearchEnabled) ? [{ googleSearch: {} }] : undefined,
-      customKey: key,
-      agentLang: agentLang
+      customKey: customKey || customApiKey,
+      agentLang,
+      webSearchEnabled,
+      disableWorkspaceSkills: !toolsEnabled,
+      disableWorkspaceExtensions: !toolsEnabled
     });
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(responseText);
-    } catch (e) {
-      parsed = {
-        text: responseText,
-        suggestions: ["Suggest a new mission", "Check security logs"]
-      };
-    }
-
-    res.json({
-      ok: true,
-      text: parsed.text || "",
-      suggestions: parsed.suggestions || []
+    return res.json({
+      ok: result.ok,
+      text: result.text,
+      suggestions: result.suggestions,
+      sessionId: result.sessionId,
+      model: result.model,
+      usage: result.usage,
+      error: result.error
     });
 
   } catch (e: any) {
     console.error("[agent-chat] Error:", e);
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── PI AGENT REALTIME API ENDPOINTS ──
+
+// GET /api/pi/sessions - List real PI agent session files
+app.get("/api/pi/sessions", (req, res) => {
+  try {
+    const tenantId = (req.query.tenantId || req.headers['x-tenant-id'] || 'default_user') as string;
+    const sessions = listPiSessions(tenantId);
+    res.json({ ok: true, tenantId, sessions });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/pi/sessions - Create new real PI agent session
+app.post("/api/pi/sessions", (req, res) => {
+  try {
+    const tenantId = req.body.tenantId || req.body.user_id || (req.headers['x-tenant-id'] as string) || 'default_user';
+    const name = req.body.name;
+    const session = createPiSession(tenantId, name);
+    res.json({ ok: true, tenantId, session });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE /api/pi/sessions/:id - Delete real PI agent session file
+app.delete("/api/pi/sessions/:id", (req, res) => {
+  try {
+    const tenantId = (req.query.tenantId || req.headers['x-tenant-id'] || 'default_user') as string;
+    const sessionId = req.params.id;
+    const deleted = deletePiSession(tenantId, sessionId);
+    res.json({ ok: deleted, tenantId, sessionId });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/pi/models - List live available models from PI CLI
+app.get("/api/pi/models", (req, res) => {
+  try {
+    const models = listPiModels();
+    res.json({ ok: true, models });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/pi/context - Get context window metrics for active PI session
+app.get("/api/pi/context", (req, res) => {
+  try {
+    const tenantId = (req.query.tenantId || req.headers['x-tenant-id'] || 'default_user') as string;
+    const sessionId = req.query.sessionId as string;
+
+    const sessions = listPiSessions(tenantId);
+    const active = sessions.find(s => s.id === sessionId) || sessions[0];
+
+    const tokensUsed = active ? active.tokensUsed : 0;
+    const maxTokens = 1000000;
+    const percentUsed = Math.min(100, Math.round((tokensUsed / maxTokens) * 100));
+
+    res.json({
+      ok: true,
+      tenantId,
+      sessionId: active?.id || sessionId,
+      tokensUsed,
+      maxTokens,
+      percentUsed,
+      messageCount: active?.messageCount || 0
+    });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
@@ -3221,7 +3341,7 @@ app.post("/api/research/deep", apiRateLimiter, async (req, res) => {
     // Call Gemini with Search Grounding to find initial sources
     const ai = getGemini(customKey);
     const searchRes = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Use standard fast model for grounding queries
+      model: "gemini-3.6-flash", // Use standard fast model for grounding queries
       contents: `Perform brief structured search regarding: "${query}"`,
       config: {
         systemInstruction: getFabricaSystemInstructions() || undefined,
@@ -3291,7 +3411,7 @@ Analyze this information, pinpoint remaining information gaps, and output exactl
       steps.push(`4. Executing secondary deep-dive query: "${subQuery}"`);
       try {
         const subSearchRes = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.6-flash",
           contents: `Search grounding for: "${subQuery}"`,
           config: {
             systemInstruction: getFabricaSystemInstructions() || undefined,

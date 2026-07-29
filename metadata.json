@@ -1,6 +1,6 @@
 {
-  "name": "Remix Fabrica",
-  "description": "Imported from GitHub: Auto-Skiller/Fabrica",
+  "name": "Fabrica",
+  "description": "AI Business Systems Dashboard & Sync Daemon",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

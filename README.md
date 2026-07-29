@@ -24,7 +24,7 @@ Fabrica organizes all your operational files, datasets, workflows, and code comp
 
 ### 1. Modern 3-Panel Workspace
 * **Global Header Controls**:
-  * **Model Selector**: Switch seamlessly between AI providers (`gemini-2.0-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic API key routing.
+  * **Model Selector**: Switch seamlessly between AI providers (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic API key routing.
   * **Active Session Switcher**: Minimized session badge (`Session 1`) with a dropdown switcher to manage, create, rename, or delete chat sessions. Full conversation histories persist to backend `app_config` and local storage per tenant, surviving logouts and session switches.
   * **Live Voice Trigger (🎙️)**: Adjacent streaming voice channel button providing real-time audio interaction.
 * **Consolidated 2-Section Account & API Modal**:

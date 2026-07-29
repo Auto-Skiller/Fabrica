@@ -24,7 +24,7 @@ The application utilizes a classic three-panel responsive layout with a compact 
 ## 2. DETAIL SPECIFICATIONS OF THE DASHBOARD LAYOUT & COMPONENTS
 
 ### GLOBAL HEADER CONTROLS
-- **Model Selector**: Compact dropdown selector (`chatModel`) permitting instant switching between AI providers (`gemini-2.0-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic key mapping and free-tier fallbacks.
+- **Model Selector**: Compact dropdown selector (`chatModel`) permitting instant switching between AI providers (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic key mapping and free-tier fallbacks.
 - **Active Session Switcher**: Minimized active session badge (`Session 1`, etc.) with a trigger button that toggles the Chat Sessions dropdown menu. Supports creating, renaming, and deleting chat sessions. Full conversation histories are saved instantly to tenant-isolated `app_config` and local storage, ensuring full chat recovery on logout and re-login.
 - **Live Voice Stream Trigger (🎙️)**: Located immediately adjacent to the active session indicator. Toggles real-time streaming audio connection with visual active state styling.
 

@@ -148,14 +148,12 @@ export function getNestedValue(obj: any, ypath: string[]): any {
 }
 
 export function getTbDiskPath(root: string, prefix: string, kind: string, parents: string[], name: string): string {
-  // Check workspace .pi/skills and .pi/extensions first
-  const piSkillDir = path.join(root, '.pi', 'skills', name);
-  if (kind === 'skill' && (fs.existsSync(piSkillDir) || (parents && parents.includes('.pi')))) {
-    return piSkillDir;
+  // Always use workspace .pi/skills and .pi/extensions for skills and extensions
+  if (kind === 'skill') {
+    return path.join(root, '.pi', 'skills', name);
   }
-  const piExtDir = path.join(root, '.pi', 'extensions', name);
-  if ((kind === 'plugin' || kind === 'mcp' || kind === 'extension') && (fs.existsSync(piExtDir) || (parents && parents.includes('.pi')))) {
-    return piExtDir;
+  if (kind === 'plugin' || kind === 'mcp' || kind === 'extension') {
+    return path.join(root, '.pi', 'extensions');
   }
 
   const systemsDir = path.join(root, 'systems');

@@ -2,12 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { BUSINESS_PLANS } from '../lib/user-harness';
+import { buildProvidersFromPiCli, FABRICA_POOL_MODELS } from '../lib/pi-models';
 
 export interface AccountWorkspaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   uiLang: 'EN' | 'FR' | 'AR';
   dtxt: Record<string, any>;
+  
+  // Method & CLI Models
+  tokenBillingMode?: 'managed' | 'paug' | 'byok' | 'pool';
+  setTokenBillingMode?: (mode: 'managed' | 'paug' | 'byok' | 'pool') => void;
+  piModelsList?: any[];
   
   // Credentials & Keys
   geminiApiKey: string;
@@ -57,6 +63,7 @@ export interface AccountWorkspaceModalProps {
   renderQuotaWarningAlert: (quota: any) => React.ReactNode;
   handleTopUpCredits: (amount: number) => void;
   isTierLoading: boolean;
+  fetchUserTierData?: () => void;
 
   // Free Tokens & Load Balancer
   freeModelsList: any[];
@@ -95,6 +102,9 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
   onClose,
   uiLang,
   dtxt,
+  tokenBillingMode: propsTokenBillingMode,
+  setTokenBillingMode: propsSetTokenBillingMode,
+  piModelsList = [],
   geminiApiKey,
   openrouterApiKey,
   anthropicApiKey,
@@ -136,6 +146,7 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
   renderQuotaWarningAlert,
   handleTopUpCredits,
   isTierLoading,
+  fetchUserTierData,
   freeModelsList,
   fetchFreeModels,
   keyPoolStats,
@@ -168,106 +179,22 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
 
   // Provider Selection & BYOK States for PI Agent Providers
   const [selectedProvider, setSelectedProvider] = useState<string>('google');
-  const [tokenBillingMode, setTokenBillingMode] = useState<'managed' | 'paug' | 'byok' | 'pool'>(() => {
+  const [internalTokenBillingMode, setInternalTokenBillingMode] = useState<'managed' | 'paug' | 'byok' | 'pool'>(() => {
     return isFreeTier ? 'pool' : 'managed';
   });
+  const tokenBillingMode = propsTokenBillingMode !== undefined ? propsTokenBillingMode : internalTokenBillingMode;
+  const setTokenBillingMode = (mode: 'managed' | 'paug' | 'byok' | 'pool') => {
+    if (propsSetTokenBillingMode) propsSetTokenBillingMode(mode);
+    setInternalTokenBillingMode(mode);
+  };
+
   const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('fabrica_openai_api_key') || '' : '');
   const [groqApiKey, setGroqApiKey] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('fabrica_groq_api_key') || '' : '');
   const [deepseekApiKey, setDeepseekApiKey] = useState<string>(() => typeof window !== 'undefined' ? localStorage.getItem('fabrica_deepseek_api_key') || '' : '');
   const [isRefreshingModelsLocal, setIsRefreshingModelsLocal] = useState<boolean>(false);
 
-  const getProviderModels = (providerId: string, defaultModels: { id: string; name: string }[]) => {
-    if (!fetchedModels) return defaultModels;
-    const key = providerId === 'google' ? 'gemini' : providerId;
-    const dynamicList = fetchedModels[key];
-    if (dynamicList && Array.isArray(dynamicList) && dynamicList.length > 0) {
-      return dynamicList.map((m: any) => ({
-        id: m.id,
-        name: m.name || m.id
-      }));
-    }
-    return defaultModels;
-  };
-
-  const PI_AGENT_PROVIDERS = [
-    {
-      id: 'google',
-      name: 'Google AI Studio (Gemini)',
-      badge: 'DIRECT GOOGLE AI',
-      badgeColor: '#3b82f6',
-      description: 'Direct connection to Gemini models using your Google AI Studio API Key.',
-      models: getProviderModels('google', [
-        { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Rate Limits)' },
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
-      ])
-    },
-    {
-      id: 'openrouter',
-      name: 'OpenRouter Multi-Model',
-      badge: 'OPENROUTER GATEWAY',
-      badgeColor: '#8b5cf6',
-      description: 'Access Claude 3.5 Sonnet, DeepSeek R1, Llama 3.3, GPT-4o via unified key.',
-      models: getProviderModels('openrouter', [
-        { id: 'openrouter/anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-        { id: 'openrouter/deepseek/deepseek-r1', name: 'DeepSeek R1' },
-        { id: 'openrouter/openai/gpt-4o', name: 'GPT-4o' },
-        { id: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nvidia Nemotron 3 Ultra 550B (Free)' },
-        { id: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free', name: 'Nvidia Nemotron 3 Super 120B (Free)' },
-        { id: 'openrouter/poolside/laguna-s-2.1:free', name: 'Poolside Laguna S 2.1 (Free)' },
-        { id: 'openrouter/google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B IT (Free)' }
-      ])
-    },
-    {
-      id: 'anthropic',
-      name: 'Anthropic Claude',
-      badge: 'DIRECT ANTHROPIC',
-      badgeColor: '#d97706',
-      description: 'Direct Anthropic API key for Claude 3.5 Sonnet, Opus & Haiku.',
-      models: getProviderModels('anthropic', [
-        { id: 'anthropic/claude-3-5-sonnet-latest', name: 'Claude 3.5 Sonnet' },
-        { id: 'anthropic/claude-3-5-haiku-latest', name: 'Claude 3.5 Haiku' },
-        { id: 'anthropic/claude-3-opus-latest', name: 'Claude 3 Opus' }
-      ])
-    },
-    {
-      id: 'openai',
-      name: 'OpenAI Direct',
-      badge: 'DIRECT OPENAI',
-      badgeColor: '#10b981',
-      description: 'Direct OpenAI API connection for GPT-4o, GPT-4o-mini & Reasoning models.',
-      models: getProviderModels('openai', [
-        { id: 'gpt-4o', name: 'GPT-4o' },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-        { id: 'o1-preview', name: 'OpenAI o1 Reasoning' },
-        { id: 'o3-mini', name: 'OpenAI o3 Mini' }
-      ])
-    },
-    {
-      id: 'groq',
-      name: 'Groq LPU Acceleration',
-      badge: 'ULTRA LOW-LATENCY',
-      badgeColor: '#ec4899',
-      description: 'Groq LPU hardware acceleration for instant Llama 3.3 & DeepSeek Distill outputs.',
-      models: getProviderModels('groq', [
-        { id: 'groq/llama-3.3-70b-versatile', name: 'Groq Llama 3.3 70B (Free Tier Available)' },
-        { id: 'groq/mixtral-8x7b-32768', name: 'Groq Mixtral 8x7B' },
-        { id: 'groq/deepseek-r1-distill-llama-70b', name: 'Groq DeepSeek R1 70B' }
-      ])
-    },
-    {
-      id: 'deepseek',
-      name: 'DeepSeek Direct API',
-      badge: 'DIRECT DEEPSEEK',
-      badgeColor: '#06b6d4',
-      description: 'Direct API key for DeepSeek V3 chat and DeepSeek R1 reasoning models.',
-      models: getProviderModels('deepseek', [
-        { id: 'deepseek-chat', name: 'DeepSeek V3 Chat' },
-        { id: 'deepseek-reasoner', name: 'DeepSeek R1 Reasoner' }
-      ])
-    }
-  ];
+  // Dynamically constructed from agent CLI command (pi --list-models)
+  const PI_AGENT_PROVIDERS = buildProvidersFromPiCli(piModelsList || []);
 
   const FABRICA_POOL_MODELS = [
     { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Allocation)' },
@@ -1145,12 +1072,28 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-soft)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>
-                          📊 Usage Quota & Token Alerts
-                        </span>
-                        <span style={{ fontSize: '8px', color: q.statusColor, fontWeight: 800 }}>
-                          {q.percentRemaining}% Tokens Available
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>
+                            📊 Usage Quota & Token Alerts
+                          </span>
+                          <span style={{ fontSize: '7.5px', color: '#10b981', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '1px 5px', borderRadius: '3px', fontWeight: 900 }}>
+                            🟢 REALTIME
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {fetchUserTierData && (
+                            <button
+                              onClick={() => fetchUserTierData()}
+                              title="Sync live usage quota"
+                              style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '9px', padding: '1px 3px' }}
+                            >
+                              🔄
+                            </button>
+                          )}
+                          <span style={{ fontSize: '8px', color: q.statusColor, fontWeight: 800 }}>
+                            {q.percentRemaining}% Tokens Available
+                          </span>
+                        </div>
                       </div>
 
                       {renderQuotaWarningAlert(q)}

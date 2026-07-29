@@ -490,6 +490,7 @@ export function verifyUserCard(tenantId: string = 'default_user', cardLast4: str
 
 // Exact at-cost LLM pricing table per 1 Million Tokens
 const MODEL_PRICING_PER_1M: Record<string, { inputUSD: number; outputUSD: number }> = {
+  'gemini-3.6-flash': { inputUSD: 0.10, outputUSD: 0.40 },
   'gemini-3.5-flash': { inputUSD: 0.10, outputUSD: 0.40 },
   'gemini-2.5-flash': { inputUSD: 0.10, outputUSD: 0.40 },
   'gemini-2.0-flash': { inputUSD: 0.10, outputUSD: 0.40 },

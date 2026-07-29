@@ -88,6 +88,21 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ geminiApiKey, openrouterApiKey, anthropicApiKey, openaiApiKey, groqApiKey, deepseekApiKey }),
     }),
+  getPiSessions: (tenantId: string = 'default_user') =>
+    request<{ ok: boolean; tenantId: string; sessions: any[] }>(`/api/pi/sessions?tenantId=${encodeURIComponent(tenantId)}`),
+  createPiSession: (tenantId: string = 'default_user', name?: string) =>
+    request<{ ok: boolean; tenantId: string; session: any }>('/api/pi/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ tenantId, name }),
+    }),
+  deletePiSession: (sessionId: string, tenantId: string = 'default_user') =>
+    request<{ ok: boolean; tenantId: string; sessionId: string }>(`/api/pi/sessions/${encodeURIComponent(sessionId)}?tenantId=${encodeURIComponent(tenantId)}`, {
+      method: 'DELETE',
+    }),
+  getPiModels: () =>
+    request<{ ok: boolean; models: any[] }>('/api/pi/models'),
+  getPiContext: (tenantId: string = 'default_user', sessionId?: string) =>
+    request<{ ok: boolean; tenantId: string; sessionId: string; tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number }>(`/api/pi/context?tenantId=${encodeURIComponent(tenantId)}&sessionId=${encodeURIComponent(sessionId || '')}`),
   updateConfig: (path: string[], value: any) =>
     request<{ ok: boolean }>('/api/config', {
       method: 'POST',
@@ -179,11 +194,14 @@ export const api = {
     customKey?: string,
     model?: string,
     webSearchEnabled?: boolean,
-    agentLang?: string
+    agentLang?: string,
+    sessionId?: string,
+    tenantId?: string,
+    toolsEnabled?: boolean
   ) =>
-    request<{ ok: boolean; text: string; suggestions: string[] }>('/api/agent/chat', {
+    request<{ ok: boolean; text: string; suggestions: string[]; sessionId?: string; usage?: any }>('/api/agent/chat', {
       method: 'POST',
-      body: JSON.stringify({ message, history, customKey, model, webSearchEnabled, agentLang }),
+      body: JSON.stringify({ message, history, customKey, model, webSearchEnabled, agentLang, sessionId, tenantId, tools_enabled: toolsEnabled }),
     }),
 
   // Context Pipeline Ingestion
@@ -205,13 +223,33 @@ export const api = {
 
   // Toolbox workspace file system and LLM auditing
   getToolboxFiles: (entityName: string, kind: string, parents: string[], entryName: string, source?: string) =>
-    request<{ ok: boolean; files: { name: string; content: string }[] }>(
+    request<{ ok: boolean; files: { name: string; path: string; type: 'file' | 'folder'; content?: string }[] }>(
       `/api/entity/${entityName}/toolboxes/files?kind=${kind}&entry_name=${entryName}&parents=${encodeURIComponent(JSON.stringify(parents))}${source ? `&source=${encodeURIComponent(source)}` : ''}`
     ),
   saveToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, filename: string, content: string, source?: string) =>
     request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files`, {
       method: 'POST',
       body: JSON.stringify({ kind, parents, entry_name: entryName, filename, content, source }),
+    }),
+  deleteToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, relPath: string, source?: string) =>
+    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/delete`, {
+      method: 'POST',
+      body: JSON.stringify({ kind, parents, entry_name: entryName, relPath, source }),
+    }),
+  renameToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, oldPath: string, newPath: string, source?: string) =>
+    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/rename`, {
+      method: 'POST',
+      body: JSON.stringify({ kind, parents, entry_name: entryName, oldPath, newPath, source }),
+    }),
+  createToolboxFolder: (entityName: string, kind: string, parents: string[], entryName: string, folderPath: string, source?: string) =>
+    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/create-folder`, {
+      method: 'POST',
+      body: JSON.stringify({ kind, parents, entry_name: entryName, folderPath, source }),
+    }),
+  renameSkillFolder: (entityName: string, kind: string, parents: string[], oldName: string, newName: string, source?: string) =>
+    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/rename-folder`, {
+      method: 'POST',
+      body: JSON.stringify({ kind, parents, oldName, newName, source }),
     }),
   auditToolboxFile: (entityName: string, kind: string, entryName: string, filename: string, content: string, description?: string, model?: string, customKey?: string) =>
     request<{ ok: boolean; report: string }>(`/api/entity/${entityName}/toolboxes/files/audit`, {

@@ -438,22 +438,17 @@ button.mini.danger:hover { background: #c73a3a; }
 .search-wrap .filter { padding-left: clamp(1.35rem, 1.7vw, 1.6rem); }
 
 /* section dividers & minimize toggles */
-.resizer.h { height: 2px; cursor: default; background: var(--border-soft); width: 100%; position: relative; z-index: 55; grid-area: hresizer; }
+.resizer.h { height: 1px; cursor: default; background: var(--border-soft); width: 100%; position: relative; z-index: 55; grid-area: hresizer; }
 .resizer.v, .resizer.lv {
-  width: 6px;
-  cursor: col-resize;
-  background: transparent;
+  width: 1px;
+  cursor: default;
+  background: var(--border-soft);
   align-self: stretch;
   position: relative;
   z-index: 55;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-}
-.resizer.v:hover, .resizer.lv:hover, .resizer.v.dragging, .resizer.lv.dragging {
-  background: color-mix(in srgb, var(--accent) 45%, transparent);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 /* Overlapping Border Minimizer Toggle Button */
@@ -463,27 +458,27 @@ button.mini.danger:hover { background: #c73a3a; }
   left: 50%;
   transform: translate(-50%, -50%);
   width: 20px;
-  height: 44px;
+  height: 40px;
   padding: 0;
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   z-index: 70;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
   outline: none;
 }
 .section-toggle-btn:hover {
   color: #ffffff;
   background: var(--accent);
-  border-color: var(--accent);
-  transform: translate(-50%, -50%) scale(1.12);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+  border-color: var(--border);
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: var(--shadow);
 }
 .section-toggle-btn span {
   font-size: 12px;
