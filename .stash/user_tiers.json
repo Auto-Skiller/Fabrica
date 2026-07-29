@@ -1,0 +1,647 @@
+{
+  "users": {
+    "usr_sandbox_w4x2ipd": {
+      "tenantId": "usr_sandbox_w4x2ipd",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T14:03:09.599Z",
+      "updatedAt": "2026-07-26T14:03:09.599Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785074589600",
+            "timestamp": "2026-07-26T14:03:09.600Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_w4x2ipd",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_w4x2ipd/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "usr_sandbox_hu1cnon": {
+      "tenantId": "usr_sandbox_hu1cnon",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T14:42:01.521Z",
+      "updatedAt": "2026-07-26T14:42:01.521Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785076921521",
+            "timestamp": "2026-07-26T14:42:01.521Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_hu1cnon",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_hu1cnon/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "usr_sandbox_0bqfpa9": {
+      "tenantId": "usr_sandbox_0bqfpa9",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-26T23:52:32.094Z",
+      "updatedAt": "2026-07-26T23:52:32.094Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785109952094",
+            "timestamp": "2026-07-26T23:52:32.094Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_0bqfpa9",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_0bqfpa9/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "sandbox_default_local": {
+      "tenantId": "sandbox_default_local",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-29T00:23:37.572Z",
+      "updatedAt": "2026-07-29T00:23:37.572Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 5,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 0,
+        "totalSpentUSD": 0,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_welcome_1785284617572",
+            "timestamp": "2026-07-29T00:23:37.573Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_sandbox_default_local",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/sandbox_default_local/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      }
+    },
+    "usr_sandbox_tg68c0w": {
+      "tenantId": "usr_sandbox_tg68c0w",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-29T00:24:12.203Z",
+      "updatedAt": "2026-07-29T01:17:29.900Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 4.958558,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 392136,
+        "totalSpentUSD": 0.041442,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_usage_1785287849900_gj6m",
+            "timestamp": "2026-07-29T01:17:29.900Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.004946,
+            "description": "Token usage on google/gemini-3.5-flash-lite (47972 prompt / 371 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 47972,
+            "outputTokens": 371,
+            "remainingBalanceUSD": 4.958558
+          },
+          {
+            "id": "tx_usage_1785287828314_946c",
+            "timestamp": "2026-07-29T01:17:08.314Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.004871,
+            "description": "Token usage on google/gemini-3.5-flash-lite (47746 prompt / 240 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 47746,
+            "outputTokens": 240,
+            "remainingBalanceUSD": 4.963504
+          },
+          {
+            "id": "tx_usage_1785287597216_crka",
+            "timestamp": "2026-07-29T01:13:17.216Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.009287,
+            "description": "Token usage on google/gemini-3.5-flash-lite (88170 prompt / 1176 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 88170,
+            "outputTokens": 1176,
+            "remainingBalanceUSD": 4.968375
+          },
+          {
+            "id": "tx_usage_1785287469173_0ty0",
+            "timestamp": "2026-07-29T01:11:09.173Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.004616,
+            "description": "Token usage on google/gemini-3.5-flash-lite (43249 prompt / 727 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 43249,
+            "outputTokens": 727,
+            "remainingBalanceUSD": 4.977662
+          },
+          {
+            "id": "tx_usage_1785287358443_hxkh",
+            "timestamp": "2026-07-29T01:09:18.443Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.002597,
+            "description": "Token usage on google/gemini-3.5-flash-lite (20954 prompt / 1253 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 20954,
+            "outputTokens": 1253,
+            "remainingBalanceUSD": 4.982278
+          },
+          {
+            "id": "tx_usage_1785287248856_l3zf",
+            "timestamp": "2026-07-29T01:07:28.856Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.014495,
+            "description": "Token usage on google/gemini-3.5-flash-lite (131171 prompt / 3445 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 131171,
+            "outputTokens": 3445,
+            "remainingBalanceUSD": 4.984875
+          },
+          {
+            "id": "tx_usage_1785287093059_b9nl",
+            "timestamp": "2026-07-29T01:04:53.059Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.00063,
+            "description": "Token usage on google/gemini-3.5-flash-lite (5450 prompt / 212 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 5450,
+            "outputTokens": 212,
+            "remainingBalanceUSD": 4.99937
+          },
+          {
+            "id": "tx_welcome_1785284652203",
+            "timestamp": "2026-07-29T00:24:12.203Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_tg68c0w",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_tg68c0w/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      },
+      "quotaSummary": {
+        "monthlyQuotaTokens": 500000,
+        "monthlyQuotaUSD": 5,
+        "usedTokensThisMonth": 343793,
+        "remainingTokensThisMonth": 495000,
+        "remainingCreditsUSD": 4.963504,
+        "percentRemaining": 99,
+        "percentUsed": 1,
+        "statusColor": "#10b981",
+        "statusLabel": "OPTIMAL BALANCE",
+        "tierName": "Free Starter Tier ($0)"
+      }
+    },
+    "default_user": {
+      "tenantId": "default_user",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-29T00:59:19.703Z",
+      "updatedAt": "2026-07-29T04:03:24.188Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 4.991917,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 75061,
+        "totalSpentUSD": 0.008083,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_usage_1785297804188_sltt",
+            "timestamp": "2026-07-29T04:03:24.188Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.002181,
+            "description": "Token usage on google/gemini-3.6-flash (20783 prompt / 256 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 20783,
+            "outputTokens": 256,
+            "remainingBalanceUSD": 4.991917
+          },
+          {
+            "id": "tx_usage_1785288170263_m71a",
+            "timestamp": "2026-07-29T01:22:50.263Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.000719,
+            "description": "Token usage on google/gemini-3.6-flash (6001 prompt / 297 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 6001,
+            "outputTokens": 297,
+            "remainingBalanceUSD": 4.994098
+          },
+          {
+            "id": "tx_usage_1785287568904_zf6x",
+            "timestamp": "2026-07-29T01:12:48.904Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.004319,
+            "description": "Token usage on google/gemini-3.6-flash (38847 prompt / 1086 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 38847,
+            "outputTokens": 1086,
+            "remainingBalanceUSD": 4.994817
+          },
+          {
+            "id": "tx_usage_1785287097676_rk7l",
+            "timestamp": "2026-07-29T01:04:57.676Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.000655,
+            "description": "Token usage on google/gemini-3.5-flash-lite (5926 prompt / 157 completion)",
+            "model": "google/gemini-3.5-flash-lite",
+            "inputTokens": 5926,
+            "outputTokens": 157,
+            "remainingBalanceUSD": 4.999136
+          },
+          {
+            "id": "tx_usage_1785286894263_iz2a",
+            "timestamp": "2026-07-29T01:01:34.263Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.000209,
+            "description": "Token usage on google/gemini-3.6-flash (1582 prompt / 126 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 1582,
+            "outputTokens": 126,
+            "remainingBalanceUSD": 4.999791
+          },
+          {
+            "id": "tx_welcome_1785286759703",
+            "timestamp": "2026-07-29T00:59:19.703Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_default_user",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/default_user/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      },
+      "quotaSummary": {
+        "monthlyQuotaTokens": 500000,
+        "monthlyQuotaUSD": 5,
+        "usedTokensThisMonth": 54022,
+        "remainingTokensThisMonth": 500000,
+        "remainingCreditsUSD": 4.994098,
+        "percentRemaining": 100,
+        "percentUsed": 0,
+        "statusColor": "#10b981",
+        "statusLabel": "OPTIMAL BALANCE",
+        "tierName": "Free Starter Tier ($0)"
+      }
+    },
+    "usr_sandbox_143y832": {
+      "tenantId": "usr_sandbox_143y832",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-29T02:54:57.572Z",
+      "updatedAt": "2026-07-29T04:02:42.188Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 4.980923,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 187657,
+        "totalSpentUSD": 0.019077,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_usage_1785297762188_obga",
+            "timestamp": "2026-07-29T04:02:42.188Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.005944,
+            "description": "Token usage on google/gemini-3.6-flash (58331 prompt / 278 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 58331,
+            "outputTokens": 278,
+            "remainingBalanceUSD": 4.980923
+          },
+          {
+            "id": "tx_usage_1785297757782_3czd",
+            "timestamp": "2026-07-29T04:02:37.782Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.007291,
+            "description": "Token usage on google/gemini-3.6-flash (71353 prompt / 388 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 71353,
+            "outputTokens": 388,
+            "remainingBalanceUSD": 4.986867
+          },
+          {
+            "id": "tx_usage_1785294048024_6otr",
+            "timestamp": "2026-07-29T03:00:48.024Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.005763,
+            "description": "Token usage on google/gemini-3.6-flash (56309 prompt / 331 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 56309,
+            "outputTokens": 331,
+            "remainingBalanceUSD": 4.994158
+          },
+          {
+            "id": "tx_usage_1785293948345_emk4",
+            "timestamp": "2026-07-29T02:59:08.345Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.00005,
+            "description": "Token usage on google/gemini-3.6-flash (416 prompt / 20 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 416,
+            "outputTokens": 20,
+            "remainingBalanceUSD": 4.999921
+          },
+          {
+            "id": "tx_usage_1785293938862_gkrh",
+            "timestamp": "2026-07-29T02:58:58.862Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.000029,
+            "description": "Token usage on google/gemini-3.6-flash (211 prompt / 20 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 211,
+            "outputTokens": 20,
+            "remainingBalanceUSD": 4.999971
+          },
+          {
+            "id": "tx_welcome_1785293697572",
+            "timestamp": "2026-07-29T02:54:57.572Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_143y832",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_143y832/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      },
+      "quotaSummary": {
+        "monthlyQuotaTokens": 500000,
+        "monthlyQuotaUSD": 5,
+        "usedTokensThisMonth": 129048,
+        "remainingTokensThisMonth": 500000,
+        "remainingCreditsUSD": 4.986867,
+        "percentRemaining": 100,
+        "percentUsed": 0,
+        "statusColor": "#10b981",
+        "statusLabel": "OPTIMAL BALANCE",
+        "tierName": "Free Starter Tier ($0)"
+      }
+    }
+  }
+}

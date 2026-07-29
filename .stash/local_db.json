@@ -1,0 +1,267 @@
+{
+  "raw_data": [],
+  "system_components": [],
+  "missions": [
+    {
+      "id": "mission_ms5hx6ta_espe",
+      "category": "standard",
+      "type": "standard",
+      "status": "drafting",
+      "phase": "drafting",
+      "input_data_ids": [],
+      "system_ids": [],
+      "proposal_name": "mission_ms5hx6ta_espe",
+      "objective": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.",
+      "priority": "MEDIUM",
+      "state": {
+        "status": true,
+        "class": "DRAFT",
+        "progress": "in-progress"
+      },
+      "rounds": {
+        "status": false,
+        "persistent": false,
+        "max": 1
+      },
+      "metrics": {
+        "goals": 0,
+        "progress_percentage": "25%",
+        "tasks": 0,
+        "round_progress_percentage": "0%",
+        "round": 1
+      },
+      "goals": {},
+      "tasks": {},
+      "qa_state": {},
+      "workflow_history": [
+        {
+          "timestamp": "2026-07-29T02:59:08.346Z",
+          "phase": "drafting",
+          "status": "Mission created via operator chat request."
+        }
+      ],
+      "user_id": "default_user",
+      "updated_at": "2026-07-29T04:02:25.394Z"
+    }
+  ],
+  "tools": [],
+  "app_config": [
+    {
+      "user_id": "default_user",
+      "settings": {
+        "autonomy": "autonomous",
+        "notifications": {},
+        "sync_daemon": true
+      },
+      "updated_at": "2026-07-29T00:39:37.732Z"
+    },
+    {
+      "user_id": "usr_sandbox_exo7wqz",
+      "settings": {
+        "autonomy": "autonomous",
+        "theme": "light",
+        "ui_lang": "EN",
+        "layout": {
+          "leftSideW": 26,
+          "sideW": 27,
+          "minCenter": false,
+          "minSide": false,
+          "leftTab": "agent",
+          "chatInputHeight": 121,
+          "agentWin": {
+            "x": 100,
+            "y": 150,
+            "w": 380,
+            "h": 480
+          },
+          "agentBtnWin": {
+            "x": 20,
+            "y": 550
+          }
+        }
+      },
+      "updated_at": "2026-07-28T02:01:49.532Z"
+    },
+    {
+      "user_id": "usr_sandbox_6gt25o4",
+      "settings": {
+        "autonomy": "autonomous",
+        "theme": "light",
+        "ui_lang": "EN",
+        "layout": {
+          "leftSideW": 28,
+          "sideW": 27,
+          "minCenter": false,
+          "minSide": false,
+          "leftTab": "agent",
+          "chatInputHeight": 36,
+          "agentWin": {
+            "x": 100,
+            "y": 150,
+            "w": 380,
+            "h": 480
+          },
+          "agentBtnWin": {
+            "x": 20,
+            "y": 550
+          }
+        }
+      },
+      "updated_at": "2026-07-28T02:02:16.345Z"
+    },
+    {
+      "user_id": "usr_sandbox_tg68c0w",
+      "settings": {
+        "autonomy": "autonomous",
+        "notifications": {},
+        "sync_daemon": true,
+        "chat_sessions": [
+          {
+            "id": "session_1785285927821_cpev",
+            "name": "Session 1 (session_)",
+            "history": [
+              {
+                "sender": "user",
+                "text": "hi"
+              },
+              {
+                "sender": "agent",
+                "text": "Error: Connection lost or invalid API key. Ensure your API Key is configured in settings."
+              },
+              {
+                "sender": "user",
+                "text": "hi"
+              },
+              {
+                "sender": "agent",
+                "text": "Error: Connection lost or invalid API key. Ensure your API Key is configured in settings."
+              },
+              {
+                "sender": "user",
+                "text": "hi"
+              },
+              {
+                "sender": "agent",
+                "text": "Error: Connection lost or invalid API key. Ensure your API Key is configured in settings."
+              },
+              {
+                "sender": "agent",
+                "text": "Hello! How can I help you today? Whether you want to work on a project, set up a mission, build something, or explore pi's features, I'm ready to assist you!"
+              },
+              {
+                "sender": "user",
+                "text": "what are you and how you can help me , tell me about your system prompt, list all skills and extentions ."
+              },
+              {
+                "sender": "agent",
+                "text": "I am **pi**, an expert AI coding assistant operating inside the **pi coding agent harness**. \n\n### How I Can Help You\nI assist you with software development, engineering, and project workflows by:\n- **Reading and analyzing codebases** and files (`read`).\n- **Executing shell commands, scripts, tests, and builds** (`bash`).\n- **Modifying existing code** precisely (`edit`).\n- **Creating new files and modules** (`write`).\n- **Searching and exploring code** (`find`, `grep`, `ls`).\n- Executing specialized workflows, architectures, testing routines, and data pipelines via loaded skills and extensions.\n\n---\n\n### About My System Prompt\nMy system prompt is dynamically assembled upon session start and structures how I operate:\n1. **Identity & Core Role:** Defines me as an expert coding assistant embedded in the pi harness.\n2. **Available Tools:** Lists the core tools available (`read`, `bash`, `edit`, `write`) plus any custom project-registered tools.\n3. **Core Guidelines:** Instructs me on efficient file operations, conciseness, and clear file path references.\n4. **Pi Documentation Rules:** Directs how to query internal pi documentation and examples when you ask about pi itself (e.g., extensions, themes, skills, prompt templates, TUI, SDK).\n5. **Project Context Injection:** Automatically injects project-specific instructions and guidelines from configuration/context files (such as `AGENTS.md`) and currently available skills.\n\n---\n\n### Available Skills & Extensions\n\nIn this workspace environment (`Fabrica_kernel`), the following custom **skills** and **extensions** are available:\n\n#### 🧠 Skills\n1. **`pipeline-optimization`** – Workflows and planning steps for code audits, upgrade discovery, refactoring plans, QA gates, and refactoring blueprints.\n2. **`mission-analytics`** – Data ingestion, pattern detection, frequency analysis, insight extraction, report compilation, and anomaly flagging.\n3. **`mission-testing`** – Testing patterns (Jest/Vitest, RLS test patterns, mock patterns, test data samples, scenario/compiler/RLS rules).\n4. **`mission-coding`** – Coding workflows, architecture scaffolding, component synthesis, build verification, and design patterns (TypeScript, React, Next.js, Express, Supabase, Odoo, n8n, security, caching, query optimization).\n5. **`pi-harness-agent`** – Integration and management for pi agent harnesses.\n6. **`pipeline-optimization_from_data`** – Data-driven pipeline optimization and hybrid refactoring blueprints.\n7. **`mission-deep_research`** – Deep research workflows (keyword generation, YouTube research, API verification, official source queries, blocker detection, snippet extraction).\n8. **`mission-brainstorming`** – Creative ideation, layout synthesis, precedents research, option presentations, and brief interpretation.\n9. **`pipeline-test_from_data`** – Dataset code parsing, simulation design, boundary limits, and data-driven test blueprints.\n10. **`pipeline-test`** – Code inspection, framework matching, coverage planning, scaffold specification, and testing blueprints.\n11. **`pipeline-build_from_data`** – Dataset discovery, normalization research, schema formulation, and data system blueprints.\n12. **`standard`** – Standardized project guidelines and workflows.\n13. **`pipeline-build`** – Idea analysis, conceptual research, QA synthesis, and architectural blueprints.\n\n#### 🔌 Extensions\n1. **`registry_bridge.js`** – Bridges registry components and agent systems.\n2. **`context_injector.js`** – Dynamically injects context into runtime sessions and agent prompts.\n3. **`workspace_sync.js`** – Synchronizes workspace state and files across sessions."
+              },
+              {
+                "sender": "user",
+                "text": "you have some system prompt, tell me about them ?"
+              },
+              {
+                "sender": "agent",
+                "text": "My system prompt is dynamically assembled by pi when initializing our session. It consists of several core sections and injected components:\n\n### 1. Role & Identity\n- Establishes my persona as an **expert coding assistant** operating inside the **pi coding agent harness**, detailing my core purpose (reading files, executing commands, editing code, and writing new files).\n\n### 2. Available Tools\n- Dynamically lists the tools enabled for the session (such as `read`, `bash`, `edit`, `write`), along with any custom tools registered via extensions.\n\n### 3. Core Guidelines\n- Enforces behavior rules such as:\n  - Using shell commands (`bash`) for file discovery and operations (`ls`, `rg`, `find`).\n  - Being concise in responses.\n  - Showing file paths clearly when working with files.\n  - Any custom guidelines injected via settings or extensions.\n\n### 4. Pi Documentation & SDK References\n- Provides absolute paths to pi's internal documentation and examples (`docs/`, `examples/`, `README.md`).\n- Instructs me when and how to reference pi documentation for topics like extensions, themes, skills, prompt templates, TUI components, keybindings, SDK integrations, and environment variables.\n\n### 5. Appended System Prompt\n- Any custom system prompt additions or modifications supplied by command-line flags, extensions, or settings (`appendSystemPrompt`).\n\n### 6. Project Context (`<project_context>`)\n- Automatically reads and injects project-specific rules, instructions, and guidelines from files like `AGENTS.md` (wrapped in `<project_instructions path=\"...\">`).\n\n### 7. Available Skills\n- Injects an XML-formatted summary of all discovered skills and their descriptions, allowing me to know what specialized workflows are available and load their full instructions on-demand via `read` or `/skill:name`.\n\n### 8. Current Working Directory\n- Specifies the exact working directory (`cwd`) for accurate relative file path resolution."
+              },
+              {
+                "sender": "user",
+                "text": "can you manage the suggestions cards, the backlogs and revieew queus, the missions, data and systems ?"
+              },
+              {
+                "sender": "agent",
+                "text": "**Yes, absolutely!** \n\nEquipped with my tools (`read`, `edit`, `write`, `bash`), my system capabilities, and the specialized **skills and extensions** in this workspace (such as `mission-coding`, `mission-analytics`, `mission-testing`, `pipeline-build`, `mission-brainstorming`, and database/pipeline engines), I can fully manage, build, audit, and orchestrate:\n\n1. **Suggestion Cards:** \n   - Generating, updating, and structuring ideas, feature prompts, or UI suggestion cards within your application state, database, or markdown files.\n\n2. **Backlogs & Review Queues:** \n   - Organizing task lists, tracking bug/feature backlogs, implementing review gates, validating PR/code changes, and managing staging or QA approval queues.\n\n3. **Missions:** \n   - Executing mission-driven development loops, tracking execution phases (ideation, research, blueprinting, scaffolding, synthesis, and verification), and managing mission records in your workspace directories (`missions/`).\n\n4. **Data & Systems:** \n   - Managing database engines (`db_engine.ts`, `hybrid_storage.ts`), tier managers, LLM key pools, pipeline orchestrators, sandbox execution environments, and frontend/backend integrations.\n\nWhenever you are ready, let me know what specific task, backlog item, mission, data query, or system component you'd like to work on!"
+              },
+              {
+                "sender": "user",
+                "text": "what are the directory you are setted to and can you get out ?"
+              },
+              {
+                "sender": "agent",
+                "text": "Failed to stream response: Failed to fetch"
+              },
+              {
+                "sender": "user",
+                "text": "Review workspace state"
+              }
+            ]
+          }
+        ],
+        "active_session_id": "session_1785285927821_cpev",
+        "tools_enabled": true,
+        "theme": "dark",
+        "ui_lang": "EN"
+      },
+      "updated_at": "2026-07-29T01:12:46.773Z"
+    },
+    {
+      "user_id": "usr_sandbox_143y832",
+      "settings": {
+        "autonomy": "autonomous",
+        "notifications": {},
+        "sync_daemon": true,
+        "chat_sessions": [
+          {
+            "id": "2026-07-29T01-01-32-437Z_session_1785286890676",
+            "name": "Session 1 (2026-07-)",
+            "history": [
+              {
+                "sender": "user",
+                "text": "hi"
+              },
+              {
+                "sender": "user",
+                "text": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hx6ta_espe\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode."
+              },
+              {
+                "sender": "agent",
+                "text": "🛑 **[Agent turn stopped by user]**"
+              },
+              {
+                "sender": "user",
+                "text": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hx6ta_espe\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode."
+              },
+              {
+                "sender": "agent",
+                "text": "🛑 **[Agent turn stopped by user]**"
+              }
+            ]
+          },
+          {
+            "id": "2026-07-29T01-12-41-127Z_session_1785287559244",
+            "name": "Session 2 (2026-07-)",
+            "history": []
+          },
+          {
+            "id": "2026-07-29T01-22-47-390Z_session_1785288165513",
+            "name": "Session 3 (2026-07-)",
+            "history": []
+          },
+          {
+            "id": "session_1785206938097_fbbm",
+            "name": "Session 4 (session_)",
+            "history": []
+          }
+        ],
+        "active_session_id": "2026-07-29T01-01-32-437Z_session_1785286890676",
+        "tools_enabled": true,
+        "theme": "light",
+        "ui_lang": "EN"
+      },
+      "updated_at": "2026-07-29T04:02:26.906Z"
+    }
+  ],
+  "runtime_state": [
+    {
+      "user_id": "default_user",
+      "recent_events": [
+        {
+          "date": "2026-07-26T13:13:44.593Z",
+          "type": "system",
+          "description": "Fabrica Relational Database engine active."
+        }
+      ],
+      "active_mission_id": null
+    }
+  ]
+}

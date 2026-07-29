@@ -1,0 +1,84 @@
+# Application & User Interface Guide
+
+This guide describes the physical layout of the Fabrica web application interface. It ensures that the agent understands how users interact with the app, how data binds to the screen, and how to maintain visual consistency when implementing front-end updates.
+
+## 1. THE THREE-PANEL GRID LAYOUT
+The application utilizes a classic three-panel responsive layout with a compact global header bar. **You are STRICTLY FORBIDDEN from altering the layout grid, columns, or panel positions.** All code changes must live within the existing visual boundaries.
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ HEADER BAR: Model Selector | Active Session Badge & Switcher | Live Voice (🎙️)          │
+├─────────────────┬───────────────────────────────────┬──────────────────────────────────┤
+│                 │                                   │             PANEL C              │
+│     PANEL A     │              PANEL B              │         (Right Section)        │
+│  (Left Section) │         (Middle Section)          │  Raw Data (50%) | Artifacts (50%)│
+│                 │                                   │   [Divided by 1.5px Vertical]    │
+│   System Maps   │          Missions Board           │   [Line across header & body]    │
+│    & Configs    │        (Horizontal status)        │                                  │
+│                 │                                   │  Quick Injections (2 Cards)      │
+└─────────────────┴───────────────────────────────────┴──────────────────────────────────┘
+```
+
+---
+
+## 2. DETAIL SPECIFICATIONS OF THE DASHBOARD LAYOUT & COMPONENTS
+
+### GLOBAL HEADER CONTROLS
+- **Model Selector**: Compact dropdown selector (`chatModel`) permitting instant switching between AI providers (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic key mapping and free-tier fallbacks.
+- **Active Session Switcher**: Minimized active session badge (`Session 1`, etc.) with a trigger button that toggles the Chat Sessions dropdown menu. Supports creating, renaming, and deleting chat sessions. Full conversation histories are saved instantly to tenant-isolated `app_config` and local storage, ensuring full chat recovery on logout and re-login.
+- **Live Voice Stream Trigger (🎙️)**: Located immediately adjacent to the active session indicator. Toggles real-time streaming audio connection with visual active state styling.
+
+### PANEL A: Left Section (Maps & Global Configuration)
+- **Purpose**: Exposes global configuration controls, client settings, active domains, and system-wide performance indices.
+- **Components**:
+  - **Autonomy Mode Selector**: Interactive dropdown binding to `app_config.settings.autonomy` supporting three modes:
+    - **FULL AUTO**: Auto-generates new contextual missions, answers agent QA gates, executes development tasks, and hot-swaps compiled components.
+    - **SEMI-AUTO**: Auto-executes planned tasks while holding user-created missions at QA gates for explicit user review.
+    - **SUPERVISED**: Fully manual control requiring user approval for all phase transitions and QA gates.
+  - **5s Real-Time Workspace Polling**: When FULL AUTO is active, the dashboard polls backend state every 5 seconds to reflect background mission creation, task completions, and component deployments live.
+  - **Recent Events Feed**: A micro-event timeline rendering the last 5 logs from `runtime_state.recent_events`.
+  - **System Directories & Sources Flow**: Interactive Cytoscape dependency graph linking Inbox → Gateway → OS Prompts & Data.
+
+### PANEL B: Middle Section (The Missions Board Tracker & Chat)
+- **Purpose**: The primary project management board where the user tracks work progression, communicates with the agent, and executes workflows.
+- **Vertical Rows (The 5 Types)**:
+  - `Standard`
+  - `Build Idea`
+  - `Build Data`
+  - `Enhance System`
+  - `Hybrid Enhance Sys/Data`
+- **Horizontal Columns (The 4 Statuses)**:
+  - `Drafting`
+  - `Planning`
+  - `Execution`
+  - `Archive`
+- **Quick Injections Panel**: High-density 2-card prompt suggestion panel rendered under chat controls. Uses a compact 2-column grid (`gridTemplateColumns: 'repeat(2, 1fr)'`) with stacked title and description text, truncation, and zero horizontal overflow.
+
+### PANEL C: Right Section (Raw Data & Artifact Management - 50/50 Split)
+- **Purpose**: Explicitly designed to handle the core inputs and outputs of our business operating system.
+- **Dual Section Layout**:
+  - Fully expanded flex-stretch container dividing **Your Data** (`raw_data`) and **Your Artifacts** (`artifacts` / `system_components`) into equal 50% width columns.
+  - **Vertical Divider Line**: A crisp `1.5px solid var(--border-soft)` vertical separator line spans continuously between the left (Data) and right (Systems) sub-sections in both the top action header and the main body list container.
+  - **Sub-section Controls**:
+    - **Your Data (Left 50%)**: Contains data source filter, semantic search input, import button, and list/graph view toggles.
+    - **Your Systems (Right 50%)**: Contains component category filter, search input, export button, and snapshot deployment controls.
+
+### CONSOLIDATED 2-SECTION ACCOUNT & API CREDENTIALS MODAL
+- **Structure**: All account, workspace, billing, BYOK credentials, model routing, load balancer, and PAUG features are consolidated into **EXACTLY TWO (2)** top-level sections:
+  1. **👤 Section 1: Account & Workspace**:
+     - **Workspace Identity & Security**: Renders active tenant email, username, company name, entity path, tenant space ID, and current subscription plan badge with session termination controls.
+     - **Usage Quota & Token Alerts**: Visual meter rendering monthly LLM token allowance, percentage used, remaining tokens, and status alert banners.
+     - **Subscription Plans & Enterprise Tiers**: Interactive 3-card pricing grid (Starter, Professional, Enterprise) managed via Stripe Gateway.
+     - **Payment Method (Stripe Billing)**: 256-bit encrypted card input fields (Card Number with auto brand detection, Expiry, CVC) with $0 verification trigger.
+  2. **🔑 Section 2: Tokens & API Credentials**:
+     - **BYOK Multi-Provider Credentials**: Encrypted inputs for Google AI Studio, OpenRouter, and Anthropic Claude keys with live validity verification badges (`✓ VERIFIED` / `✕ INVALID KEY`).
+     - **User Harness Engine & Model Intelligence**: Active harness engine indicator, model routing selector (`chatModel`), free-only filter, auto-free fallback toggle, and active model rate limits and cost intel.
+     - **Free Tokens Pool & Key Load Balancer**: Multi-key system load balancer metrics (active keys count and lock isolation states) with inline form to register new keys into the system pool.
+     - **Managed LLM Credits & PAUG Infrastructure**: Managed token balance, usage history log, and top-up refill controls ($10, $25, $50).
+
+---
+
+## 3. DESIGN POLISHING CONSTRAINTS
+- **Theme**: Clean, off-white background with high-contrast charcoal typography, accented by thin dark-gray borders (`var(--border-soft)`). Use deep indigo or emerald colors for action items. Avoid glowing gradient backgrounds or tech-larping console screens unless explicitly requested.
+- **Interaction Feedback**: Every card selection, file upload, or button click must have smooth, visual hover and active states (using Tailwind transitions: `transition-all duration-200 hover:scale-[1.01] hover:shadow-sm`).
+- **Data Load Skeletons**: Show subtle, quiet skeleton load screens (`animate-pulse`) when fetching raw file contents or compiling system outputs, rather than freezing the screen.

@@ -1,0 +1,8 @@
+{
+  "name": "Remix Fabrica",
+  "description": "Imported from GitHub: Auto-Skiller/Fabrica",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
