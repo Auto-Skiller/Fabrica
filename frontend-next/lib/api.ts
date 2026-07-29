@@ -144,6 +144,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ file, path, value, op }),
     }),
+  saveDbMission: (mission: any) =>
+    request<any>('/api/db/missions', {
+      method: 'POST',
+      body: JSON.stringify(mission),
+    }),
 
   // Ecosystem
   getEcosystem: () => request<EcosystemData>('/api/ecosystem'),

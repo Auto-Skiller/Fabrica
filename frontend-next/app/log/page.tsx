@@ -994,7 +994,7 @@ export default function LogPage() {
     try {
       if (supabase) {
         const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-          redirectTo: window.location.origin + '/log?recovery=true',
+          redirectTo: typeof window !== 'undefined' ? window.location.origin + '/log?recovery=true' : undefined,
         });
         if (error) {
           setToast({ message: error.message, type: 'error', isOpen: true });

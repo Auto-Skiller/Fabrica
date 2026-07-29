@@ -56,12 +56,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: safeFetchScript }} />
-      </head>
-      <body>{children}</body>
+      <body>
+        <script key="safe-fetch-script" id="safe-fetch-script" dangerouslySetInnerHTML={{ __html: safeFetchScript }} />
+        {children}
+      </body>
     </html>
   );
 }
+
 
 

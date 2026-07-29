@@ -157,6 +157,15 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       else env.GEMINI_API_KEY = effectiveKey;
     }
 
+    let promptWithLang = options.prompt;
+    if (options.agentLang === 'FR') {
+      promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in French (Français). All explanations, code commentary, and summaries must be in French.]';
+    } else if (options.agentLang === 'AR') {
+      promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in Arabic (العربية). All explanations, code commentary, and summaries must be in Arabic.]';
+    } else if (options.agentLang === 'EN') {
+      promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in English.]';
+    }
+
     const args: string[] = [
       '-p',
       '--mode', 'json',
@@ -164,7 +173,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       '--session-id', sessionId,
       '--model', fullModel,
       ...execOpts.cliFlags,
-      options.prompt
+      promptWithLang
     ];
 
     const startTime = Date.now();

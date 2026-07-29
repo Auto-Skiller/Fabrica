@@ -394,20 +394,31 @@
       "plan": "free",
       "status": "active",
       "createdAt": "2026-07-29T00:59:19.703Z",
-      "updatedAt": "2026-07-29T01:22:50.263Z",
+      "updatedAt": "2026-07-29T04:03:24.188Z",
       "llmConfig": {
         "requiresByokOrFree": true,
         "activeProvider": "gemini"
       },
       "llmCredits": {
-        "balanceUSD": 4.994098,
+        "balanceUSD": 4.991917,
         "autoTopUp": false,
         "autoTopUpThresholdUSD": 2,
         "autoTopUpAmountUSD": 10,
-        "totalTokensUsed": 54022,
-        "totalSpentUSD": 0.005902,
+        "totalTokensUsed": 75061,
+        "totalSpentUSD": 0.008083,
         "activePlan": "byok_or_free",
         "transactions": [
+          {
+            "id": "tx_usage_1785297804188_sltt",
+            "timestamp": "2026-07-29T04:03:24.188Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.002181,
+            "description": "Token usage on google/gemini-3.6-flash (20783 prompt / 256 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 20783,
+            "outputTokens": 256,
+            "remainingBalanceUSD": 4.991917
+          },
           {
             "id": "tx_usage_1785288170263_m71a",
             "timestamp": "2026-07-29T01:22:50.263Z",
@@ -495,9 +506,136 @@
       "quotaSummary": {
         "monthlyQuotaTokens": 500000,
         "monthlyQuotaUSD": 5,
-        "usedTokensThisMonth": 47724,
+        "usedTokensThisMonth": 54022,
         "remainingTokensThisMonth": 500000,
-        "remainingCreditsUSD": 4.994817,
+        "remainingCreditsUSD": 4.994098,
+        "percentRemaining": 100,
+        "percentUsed": 0,
+        "statusColor": "#10b981",
+        "statusLabel": "OPTIMAL BALANCE",
+        "tierName": "Free Starter Tier ($0)"
+      }
+    },
+    "usr_sandbox_143y832": {
+      "tenantId": "usr_sandbox_143y832",
+      "plan": "free",
+      "status": "active",
+      "createdAt": "2026-07-29T02:54:57.572Z",
+      "updatedAt": "2026-07-29T04:02:42.188Z",
+      "llmConfig": {
+        "requiresByokOrFree": true,
+        "activeProvider": "gemini"
+      },
+      "llmCredits": {
+        "balanceUSD": 4.980923,
+        "autoTopUp": false,
+        "autoTopUpThresholdUSD": 2,
+        "autoTopUpAmountUSD": 10,
+        "totalTokensUsed": 187657,
+        "totalSpentUSD": 0.019077,
+        "activePlan": "byok_or_free",
+        "transactions": [
+          {
+            "id": "tx_usage_1785297762188_obga",
+            "timestamp": "2026-07-29T04:02:42.188Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.005944,
+            "description": "Token usage on google/gemini-3.6-flash (58331 prompt / 278 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 58331,
+            "outputTokens": 278,
+            "remainingBalanceUSD": 4.980923
+          },
+          {
+            "id": "tx_usage_1785297757782_3czd",
+            "timestamp": "2026-07-29T04:02:37.782Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.007291,
+            "description": "Token usage on google/gemini-3.6-flash (71353 prompt / 388 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 71353,
+            "outputTokens": 388,
+            "remainingBalanceUSD": 4.986867
+          },
+          {
+            "id": "tx_usage_1785294048024_6otr",
+            "timestamp": "2026-07-29T03:00:48.024Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.005763,
+            "description": "Token usage on google/gemini-3.6-flash (56309 prompt / 331 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 56309,
+            "outputTokens": 331,
+            "remainingBalanceUSD": 4.994158
+          },
+          {
+            "id": "tx_usage_1785293948345_emk4",
+            "timestamp": "2026-07-29T02:59:08.345Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.00005,
+            "description": "Token usage on google/gemini-3.6-flash (416 prompt / 20 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 416,
+            "outputTokens": 20,
+            "remainingBalanceUSD": 4.999921
+          },
+          {
+            "id": "tx_usage_1785293938862_gkrh",
+            "timestamp": "2026-07-29T02:58:58.862Z",
+            "type": "usage_deduction",
+            "amountUSD": 0.000029,
+            "description": "Token usage on google/gemini-3.6-flash (211 prompt / 20 completion)",
+            "model": "google/gemini-3.6-flash",
+            "inputTokens": 211,
+            "outputTokens": 20,
+            "remainingBalanceUSD": 4.999971
+          },
+          {
+            "id": "tx_welcome_1785293697572",
+            "timestamp": "2026-07-29T02:54:57.572Z",
+            "type": "topup",
+            "amountUSD": 5,
+            "description": "Starter Complimentary Managed LLM Credits ($5.00 Grant)",
+            "remainingBalanceUSD": 5
+          }
+        ]
+      },
+      "features": {
+        "database": {
+          "type": "shared_row_isolated",
+          "allocatedName": "shared_db_tenant_usr_sandbox_143y832",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "storage": {
+          "type": "shared_namespace_pool",
+          "namespace": "/storage_shared_pool/tenants/usr_sandbox_143y832/",
+          "costMonthly": 0,
+          "status": "ready"
+        },
+        "executionSpace": {
+          "type": "shared_worker_queue",
+          "runnerId": "shared_runner_worker_pool_v1",
+          "costMonthly": 0,
+          "status": "ready"
+        }
+      },
+      "billingSummary": {
+        "monthlyTotalCost": 0,
+        "currency": "USD",
+        "billingCycle": "pay_as_you_go",
+        "atCostPricingBreakdown": {
+          "database": "$0.00 (Shared row-level DB pool)",
+          "storage": "$0.00 (Shared tenant prefix bucket)",
+          "executionSpace": "$0.00 (Shared worker execution sandbox)"
+        }
+      },
+      "quotaSummary": {
+        "monthlyQuotaTokens": 500000,
+        "monthlyQuotaUSD": 5,
+        "usedTokensThisMonth": 129048,
+        "remainingTokensThisMonth": 500000,
+        "remainingCreditsUSD": 4.986867,
         "percentRemaining": 100,
         "percentUsed": 0,
         "statusColor": "#10b981",

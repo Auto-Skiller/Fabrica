@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api';
 import { EntityData, EcosystemData, RuntimeYaml, MissionsYaml, ToolboxesYaml, InboxYaml } from '../../lib/types';
 
-const ToolboxGraph = dynamic(() => import('../../components/flow/ToolboxGraph'), { ssr: false });
+const SkillsAndExtensions = dynamic(() => import('../../components/flow/SkillsAndExtensions'), { ssr: false });
 const MissionGraph = dynamic(() => import('../../components/flow/MissionGraph'), { ssr: false });
 
 const DependencyGraph = dynamic(() => import('../../components/flow/DependencyGraph'), { ssr: false });
@@ -1355,7 +1355,7 @@ export default function Dashboard() {
     try {
       if (supabase) {
         const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-          redirectTo: window.location.origin + '/dashboard?recovery=true',
+          redirectTo: typeof window !== 'undefined' ? window.location.origin + '/dashboard?recovery=true' : undefined,
         });
         if (error) {
           setToast({ message: error.message, type: 'error', isOpen: true });
@@ -3439,6 +3439,9 @@ export default function Dashboard() {
       ]);
       const mergedEnt = getMergedEntityData(entRes);
       setEntityData(mergedEnt);
+      if (mergedEnt.runtime && Array.isArray(mergedEnt.runtime.suggestions) && mergedEnt.runtime.suggestions.length > 0) {
+        setAgentSuggestions(mergedEnt.runtime.suggestions);
+      }
       setBoardContent(mergedEnt.board || '');
       setEcosystem(ecoRes && ecoRes.entities && ecoRes.entities.length > 0 ? ecoRes : EMPTY_ECOSYSTEM_DATA);
       setRawDataList(dbRaw || []);
@@ -4017,32 +4020,51 @@ export default function Dashboard() {
 
   const handleUpdateMissionStatus = async (mission: any, nextStatus: string) => {
     try {
+      let normalizedStatus = nextStatus;
+      if (nextStatus === 'new' || nextStatus === 'draft') normalizedStatus = 'drafting';
+
       let nextClass = 'DRAFT';
-      if (nextStatus === 'planning') nextClass = 'PLANNING';
-      if (nextStatus === 'execution') nextClass = 'EXECUTION';
-      if (nextStatus === 'archive' || nextStatus === 'done') nextClass = 'DONE';
+      if (normalizedStatus === 'planning') nextClass = 'PLANNING';
+      if (normalizedStatus === 'execution') nextClass = 'EXECUTION';
+      if (normalizedStatus === 'archive' || normalizedStatus === 'done') nextClass = 'DONE';
 
       const cat = mission.type || mission.category || 'standard';
-      await api.patchEntity(activeEntity, 'missions', [cat, mission.id, 'status'], nextStatus);
-      const res = await api.patchEntity(activeEntity, 'missions', [cat, mission.id, 'state', 'class'], nextClass);
-      if (res.ok) {
-        setToast({ message: `Mission state updated to ${nextStatus.toUpperCase()}!`, type: 'success', isOpen: true });
-        fetchWorkspaceData();
-        const updatedMission = {
-          ...mission,
-          status: nextStatus,
-          phase: nextStatus,
-          state: {
-            ...(mission.state || {}),
-            class: nextClass
-          }
-        };
-        setSelectedMission((prev: any) => {
-          if (!prev || prev.id !== mission.id) return prev;
-          return updatedMission;
-        });
-        triggerMissionAgentNotification('MOVED', updatedMission, `Moved mission status to '${nextStatus.toUpperCase()}' (${nextClass})`);
+      let patchSuccess = false;
+      try {
+        await api.patchEntity(activeEntity, 'missions', [cat, mission.id, 'status'], normalizedStatus);
+        const res = await api.patchEntity(activeEntity, 'missions', [cat, mission.id, 'state', 'class'], nextClass);
+        if (res && res.ok) patchSuccess = true;
+      } catch {
+        // Fallback to saving directly in DB if patchEntity failed
       }
+
+      // Also persist to SQLite/DB to ensure persistent state transition across custom & preset missions
+      await api.saveDbMission({
+        ...mission,
+        status: normalizedStatus,
+        phase: normalizedStatus,
+        state: {
+          ...(mission.state || {}),
+          class: nextClass
+        }
+      }).catch(() => null);
+
+      setToast({ message: `Mission state updated to ${normalizedStatus.toUpperCase()}!`, type: 'success', isOpen: true });
+      fetchWorkspaceData();
+      const updatedMission = {
+        ...mission,
+        status: normalizedStatus,
+        phase: normalizedStatus,
+        state: {
+          ...(mission.state || {}),
+          class: nextClass
+        }
+      };
+      setSelectedMission((prev: any) => {
+        if (!prev || prev.id !== mission.id) return prev;
+        return updatedMission;
+      });
+      triggerMissionAgentNotification('MOVED', updatedMission, `Moved mission status to '${normalizedStatus.toUpperCase()}' (${nextClass})`);
     } catch (e: any) {
       setToast({ message: e.message || 'Failed to update status', type: 'error', isOpen: true });
     }
@@ -5163,6 +5185,7 @@ ${isDirector ? `
         setChatHistory(prev => [...prev, { sender: 'agent', text: res.text }]);
         if (res.suggestions && Array.isArray(res.suggestions) && res.suggestions.length > 0) {
           setAgentSuggestions(res.suggestions);
+          api.patchEntity(activeEntity, 'runtime', ['suggestions'], res.suggestions).catch(() => null);
         }
         const lowerText = (res.text || '').toLowerCase();
         if (
@@ -5918,16 +5941,16 @@ ${isDirector ? `
 
   const getMissionStatus = (m: any) => {
     const rawStatus = String(m.status || '').toLowerCase();
-    if (['drafting', 'draft', 'drafted'].includes(rawStatus)) return 'drafting';
+    if (['drafting', 'draft', 'drafted', 'new'].includes(rawStatus)) return 'drafting';
     if (rawStatus === 'planning') return 'planning';
     if (rawStatus === 'execution') return 'execution';
     if (['archive', 'done', 'completed'].includes(rawStatus)) return 'archive';
 
     const rawClass = String(m.state?.class || '').toLowerCase();
-    if (rawClass === 'draft' || rawClass === 'drafting') return 'drafting';
+    if (['draft', 'drafting', 'new'].includes(rawClass)) return 'drafting';
     if (rawClass === 'planning') return 'planning';
     if (rawClass === 'execution') return 'execution';
-    if (rawClass === 'done' || rawClass === 'archive') return 'archive';
+    if (['done', 'archive', 'completed'].includes(rawClass)) return 'archive';
 
     return 'drafting';
   };
@@ -8165,15 +8188,44 @@ ${isDirector ? `
                         gridTemplateColumns: 'repeat(2, 1fr)', 
                         gap: '4px'
                       }}>
-                        {(agentSuggestions.length >= 2
-                          ? agentSuggestions.slice(0, 2).map((s, idx) => ({
-                              title: `Option ${idx + 1}`,
-                              icon: '⚡',
-                              prompt: s,
-                              desc: s
-                            }))
-                          : pbSuggestions.slice(0, 2)
-                        ).map((s, idx) => (
+                        {(() => {
+                          const baseDefaults = pbSuggestions;
+                          let displayList: Array<{ title: string; icon: string; prompt: string; desc: string }> = [];
+
+                          if (agentSuggestions && agentSuggestions.length > 0) {
+                            displayList = agentSuggestions.map((s: any, idx: number) => {
+                              if (typeof s === 'object' && s !== null) {
+                                const promptVal = s.prompt || s.description || s.title || '';
+                                return {
+                                  title: s.title || s.name || `Option ${idx + 1}`,
+                                  icon: s.icon || '⚡',
+                                  prompt: promptVal,
+                                  desc: s.description || s.title || promptVal
+                                };
+                              }
+                              const strVal = String(s);
+                              return {
+                                title: `Option ${idx + 1}`,
+                                icon: '⚡',
+                                prompt: strVal,
+                                desc: strVal
+                              };
+                            });
+                          }
+
+                          // Always pad with base defaults to guarantee exactly 2 cards
+                          if (displayList.length < 2) {
+                            const missingCount = 2 - displayList.length;
+                            for (let i = 0; i < missingCount; i++) {
+                              if (baseDefaults[i]) {
+                                displayList.push(baseDefaults[i]);
+                              }
+                            }
+                          }
+
+                          // Always slice to exactly 2 cards
+                          return displayList.slice(0, 2);
+                        })().map((s, idx) => (
                           <button
                             key={idx}
                             onClick={() => handleSendChat(s.prompt)}
@@ -8850,6 +8902,11 @@ ${isDirector ? `
                               <button
                                 className="mini ghost"
                                 style={{ fontSize: '8px', padding: '2px 4px' }}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
+                              >◀ Draft</button>
+                              <button
+                                className="mini ghost"
+                                style={{ fontSize: '8px', padding: '2px 4px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                               >◀ Plan</button>
                               <button
@@ -8951,11 +9008,18 @@ ${isDirector ? `
                           <p className="mcard-desc">{m.objective}</p>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                             <span className="mcard-meta-badge model-badge">✓ archived</span>
-                            <button
-                              className="mini ghost"
-                              style={{ fontSize: '8px', padding: '2px 4px' }}
-                              onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
-                            >Re-open ↺</button>
+                            <div style={{ display: 'flex', gap: '2px' }}>
+                              <button
+                                className="mini ghost"
+                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
+                              >◀ Draft</button>
+                              <button
+                                className="mini ghost"
+                                style={{ fontSize: '8px', padding: '2px 4px' }}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
+                              >Re-open ↺</button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -10366,7 +10430,7 @@ ${isDirector ? `
             {/* Body */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {toolboxes ? (
-                <ToolboxGraph
+                <SkillsAndExtensions
                   entityName={activeEntity}
                   toolboxes={toolboxes}
                   onRefresh={fetchWorkspaceData}

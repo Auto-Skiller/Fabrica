@@ -641,9 +641,9 @@ function WorkspaceSkillCard({
 }
 
 // --------------------------------------------------
-// MAIN COMPONENT: ToolboxGraph
+// MAIN COMPONENT: SkillsAndExtensions
 // --------------------------------------------------
-export default function ToolboxGraph({ entityName, toolboxes, onRefresh, showToast }: Props) {
+export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, showToast }: Props) {
   const triggerToast = (msg: string, type: 'success' | 'info' | 'error' = 'error') => {
     if (showToast) showToast(msg, type);
     else alert(msg);

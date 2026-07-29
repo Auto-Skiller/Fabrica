@@ -1,1 +1,0 @@
-export function forecast() { return 0.25; }

@@ -1,7 +1,49 @@
 {
   "raw_data": [],
   "system_components": [],
-  "missions": [],
+  "missions": [
+    {
+      "id": "mission_ms5hx6ta_espe",
+      "category": "standard",
+      "type": "standard",
+      "status": "drafting",
+      "phase": "drafting",
+      "input_data_ids": [],
+      "system_ids": [],
+      "proposal_name": "mission_ms5hx6ta_espe",
+      "objective": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.",
+      "priority": "MEDIUM",
+      "state": {
+        "status": true,
+        "class": "DRAFT",
+        "progress": "in-progress"
+      },
+      "rounds": {
+        "status": false,
+        "persistent": false,
+        "max": 1
+      },
+      "metrics": {
+        "goals": 0,
+        "progress_percentage": "25%",
+        "tasks": 0,
+        "round_progress_percentage": "0%",
+        "round": 1
+      },
+      "goals": {},
+      "tasks": {},
+      "qa_state": {},
+      "workflow_history": [
+        {
+          "timestamp": "2026-07-29T02:59:08.346Z",
+          "phase": "drafting",
+          "status": "Mission created via operator chat request."
+        }
+      ],
+      "user_id": "default_user",
+      "updated_at": "2026-07-29T04:02:25.394Z"
+    }
+  ],
   "tools": [],
   "app_config": [
     {
@@ -151,6 +193,62 @@
         "ui_lang": "EN"
       },
       "updated_at": "2026-07-29T01:12:46.773Z"
+    },
+    {
+      "user_id": "usr_sandbox_143y832",
+      "settings": {
+        "autonomy": "autonomous",
+        "notifications": {},
+        "sync_daemon": true,
+        "chat_sessions": [
+          {
+            "id": "2026-07-29T01-01-32-437Z_session_1785286890676",
+            "name": "Session 1 (2026-07-)",
+            "history": [
+              {
+                "sender": "user",
+                "text": "hi"
+              },
+              {
+                "sender": "user",
+                "text": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hx6ta_espe\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode."
+              },
+              {
+                "sender": "agent",
+                "text": "🛑 **[Agent turn stopped by user]**"
+              },
+              {
+                "sender": "user",
+                "text": "[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hx6ta_espe\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_ms5hwzhw_407y\n📌 Title / Objective: \"[REAL-TIME MISSION EVENT]\n⚡ Action: User MOVED mission in UI\n🆔 Mission ID: mission_test_456\n📌 Title / Objective: \"Verify direct workspace sync\"\n🏷️ Category / Type: deep_research\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: planning\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'PLANNING' (PLANNING)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode.\"\n🏷️ Category / Type: standard\n📊 Current Phase / Status: drafting\n🤖 Active Autonomy Mode: DIRECTOR (Autonomous Mode)\nℹ️ Details: Moved mission status to 'DRAFTING' (DRAFT)\n\nDIRECTIVE FOR AGENT:\nYou are the Fabrica Agent Kernel handling workspace missions in DIRECTOR (Autonomous Mode).\n\n1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.\n2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.\n3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.\n4. Begin execution on this mission immediately under DIRECTOR mode."
+              },
+              {
+                "sender": "agent",
+                "text": "🛑 **[Agent turn stopped by user]**"
+              }
+            ]
+          },
+          {
+            "id": "2026-07-29T01-12-41-127Z_session_1785287559244",
+            "name": "Session 2 (2026-07-)",
+            "history": []
+          },
+          {
+            "id": "2026-07-29T01-22-47-390Z_session_1785288165513",
+            "name": "Session 3 (2026-07-)",
+            "history": []
+          },
+          {
+            "id": "session_1785206938097_fbbm",
+            "name": "Session 4 (session_)",
+            "history": []
+          }
+        ],
+        "active_session_id": "2026-07-29T01-01-32-437Z_session_1785286890676",
+        "tools_enabled": true,
+        "theme": "light",
+        "ui_lang": "EN"
+      },
+      "updated_at": "2026-07-29T04:02:26.906Z"
     }
   ],
   "runtime_state": [

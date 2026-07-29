@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export default function NotFound() {
@@ -38,4 +36,5 @@ export default function NotFound() {
     </div>
   );
 }
+
 

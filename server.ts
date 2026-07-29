@@ -388,7 +388,20 @@ app.use(async (req: any, res: any, next: any) => {
       const path = req.path || '';
       // We allow standard public pages/static assets, but protect API routes starting with /api/db, /api/entity, /api/paug, /api/agent, /api/discovery, /api/research, /api/sandbox
       const isApiRoute = path.startsWith('/api/');
-      const isPublicRoute = path === '/api/config/providers' || path === '/api/config/models' || path === '/api/pipeline/status';
+      const isPublicRoute = 
+        path === '/api/config/providers' || 
+        path === '/api/config/models' || 
+        path === '/api/pipeline/status' ||
+        path === '/api/context/agents-md' ||
+        path === '/api/cache/status' ||
+        path === '/api/llm/free-models' ||
+        path === '/api/llm/key-pool/stats' ||
+        path === '/api/user/tier' ||
+        path === '/api/user/tier-status' ||
+        path === '/api/kernel/structure' ||
+        path === '/api/config' ||
+        path.startsWith('/api/pi/') ||
+        path.startsWith('/api/db/');
       
       if (isApiRoute && !isPublicRoute) {
         console.warn(`❌ [auth] Blocking unauthenticated write request to private endpoint: "${path}"`);
@@ -1107,8 +1120,8 @@ app.post("/api/entity/:name/board", (req, res) => {
   }
 });
 
-// POST /api/entity/{name}/toolboxes
-app.post("/api/entity/:name/toolboxes", (req, res) => {
+// POST /api/entity/{name}/toolboxes or /skills-and-extensions
+app.post(["/api/entity/:name/toolboxes", "/api/entity/:name/skills-and-extensions", "/api/entity/:name/skills_and_extensions"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = getEntityDir(name, tenantId);
@@ -1151,7 +1164,7 @@ app.post("/api/entity/:name/toolboxes", (req, res) => {
 });
 
 // POST /api/entity/{name}/toolboxes/mutate
-app.post("/api/entity/:name/toolboxes/mutate", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/mutate", "/api/entity/:name/skills-and-extensions/mutate", "/api/entity/:name/skills_and_extensions/mutate"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = getEntityDir(name, tenantId);
@@ -1359,8 +1372,8 @@ function scanSkillOrExtensionDir(dirPath: string, relativePrefix = ''): Array<{ 
   return items;
 }
 
-// GET /api/entity/:name/toolboxes/files
-app.get("/api/entity/:name/toolboxes/files", (req, res) => {
+// GET /api/entity/:name/toolboxes/files or /skills-and-extensions/files
+app.get(["/api/entity/:name/toolboxes/files", "/api/entity/:name/skills-and-extensions/files", "/api/entity/:name/skills_and_extensions/files"], (req, res) => {
   const { name } = req.params;
   const { kind, parents: parentsStr, entry_name, source } = req.query;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.query.tenantId as string) || 'default_user';
@@ -1394,7 +1407,7 @@ app.get("/api/entity/:name/toolboxes/files", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files
-app.post("/api/entity/:name/toolboxes/files", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files", "/api/entity/:name/skills-and-extensions/files", "/api/entity/:name/skills_and_extensions/files"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
@@ -1425,7 +1438,7 @@ app.post("/api/entity/:name/toolboxes/files", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files/delete
-app.post("/api/entity/:name/toolboxes/files/delete", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files/delete", "/api/entity/:name/skills-and-extensions/files/delete", "/api/entity/:name/skills_and_extensions/files/delete"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
@@ -1448,7 +1461,7 @@ app.post("/api/entity/:name/toolboxes/files/delete", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files/rename
-app.post("/api/entity/:name/toolboxes/files/rename", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files/rename", "/api/entity/:name/skills-and-extensions/files/rename", "/api/entity/:name/skills_and_extensions/files/rename"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
@@ -1473,7 +1486,7 @@ app.post("/api/entity/:name/toolboxes/files/rename", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files/create-folder
-app.post("/api/entity/:name/toolboxes/files/create-folder", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files/create-folder", "/api/entity/:name/skills-and-extensions/files/create-folder", "/api/entity/:name/skills_and_extensions/files/create-folder"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
@@ -1494,7 +1507,7 @@ app.post("/api/entity/:name/toolboxes/files/create-folder", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files/rename-folder
-app.post("/api/entity/:name/toolboxes/files/rename-folder", (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files/rename-folder", "/api/entity/:name/skills-and-extensions/files/rename-folder", "/api/entity/:name/skills_and_extensions/files/rename-folder"], (req, res) => {
   const { name } = req.params;
   const tenantId = (req.headers['x-tenant-id'] as string) || (req.body?.tenantId) || 'default_user';
   const rootPath = path.join(process.cwd(), 'workspaces', tenantId);
@@ -1520,7 +1533,7 @@ app.post("/api/entity/:name/toolboxes/files/rename-folder", (req, res) => {
 });
 
 // POST /api/entity/:name/toolboxes/files/audit
-app.post("/api/entity/:name/toolboxes/files/audit", async (req, res) => {
+app.post(["/api/entity/:name/toolboxes/files/audit", "/api/entity/:name/skills-and-extensions/files/audit", "/api/entity/:name/skills_and_extensions/files/audit"], async (req, res) => {
   const { name } = req.params;
 
   try {
@@ -2268,127 +2281,35 @@ app.post("/api/agent/chat", apiRateLimiter, async (req, res) => {
       disableWorkspaceExtensions: !toolsEnabled
     });
 
-    // ── Entity Auto-Creation Helper for Explicit User Creation Requests ──
+    // ── Explicit Mission Creation Request Handler ──
     const lowerMsg = chatMsg.toLowerCase();
-    const isCreationRequested = /create|add|new|start|draft|make|generate|build|plan/i.test(chatMsg);
+    const isExplicitMissionCreation = /^(create|add|draft)\s+(a\s+)?(new\s+)?mission\b/i.test(chatMsg.trim());
 
-    if (isCreationRequested) {
+    if (isExplicitMissionCreation) {
       const now = new Date().toISOString();
-      const targetTenants = Array.from(new Set([tenantId, 'default_user', 'os'].filter(Boolean)));
+      const targetTenants = Array.from(new Set([tenantId, 'default_user'].filter(Boolean)));
 
       for (const tid of targetTenants) {
-        const runtimePath = path.join(process.cwd(), 'workspaces', tid, 'db', 'runtime.json');
-        let runtimeObj: any = { suggestions: [], backlogs: [], review_queues: [], recent_events: [] };
-        if (fs.existsSync(runtimePath)) {
-          try { runtimeObj = JSON.parse(fs.readFileSync(runtimePath, 'utf8')); } catch {}
-        }
-
-        if (lowerMsg.includes('suggest')) {
-          runtimeObj.suggestions = runtimeObj.suggestions || [];
-          if (runtimeObj.suggestions.length === 0) {
-            runtimeObj.suggestions.push(
-              { id: `sug_${Date.now()}_1`, title: 'Audit Workspace Data Schemas', description: 'Review uploaded raw data and system components for structural alignment', created_at: now },
-              { id: `sug_${Date.now()}_2`, title: 'Formulate Architecture Blueprint', description: 'Draft component interfaces and database indexes based on user requirements', created_at: now }
-            );
-          }
-        }
-
-        if (lowerMsg.includes('backlog')) {
-          runtimeObj.backlogs = runtimeObj.backlogs || [];
-          if (runtimeObj.backlogs.length === 0) {
-            runtimeObj.backlogs.push(
-              { id: `bl_${Date.now()}_1`, title: 'Define REST API Proxy Handlers', priority: 'HIGH', status: 'OPEN', created_at: now },
-              { id: `bl_${Date.now()}_2`, title: 'Configure Database Indexes & Constraints', priority: 'MEDIUM', status: 'OPEN', created_at: now }
-            );
-          }
-        }
-
-        if (lowerMsg.includes('review')) {
-          runtimeObj.review_queues = runtimeObj.review_queues || [];
-          if (runtimeObj.review_queues.length === 0) {
-            runtimeObj.review_queues.push(
-              { id: `rv_${Date.now()}_1`, title: 'Audit Gateway Authentication Middleware', details: 'Verify header security and RLS tenant isolation', status: 'PENDING_USER_APPROVAL', created_at: now },
-              { id: `rv_${Date.now()}_2`, title: 'Review Database Migration Script', details: 'Verify schema indexes and field defaults', status: 'PENDING_USER_APPROVAL', created_at: now }
-            );
-          }
-        }
-
-        fs.mkdirSync(path.dirname(runtimePath), { recursive: true });
-        fs.writeFileSync(runtimePath, JSON.stringify(runtimeObj, null, 2), 'utf8');
-
-        if (lowerMsg.includes('project')) {
-          let projName = chatMsg.replace(/.*(project)\s*/i, '').trim();
-          if (!projName || projName.length < 3) projName = 'Primary Workspace Project';
-          const projectsPath = path.join(process.cwd(), 'workspaces', tid, 'db', 'projects.json');
-          let projs: any[] = [];
-          if (fs.existsSync(projectsPath)) {
-            try { projs = JSON.parse(fs.readFileSync(projectsPath, 'utf8')); } catch {}
-          }
-          if (projs.length === 0) {
-            projs.push({
-              id: `proj_${Date.now()}`,
-              name: projName,
-              description: `Workspace project container created for ${projName}`,
-              status: 'active',
-              created_at: now
-            });
-            fs.mkdirSync(path.dirname(projectsPath), { recursive: true });
-            fs.writeFileSync(projectsPath, JSON.stringify(projs, null, 2), 'utf8');
-          }
-        }
-      }
-
-      for (const tid of targetTenants) {
-        if (lowerMsg.includes('mission')) {
-          let rawTitle = chatMsg.replace(/^(create|add|new|start|draft|make|generate|build|plan)\s+(a\s+)?(new\s+)?(mission|project|goal)(\s+to|\s+for|\s+about|\s+on|\s+that)?/i, '').trim();
-          if (!rawTitle || rawTitle.length < 3) rawTitle = chatMsg.trim();
-          const title = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
-          await db.saveMission({
-            id: `mission_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
-            user_id: tid,
-            title: title.length > 70 ? title.substring(0, 70) + '...' : title,
-            objective: chatMsg,
-            type: 'standard',
-            category: 'standard',
-            status: 'drafting',
-            phase: 'analytics_1',
-            created_by: 'user_agent',
-            user_created: true,
-            input_data_ids: [],
-            system_ids: [],
-            qa_state: {},
-            workflow_history: [{ timestamp: now, phase: 'drafting', status: 'Mission created via operator chat request.' }],
-            metadata: { created_by: 'agent_chat', proposal_name: title, objective: chatMsg, status: 'DRAFT', progress: 'in-progress', metrics: { goals: 1, progress_percentage: '0%', tasks: 1, round_progress_percentage: '0%', round: 1 } }
-          });
-        }
-
-        if (lowerMsg.includes('data')) {
-          const existingData = await db.getRawDataList(tid);
-          if (existingData.length === 0) {
-            await db.saveRawData({
-              id: `raw_${Date.now()}`,
-              user_id: tid,
-              name: 'Workspace Data Specifications',
-              mime_type: 'application/json',
-              content: JSON.stringify({ description: "Initial workspace data specification scaffolded from chat request", created_at: now }, null, 2),
-              metadata: { status: 'new', size: 120 }
-            });
-          }
-        }
-
-        if (lowerMsg.includes('system')) {
-          const existingSys = await db.getSystemComponents(tid);
-          if (existingSys.length === 0) {
-            await db.saveSystemComponent({
-              id: `sys_${Date.now()}`,
-              user_id: tid,
-              name: 'Workspace Core System Gateway',
-              role: 'service',
-              code_snapshot: '// Core system gateway module scaffolded from chat request\nexport function handleGatewayRequest(req: any) {\n  return { ok: true, status: "online" };\n}',
-              metadata: { version: '1.0.0', status: 'active' }
-            });
-          }
-        }
+        let rawTitle = chatMsg.replace(/^(create|add|draft)\s+(a\s+)?(new\s+)?mission(\s+to|\s+for|\s+about|\s+named|\s+called)?/i, '').trim();
+        if (!rawTitle || rawTitle.length < 3) rawTitle = chatMsg.trim();
+        const title = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+        await db.saveMission({
+          id: `mission_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+          user_id: tid,
+          title: title.length > 70 ? title.substring(0, 70) + '...' : title,
+          objective: chatMsg,
+          type: 'standard',
+          category: 'standard',
+          status: 'drafting',
+          phase: 'analytics_1',
+          created_by: 'user_agent',
+          user_created: true,
+          input_data_ids: [],
+          system_ids: [],
+          qa_state: {},
+          workflow_history: [{ timestamp: now, phase: 'drafting', status: 'Mission created via operator chat request.' }],
+          metadata: { created_by: 'agent_chat', proposal_name: title, objective: chatMsg, status: 'DRAFT', progress: 'in-progress', metrics: { goals: 1, progress_percentage: '0%', tasks: 1, round_progress_percentage: '0%', round: 1 } }
+        });
       }
     }
 
