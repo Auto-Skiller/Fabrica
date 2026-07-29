@@ -38,8 +38,8 @@ Fabrica organizes all your operational files, datasets, workflows, and code comp
 * **Panel B (Missions Board & Chat)**:
   * Horizontal project board managing work across 4 status stages (*Drafting*, *Planning*, *Execution*, *Archive*).
   * High-density **Quick Injections Panel**: 2-card prompt suggestions grid directly under chat controls, featuring title, icon, and truncated description text with zero horizontal overflow.
-* **Panel C (50/50 Split Data & Systems View)**:
-  * Expanded dual-column layout providing equal 50% width columns for **Your Data** (`raw_data`) and **Your Systems** (`system_components`).
+* **Panel C (50/50 Split Data & Artifacts View)**:
+  * Expanded dual-column layout providing equal 50% width columns for **Your Data** (`raw_data`) and **Your Artifacts** (`system_components`).
   * **Vertical Dividing Line**: A crisp `1.5px solid var(--border-soft)` separator line spans continuously down the center across both the top sub-section header controls and the list body container.
   * Sub-section search filters, import/export triggers, and D3 force-directed dependency visualization toggles.
 

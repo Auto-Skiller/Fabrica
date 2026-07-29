@@ -1406,6 +1406,7 @@ export default function Dashboard() {
 
   // Sizing and layout states matching the 3-column architecture
   const [minCenter, setMinCenter] = useState<boolean>(false);
+  const [minBottomVertical, setMinBottomVertical] = useState<boolean>(false);
   const [minSide, setMinSide] = useState<boolean>(false);
   const [minTop, setMinTop] = useState<boolean>(false);
   const [leftSideW, setLeftSideW] = useState<number>(31);
@@ -8645,25 +8646,8 @@ ${isDirector ? `
         </section>
       </aside>
 
-        {/* Section Divider 1 (Left / Center) with Minimizer Button */}
-        <div className="resizer lv">
-          <button
-            type="button"
-            className="section-toggle-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              const next = !minCenter;
-              setMinCenter(next);
-              saveLayoutConfig(next, minSide);
-            }}
-            title={minCenter ? "Expand Missions HQ section" : "Minimize Missions HQ section"}
-          >
-            <span>{minCenter ? '›' : '‹'}</span>
-          </button>
-        </div>
-
         {/* ============ MAIN WORKSPACE WRAPPER (TOP: MISSIONS | BOTTOM: ARTIFACT (LEFT) + PROJECTS (RIGHT)) ============ */}
-        <div style={{ gridColumn: '3 / 6', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
           
           {/* ============ TOP SECTION: MISSIONS HQ BOARD ============ */}
           <div style={{
@@ -8883,6 +8867,30 @@ ${isDirector ? `
                     <option value="priority">Sort: Priority</option>
                   </select>
                 )}
+                {/* Vertical Collapse 1 Button for Missions Section */}
+                <button
+                  type="button"
+                  onClick={() => setMinCenter(true)}
+                  title="Collapse Missions HQ section vertically"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--border-soft)',
+                    color: 'var(--muted)',
+                    borderRadius: '3px',
+                    padding: '1px 6px',
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    height: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    marginLeft: '4px',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>↕ Collapse</span>
+                </button>
               </div>
             </div>
 
@@ -8911,20 +8919,30 @@ ${isDirector ? `
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
-                            <div className="mcard-title-group">
-                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
+                            <div className="mcard-title-group" style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                                  ⚡ {m.priority || 'MEDIUM'}
+                                </span>
+                              </div>
+                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          {m.target_stack && (
+                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                              🛠️ {m.target_stack}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
                             <button
                               className="mini accent"
-                              style={{ fontSize: '7px', padding: '1.5px 5px' }}
+                              style={{ fontSize: '6.5px', padding: '1px 4px' }}
                               onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                             >Plan ➔</button>
                           </div>
@@ -8988,31 +9006,41 @@ ${isDirector ? `
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
-                            <div className="mcard-title-group">
-                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
+                            <div className="mcard-title-group" style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                                  ⚡ {m.priority || 'HIGH'}
+                                </span>
+                              </div>
+                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
                           {m.phase === 'qa' && (
-                            <div style={{ fontSize: '7px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '1px 4px', borderRadius: '3px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                            <div style={{ fontSize: '6px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(244,63,94,0.2)' }}>
                               🛡️ QA Gating Active
                             </div>
                           )}
+                          {m.target_stack && (
+                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                              🛠️ {m.target_stack}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧪 {getCategoryLabel(m.type || m.category)}</span>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧪 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini accent"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Launch ➔</button>
                             </div>
@@ -9077,39 +9105,50 @@ ${isDirector ? `
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
-                            <div className="mcard-title-group">
-                              <b className="mcard-title-text" style={{ fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
+                            <div className="mcard-title-group" style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', whiteSpace: 'nowrap' }}>
+                                  ⚡ {m.priority || 'CRITICAL'}
+                                </span>
+                              </div>
+                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
                           
-                          <div className="bar-row">
-                            <div className="bar">
+                          <div className="bar-row" style={{ margin: '1px 0' }}>
+                            <div className="bar" style={{ height: '3px' }}>
                               <i style={{ width: m.metrics?.progress_percentage || '0%' }}></i>
                             </div>
-                            <span className="bar-pct">{m.metrics?.progress_percentage || '0%'}</span>
+                            <span className="bar-pct" style={{ fontSize: '6px' }}>{m.metrics?.progress_percentage || '0%'}</span>
                           </div>
 
+                          {m.target_stack && (
+                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                              🛠️ {m.target_stack}
+                            </div>
+                          )}
+
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>🧬 {getCategoryLabel(m.type || m.category)}</span>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧬 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                               >◀ Plan</button>
                               <button
                                 className="mini accent-2"
-                                style={{ fontSize: '7px', padding: '1.5px 4px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'archive'); }}
                               >Done ✓</button>
                             </div>
@@ -9195,26 +9234,36 @@ ${isDirector ? `
                           key={m.id}
                           className="mcard sm"
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '3px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
                         >
                           <div className="mcard-top">
-                            <div className="mcard-title-group">
-                              <b className="mcard-title-text" style={{ textDecoration: 'line-through', fontSize: '8.5px' }}>{m.id.replace(/_/g, ' ')}</b>
-                              <span className="mcard-slug mono" style={{ fontSize: '6.5px' }}>{m.id}</span>
+                            <div className="mcard-title-group" style={{ width: '100%' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ textDecoration: 'line-through', fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                                  ⚡ {m.priority || 'LOW'}
+                                </span>
+                              </div>
+                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7.5px', margin: '1px 0 2px 0' }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          {m.target_stack && (
+                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                              🛠️ {m.target_stack}
+                            </div>
+                          )}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6.5px', padding: '1px 4px' }}>✓ archived</span>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>✓ archived</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '7px', padding: '1.5px 4px' }}
+                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Re-open ↺</button>
                             </div>
@@ -9237,10 +9286,10 @@ ${isDirector ? `
                           gap: '8px',
                           background: 'rgba(255,255,255,0.015)'
                         }}>
-                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🎯</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>Archive Empty</div>
+                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🎉</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Completed Items</div>
                           <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                            Completed and archived mission logs will be indexed here.
+                            Completed missions will appear here when archived.
                           </p>
                         </div>
                       )}
@@ -9250,116 +9299,117 @@ ${isDirector ? `
                 </div>
               )}
             </div>
-
           </div>
         </section>
       )}
-    </div>
 
-    {/* ============ BOTTOM SECTION: SPLIT INTO ARTIFACT (LEFT) AND PROJECTS/DATA (RIGHT) ============ */}
-    <div style={{
-      flex: minCenter ? '1 1 100%' : '1 1 50%',
-      minHeight: 0,
-      display: 'flex',
-      flexDirection: 'row',
-      gap: '6px',
-      overflow: 'hidden',
-      paddingTop: '6px'
-    }}>
-
-      {/* ================= BOTTOM-LEFT: ARTIFACT WORKSPACE SECTION (PREVIEW & CODE) ================= */}
-      <div 
-        id="artifact-section-container"
-        style={{ 
-          flex: '1 1 50%',
-          minWidth: 0,
-          background: 'var(--surface)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-soft)',
+        {/* ================= BOTTOM WORKSPACE WRAPPER (ARTIFACT (LEFT) + PROJECTS (RIGHT)) ================= */}
+        <div style={{
+          flex: minCenter ? '1 1 100%' : (minBottomVertical ? '0 0 auto' : '1 1 50%'),
+          minHeight: minBottomVertical ? '32px' : '180px',
+          maxHeight: minBottomVertical ? '32px' : 'none',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          height: '100%',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}
-      >
-        {/* Section Header Bar */}
-        <div style={{
-          background: 'var(--surface-alt)',
-          borderBottom: minArtifactSection ? 'none' : '1px solid var(--border-soft)',
-          padding: '6px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          flexShrink: 0,
-          userSelect: 'none'
+          borderTop: '1px solid var(--border-soft)',
+          transition: 'all 0.2s ease'
         }}>
-          {/* Left: Section Title & Selected Artifact Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+          {/* Vertical Toggle 2 Header for Bottom Section */}
+          <div style={{
+            background: 'var(--surface-alt)',
+            padding: '4px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid var(--border-soft)',
+            height: '32px',
+            flexShrink: 0
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '8.5px', fontWeight: 900, background: '#8b5cf6', color: '#ffffff', padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
+                WORKSPACES
+              </span>
+              <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                📦 ARTIFACTS WORKSPACE & 📂 DATA / PROJECTS
+              </span>
+            </div>
             <button
-              onClick={() => setMinArtifactSection(!minArtifactSection)}
+              type="button"
+              onClick={() => setMinBottomVertical(!minBottomVertical)}
+              title={minBottomVertical ? "Expand Artifacts & Projects section vertically" : "Collapse Artifacts & Projects section vertically"}
               style={{
                 background: 'transparent',
                 border: '1px solid var(--border-soft)',
                 color: 'var(--muted)',
-                borderRadius: '4px',
-                padding: '2px 6px',
-                fontSize: '9px',
+                borderRadius: '3px',
+                padding: '1px 6px',
+                fontSize: '8px',
+                fontWeight: 800,
                 cursor: 'pointer',
-                fontFamily: 'var(--sans)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
+                fontFamily: 'var(--sans)'
               }}
-              title={minArtifactSection ? "Expand Artifact Workspace" : "Minimize Artifact Workspace"}
             >
-              <span>{minArtifactSection ? '▲ Expand' : '▼ Minimize'}</span>
+              {minBottomVertical ? '▲ Expand Section' : '↕ Collapse Section'}
             </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-              <span style={{ fontSize: '11px' }}>📦</span>
-              <span style={{ fontSize: '9px', fontWeight: 900, letterSpacing: '0.04em', color: 'var(--text-bright)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                ARTIFACT:
-              </span>
-              {selectedArtifact ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', minWidth: 0 }}>
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontFamily: 'var(--mono)' }}>
-                    {selectedArtifact.name}
-                  </span>
-                  <span style={{
-                    fontSize: '6.5px',
-                    fontWeight: 800,
-                    background: 'rgba(59, 130, 246, 0.12)',
-                    color: '#3b82f6',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '3px',
-                    padding: '1px 5px',
-                    textTransform: 'uppercase',
-                    fontFamily: 'var(--sans)'
-                  }}>
-                    {selectedArtifact.metadata?.artifact_type || selectedArtifact.artifact_type || selectedArtifact.role || 'CODEBASE'}
-                  </span>
-                </div>
-              ) : (
-                <span style={{ fontSize: '8.5px', color: 'var(--muted)', fontStyle: 'italic' }}>
-                  No Artifact Active
-                </span>
-              )}
-            </div>
           </div>
 
-          {/* Right: Tab Controls (Preview / Code) & Quick Select */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            {/* AI Studio Style Tabs Toggle */}
-            <div style={{
-              display: 'flex',
-              background: 'rgba(0,0,0,0.25)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: '5px',
-              padding: '2px',
-              gap: '2px'
-            }}>
+          {!minBottomVertical && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+              
+              {/* ------------ BOTTOM-LEFT: ARTIFACT WORKSPACE SECTION ------------ */}
+              <div style={{
+                flex: minSide ? '1 1 100%' : (minArtifactSection ? '0 0 38px' : '1 1 50%'),
+                minWidth: minArtifactSection ? '38px' : '0',
+                maxWidth: minArtifactSection ? '38px' : '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                borderRight: '1px solid var(--border-soft)',
+                transition: 'all 0.2s ease'
+              }}>
+                {minArtifactSection ? (
+                  <div
+                    onClick={() => setMinArtifactSection(false)}
+                    style={{
+                      width: '38px',
+                      height: '100%',
+                      background: 'var(--surface-alt)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '8px 4px',
+                      cursor: 'pointer'
+                    }}
+                    title="Click to expand Artifact Workspace"
+                  >
+                    <span style={{ fontSize: '10px' }}>📦</span>
+                    <span style={{
+                      writingMode: 'vertical-rl',
+                      transform: 'rotate(180deg)',
+                      fontSize: '9px',
+                      fontWeight: 900,
+                      color: 'var(--text-bright)',
+                      letterSpacing: '0.08em',
+                      margin: '12px 0'
+                    }}>
+                      ARTIFACT WORKSPACE
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setMinArtifactSection(false); }}
+                      style={{ marginTop: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '10px', cursor: 'pointer' }}
+                    >
+                      ▶
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
+          <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
+                📦 ARTIFACT WORKSPACE
+              </span>
               <button
                 onClick={() => { setArtifactTab('preview'); setMinArtifactSection(false); }}
                 style={{
@@ -9430,8 +9480,29 @@ ${isDirector ? `
                 </option>
               ))}
             </select>
+            {/* Horizontal Collapse 1 Button for Artifact Section */}
+            <button
+              onClick={() => setMinArtifactSection(true)}
+              title="Collapse Artifact section horizontally"
+              style={{
+                fontSize: '8px',
+                fontWeight: 800,
+                padding: '2px 6px',
+                borderRadius: '3px',
+                border: '1px solid var(--border-soft)',
+                background: 'transparent',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                marginLeft: '4px'
+              }}
+            >
+              ◀ Collapse
+            </button>
           </div>
-        </div>
 
         {/* Section Body */}
         {!minArtifactSection && (
@@ -9499,115 +9570,16 @@ ${isDirector ? `
                       fontSize: '7.5px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--accent)' }}>MODE:</span>
-                        <span style={{ fontWeight: 700, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-                          {selectedArtifact.metadata?.artifact_type || selectedArtifact.artifact_type || 'LIVE PREVIEW'}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <div style={{ display: 'flex', gap: '2px', background: 'var(--surface)', padding: '1px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
-                          <button
-                            onClick={() => setArtifactPreviewDevice('desktop')}
-                            style={{
-                              fontSize: '7px',
-                              padding: '1px 5px',
-                              borderRadius: '2px',
-                              border: 'none',
-                              background: artifactPreviewDevice === 'desktop' ? 'var(--accent)' : 'transparent',
-                              color: artifactPreviewDevice === 'desktop' ? '#fff' : 'var(--muted)',
-                              cursor: 'pointer'
-                            }}
-                            title="Desktop View"
-                          >
-                            🖥️ Desktop
-                          </button>
-                          <button
-                            onClick={() => setArtifactPreviewDevice('mobile')}
-                            style={{
-                              fontSize: '7px',
-                              padding: '1px 5px',
-                              borderRadius: '2px',
-                              border: 'none',
-                              background: artifactPreviewDevice === 'mobile' ? 'var(--accent)' : 'transparent',
-                              color: artifactPreviewDevice === 'mobile' ? '#fff' : 'var(--muted)',
-                              cursor: 'pointer'
-                            }}
-                            title="Mobile View"
-                          >
-                            📱 Mobile
-                          </button>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(artifactCodeText);
-                            setToast({ message: 'Artifact content copied to clipboard!', type: 'success', isOpen: true });
-                          }}
-                          style={{
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border-soft)',
-                            color: 'var(--text-bright)',
-                            fontSize: '7px',
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                          title="Copy Code Snapshot"
-                        >
-                          📋 Copy
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            const w = window.open('', '_blank');
-                            if (w) {
-                              w.document.write(artifactCodeText || `<h1>${selectedArtifact.name}</h1><p>No content snapshot available.</p>`);
-                              w.document.close();
-                            }
-                          }}
-                          style={{
-                            background: 'rgba(59,130,246,0.12)',
-                            border: '1px solid #3b82f6',
-                            color: '#3b82f6',
-                            fontSize: '7px',
-                            fontWeight: 800,
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                          title="Open Standalone Preview Window"
-                        >
-                          ↗️ Standalone
-                        </button>
+                        <span style={{ fontWeight: 800, color: '#3b82f6' }}>PREVIEW MODE:</span>
+                        <code style={{ fontSize: '7.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', fontWeight: 700 }}>
+                          {selectedArtifact.name}
+                        </code>
                       </div>
                     </div>
 
-                    {/* Rendered View Box */}
-                    <div style={{
-                      flex: 1,
-                      minHeight: 0,
-                      background: '#090d16',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '6px',
-                      overflow: 'auto',
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'stretch',
-                      padding: artifactPreviewDevice === 'mobile' ? '8px' : '0'
-                    }}>
-                      <div style={{
-                        width: artifactPreviewDevice === 'mobile' ? '320px' : '100%',
-                        height: '100%',
-                        background: 'var(--surface)',
-                        border: artifactPreviewDevice === 'mobile' ? '2px solid var(--border-soft)' : 'none',
-                        borderRadius: artifactPreviewDevice === 'mobile' ? '12px' : '0',
-                        boxShadow: artifactPreviewDevice === 'mobile' ? '0 8px 24px rgba(0,0,0,0.5)' : 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden'
-                      }}>
-                        {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
+                    {/* Preview Body Container */}
+                    <div style={{ flex: 1, minHeight: 0, border: '1px solid var(--border-soft)', borderRadius: '6px', overflow: 'hidden', background: '#0d1117' }}>
+                      {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
                           <iframe
                             srcDoc={artifactCodeText}
                             title={`Preview - ${selectedArtifact.name}`}
@@ -9636,8 +9608,7 @@ ${isDirector ? `
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* TAB 2: AUDIT REALTIME CODEBASE */}
                 {artifactTab === 'code' && (
@@ -9717,11 +9688,22 @@ ${isDirector ? `
           </div>
         )}
       </div>
+    )}
+  </div>
 
-      {/* ================= BOTTOM-RIGHT: PROJECTS & DATA SECTION ================= */}
-      <div style={{ flex: '1 1 50%', minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
-        {/* ============ RIGHT COLUMN: PIPELINES, INGEST & CONSULTING ============ */}
-        <aside className={`col side ${minSide ? 'min' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+              {/* ------------ BOTTOM-RIGHT: PROJECTS & DATA SECTION ------------ */}
+              <div style={{
+                flex: minArtifactSection ? '1 1 100%' : (minSide ? '0 0 38px' : '1 1 50%'),
+                minWidth: minSide ? '38px' : '0',
+                maxWidth: minSide ? '38px' : '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: 'all 0.2s ease'
+              }}>
+                {/* ============ RIGHT COLUMN: PIPELINES, INGEST & CONSULTING ============ */}
+                <aside className={`col side ${minSide ? 'min' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
           {minSide ? (
             <div
               className="side-rail"
@@ -9827,6 +9809,28 @@ ${isDirector ? `
                       }}
                     >
                       🕸️ Graph
+                    </button>
+                    {/* Horizontal Collapse 2 Button for Projects Section */}
+                    <button
+                      onClick={() => setMinSide(true)}
+                      title="Collapse Projects section horizontally"
+                      style={{
+                        fontSize: '8px',
+                        background: 'transparent',
+                        color: 'var(--muted)',
+                        border: '1px solid var(--border-soft)',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        fontFamily: 'var(--sans)',
+                        transition: 'all 0.15s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      Collapse ▶
                     </button>
                   </div>
                 </div>
@@ -10252,59 +10256,59 @@ ${isDirector ? `
                                     gap: '4px',
                                     background: 'rgba(0,0,0,0.15)',
                                     borderRadius: '4px',
-                                    padding: '4px 6px',
+                                    padding: '3px 5px',
                                     border: '1px solid var(--border-soft)',
                                     marginTop: '2px',
                                     flexWrap: 'wrap'
                                   }}>
-                                    <span style={{ fontSize: '6.5px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>MISSIONS:</span>
+                                    <span style={{ fontSize: '6px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>MISSIONS:</span>
                                     <button
                                       onClick={() => {
                                         setIsAddMissionOpen(true);
                                         setNewMissionCategory('system_build_from_data');
-                                        setNewMissionObjective(`Build new system component using dataset "${rd.name}" in project "${itemProj}"`);
+                                        setNewMissionObjective(`Build new artifact component using dataset "${rd.name}" in project "${itemProj}"`);
                                       }}
                                       style={{
-                                        fontSize: '6.5px',
+                                        fontSize: '6px',
                                         fontWeight: 800,
                                         background: 'rgba(204,122,74,0.12)',
                                         border: '1px solid var(--accent)',
                                         color: 'var(--accent)',
                                         borderRadius: '3px',
-                                        padding: '1.5px 5px',
+                                        padding: '1px 4px',
                                         cursor: 'pointer',
                                         fontFamily: 'var(--sans)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '2px'
                                       }}
-                                      title="Trigger a mission to build a new system component from this dataset"
+                                      title="Trigger a mission to build a new artifact component from this dataset"
                                     >
-                                      🚀 Generate System
+                                      🚀 Generate Artifact
                                     </button>
                                     <button
                                       onClick={() => {
                                         setIsAddMissionOpen(true);
                                         setNewMissionCategory('system_optimization_from_data');
-                                        setNewMissionObjective(`Optimize existing project system using data input "${rd.name}" in project "${itemProj}"`);
+                                        setNewMissionObjective(`Optimize existing project artifact using data input "${rd.name}" in project "${itemProj}"`);
                                       }}
                                       style={{
-                                        fontSize: '6.5px',
+                                        fontSize: '6px',
                                         fontWeight: 800,
                                         background: 'rgba(59,130,246,0.12)',
                                         border: '1px solid #3b82f6',
                                         color: '#3b82f6',
                                         borderRadius: '3px',
-                                        padding: '1.5px 5px',
+                                        padding: '1px 4px',
                                         cursor: 'pointer',
                                         fontFamily: 'var(--sans)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '2px'
                                       }}
-                                      title="Trigger an optimization mission on existing systems using this dataset"
+                                      title="Trigger an optimization mission on existing artifacts using this dataset"
                                     >
-                                      ⚡ Optimize System
+                                      ⚡ Optimize Artifact
                                     </button>
                                   </div>
 
@@ -10638,7 +10642,7 @@ ${isDirector ? `
 
                                       {/* Exact Disk Folder Badge */}
                                       <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1px', opacity: 0.9 }}>
-                                        📁 projects/{itemProj}/systems/{sc.name.replace(/[^a-zA-Z0-9_\-]/g, '_')}/
+                                        📁 projects/{itemProj}/artifacts/{sc.name.replace(/[^a-zA-Z0-9_\-]/g, '_')}/
                                       </span>
 
                                       <span style={{ fontSize: '6.5px', color: 'var(--muted)', marginTop: '0.5px' }}>
@@ -10922,10 +10926,11 @@ ${isDirector ? `
         </aside>
       </div>
 
-    </div>
-
-  </div>
-</main>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
                        {/* Realtime Event Payload Modal */}
       {selectedRealtimeEvent && (
         <div style={{

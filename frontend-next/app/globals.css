@@ -388,28 +388,28 @@ button.mini.danger:hover { background: #c73a3a; }
    Flow is now a floating window — grid is single-row.
    ============================================================ */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px minmax(var(--panel-b-min-w), 1fr) 0px max(27%, var(--panel-c-min-w));
-  grid-template-rows: 1fr;
-  grid-template-areas: "lsidebar lvresizer missions vresizer sidebar";
+  display: flex;
+  flex-direction: row;
   flex: 1 1 auto;
   min-height: 0;
-  transition: grid-template-columns 200ms ease-in-out;
+  width: 100%;
+  overflow: hidden;
 }
-.dashboard-grid.min-side {
-  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px minmax(var(--panel-b-min-w), 1fr) 0px var(--minw);
+.col.lside {
+  flex: 0 0 340px;
+  width: 340px;
+  min-width: 290px;
+  max-width: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  border-right: 1px solid var(--border-soft);
+  padding: clamp(0.4rem, 0.7vw, 0.7rem);
 }
-.dashboard-grid.min-center {
-  grid-template-columns: max(31%, var(--panel-a-min-w)) 0px var(--minw) 0px minmax(var(--panel-c-min-w), 1fr);
-}
-.dashboard-grid.min-center.min-side {
-  grid-template-columns: minmax(var(--panel-b-min-w), 1fr) 0px var(--minw) 0px var(--minw);
-}
-.col.top  { grid-area: missions;  padding-right: 0;  min-width: var(--panel-b-min-w); }
-.col.side { grid-area: sidebar;   overflow: visible; position: relative; padding-left: 0;  min-width: var(--panel-c-min-w); }
-.col.lside{ grid-area: lsidebar; overflow: visible; position: relative; padding-right: 0; min-width: var(--panel-a-min-w); }
-/* When a panel is minimised its col gets .min — keep the icon-strip width but
-   still honour the shared --minw floor so nothing clips. */
+.col.top  { padding-right: 0; }
+.col.side { overflow: visible; position: relative; padding-left: 0; }
 .col.min  { padding: 0; min-width: var(--minw); }
 .col { display: flex; flex-direction: column; gap: clamp(0.4rem, 0.7vw, 0.7rem); padding: clamp(0.4rem, 0.7vw, 0.7rem); overflow: hidden; min-height: 0; transition: padding 200ms ease-in-out, gap 200ms ease-in-out; }
 

@@ -1,6 +1,6 @@
 {
-  "name": "Remix Fabrica",
-  "description": "Imported from GitHub: Auto-Skiller/Fabrica",
+  "name": "Fabrica",
+  "description": "Autonomous Business Partner and Context Operating System with persistent memory, multi-project workspace execution, background simulation daemons, and live artifact compilers.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
