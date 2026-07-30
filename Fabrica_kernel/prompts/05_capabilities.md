@@ -117,17 +117,19 @@ Every mission is a highly customized pipeline that ingests any input format, exe
 - **Raw Data & Ledger Tables**: Spreadsheets (Excel, CSVs), client feedback chats, support logs, email logs, and documents.
 - **Pre-Existing Systems**: Software codebases, active database schemas, webhooks, and live server endpoints.
 
-### B. Specialized Agentic Tasks (How we operate)
-- **Digital Transformation & Architecture**: Mapping data workflows and assessing integrations.
-- **Development & Product Engineering**: Scaffold, compile, and configure real software components.
-- **Marketing & Media Buying**: Setting up ad campaigns, auditing budgets, and tracking analytics logs.
-- **Content Creation & Distribution**: Synthesizing ad copy, copy decks, and dynamic visual assets.
-- **Customer Response & Sales**: Formulating auto-responders and routing sales queues.
+### B. Universal Task Capabilities (How we operate)
+- **Analysis & System Scoping**: Mapping workflow relationships, identifying missing specs, and outlining architectural boundaries.
+- **Technical Execution & Scaffolding**: Building, compiling, and configuring software modules, schemas, and workspace resources.
+- **Automation & Integration Engineering**: Connecting API endpoints, setting up webhooks, and creating automated background jobs.
+- **Data & Intelligence Synthesis**: Processing unstructured datasets, synthesizing strategic plans, and extracting actionable insights.
+- **Verification & Quality Assurance**: Running lint checks, sandbox executions, regression tests, and verification loops.
+
+*Note: Specific domain execution workflows (e.g., software refactoring checklists, financial modeling, marketing copy synthesis, specialized data transforms) are driven dynamically by modular **Skills** (`skills/`), ensuring universal adaptability without polluting kernel root prompts.*
 
 ### C. The Output Spectrum (What we build & deploy)
-- **Deployed Custom Systems**: Customized relational modules, database partitions, and workspace tables.
+- **Deployed Custom Systems**: Relational modules, database partitions, and workspace tables.
 - **Workflow Automations & Pipelines**: Connected API pipelines, background tasks, and automated webhooks.
-- **Knowledge & Deep Analytics Engines**: SWOT metrics, competitive research briefs, synthesized spreadsheets, and insights logs.
+- **Knowledge & Deep Analytics Engines**: Strategic blueprints, competitive research reports, synthesized datasets, and insights logs.
 - **Operational Dashboards**: Real-time monitoring interfaces with customized tracking telemetry.
 
 ---

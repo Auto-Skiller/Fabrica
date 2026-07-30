@@ -164,7 +164,7 @@ function ensurePoolFileExists() {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  if (!fs.existsSync(POOL_FILE_PATH)) {
+  if (!fs.existsSync(POOL_FILE_PATH) || fs.readFileSync(POOL_FILE_PATH, 'utf8').trim() === '') {
     fs.writeFileSync(POOL_FILE_PATH, JSON.stringify({ keys: [] }, null, 2));
   }
 }

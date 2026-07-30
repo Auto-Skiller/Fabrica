@@ -1498,6 +1498,12 @@ export default function Dashboard() {
   const [newDeliverableSubSection, setNewDeliverableSubSection] = useState<string>('executions');
   const [exportSelectedSourceIds, setExportSelectedSourceIds] = useState<string[]>([]);
   const [exportSelectedDeliverableIds, setExportSelectedDeliverableIds] = useState<string[]>([]);
+  const [modalSubSectionContext, setModalSubSectionContext] = useState<{
+    sectionType: 'sources' | 'deliverables';
+    subSectionKey: string;
+    subSectionLabel: string;
+    secItems: any[];
+  } | null>(null);
 
   // Add & Edit Modals states for Sources & Deliverables
   const [isAddSourceModalOpen, setIsAddSourceModalOpen] = useState<boolean>(false);
@@ -9668,344 +9674,326 @@ ${isDirector ? `
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
-                    {/* SOURCES HEADER & TOOLBAR */}
-                    <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '11px' }}>📥</span>
-                          <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            SOURCES ({rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length})
-                          </span>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <button
-                            onClick={() => setIsAddSourceModalOpen(true)}
-                            style={{
-                              background: 'var(--accent)',
-                              border: 'none',
-                              color: '#ffffff',
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              padding: '2.5px 7px',
-                              borderRadius: '3.5px',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }}
-                          >
-                            ＋ Add Source
-                          </button>
-                          <button
-                            onClick={() => setIsImportModalOpen(true)}
-                            style={{
-                              background: 'var(--surface)',
-                              border: '1px solid var(--border-soft)',
-                              color: 'var(--text-bright)',
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              padding: '2.5px 6px',
-                              borderRadius: '3.5px',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '2px'
-                            }}
-                          >
-                            📥 Import
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* SUB-SECTIONS FILTER BAR FOR SOURCES */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
-                        {[
-                          { key: 'all', label: 'All', icon: '🌐' },
-                          { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍' },
-                          { key: 'deep_research', label: 'Deep Research', icon: '📡' },
-                          { key: 'data_analysis', label: 'Data Analysis', icon: '📊' },
-                          { key: 'strategic_synthesis', label: 'Strategic Synthesis', icon: '🎯' }
-                        ].map(sub => (
-                          <button
-                            key={sub.key}
-                            onClick={() => setSourceSubSectionFilter(sub.key)}
-                            style={{
-                              fontSize: '7.5px',
-                              fontWeight: sourceSubSectionFilter === sub.key ? 800 : 500,
-                              padding: '2px 6px',
-                              borderRadius: '3px',
-                              border: '1px solid var(--border-soft)',
-                              background: sourceSubSectionFilter === sub.key ? 'var(--text)' : 'var(--surface)',
-                              color: sourceSubSectionFilter === sub.key ? 'var(--surface)' : 'var(--muted)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            {sub.icon} {sub.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* SOURCES CONTENT BODY */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '8px', gap: '6px' }}>
-                      {rawDataList
-                        .filter((rd: any) => {
+                    {/* SOURCES CONTENT BODY (HORIZONTAL SUB-SECTION COLUMNS FROM LEFT TO RIGHT) */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
+                      {[
+                        { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                        { key: 'deep_research', label: 'Deep Research', icon: '📡', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+                        { key: 'data_analysis', label: 'Data Analysis', icon: '📊', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                        { key: 'strategic_synthesis', label: 'Strategic Synthesis', icon: '🎯', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
+                      ].map(sec => {
+                        const secItems = rawDataList.filter((rd: any) => {
                           const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
                           if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
                           const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
-                          if (sourceSubSectionFilter === 'all') return true;
-                          return subSec === sourceSubSectionFilter;
-                        })
-                        .map((rd: any) => {
-                          const isExpanded = expandedRawDataIds.includes(rd.id);
-                          const itemProj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                          const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
-                          const isSelectedForExport = exportSelectedSourceIds.includes(rd.id);
+                          return subSec === sec.key;
+                        });
 
-                          const subSecConfig: Record<string, { label: string; color: string; bg: string }> = {
-                            discovery_scoping: { label: 'Discovery & Scoping', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-                            deep_research: { label: 'Deep Research', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-                            data_analysis: { label: 'Data Analysis', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                            strategic_synthesis: { label: 'Strategic Synthesis', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
-                          };
-
-                          const secInfo = subSecConfig[subSec] || subSecConfig.discovery_scoping;
-
-                          return (
-                            <div key={rd.id} style={{
-                              background: 'var(--surface)',
-                              border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
-                              borderRadius: '6px',
-                              padding: '7px 9px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '4px'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1, overflow: 'hidden' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelectedForExport}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setExportSelectedSourceIds(prev => [...prev, rd.id]);
-                                      } else {
-                                        setExportSelectedSourceIds(prev => prev.filter(id => id !== rd.id));
-                                      }
-                                    }}
-                                    style={{ marginTop: '2px', cursor: 'pointer' }}
-                                    title="Select item for export"
-                                  />
-
-                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {rd.name}
-                                      </span>
-                                      <span style={{ fontSize: '6.5px', fontWeight: 800, background: secInfo.bg, color: secInfo.color, padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
-                                        {secInfo.label}
-                                      </span>
-                                    </div>
-
-                                    {/* Disk Path Badge */}
-                                    <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1.5px' }}>
-                                      📁 projects/{itemProj}/sources/{subSec}/{rd.name}
-                                    </span>
-
-                                    {/* Stage/Loop Dependency Badge */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 4px', borderRadius: '2px', border: '1px solid var(--border-soft)' }}>
-                                        🔗 Stage Dep: {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
-                                      </span>
-                                      <span style={{ fontSize: '6.5px', color: '#10b981', fontFamily: 'var(--mono)' }}>
-                                        ⚡ Feeds ➔ Deliverables
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <button
-                                    onClick={() => toggleRawDataExpand(rd.id)}
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '9px', cursor: 'pointer', padding: '2px' }}
-                                    title="View / edit content"
-                                  >
-                                    {isExpanded ? '▲' : '▼'}
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteRawData(rd.id)}
-                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px', padding: '2px' }}
-                                    title="Delete source"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
+                        return (
+                          <div key={sec.key} style={{
+                            flex: '1 1 0px',
+                            minWidth: '0px',
+                            height: '100%',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '5px',
+                            padding: '5px 6px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '5px'
+                          }}>
+                            {/* SUB-SECTION HEADER */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
+                              {/* Sub-Section Name directly ABOVE buttons */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '10px' }}>{sec.icon}</span>
+                                <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {sec.label} ({secItems.length})
+                                </span>
                               </div>
 
-                              {/* Action Bar for Sources */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: 'rgba(0,0,0,0.15)', padding: '2.5px 4px', borderRadius: '3.5px', flexWrap: 'wrap' }}>
+                              {/* SUB-SECTION ACTION BUTTONS (IMPORT & EXPORT) */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
                                 <button
                                   onClick={() => {
-                                    setIsAddMissionOpen(true);
-                                    setNewMissionObjective(`Synthesize & process source "${rd.name}" in project "${itemProj}"`);
+                                    setNewSourceSubSection(sec.key);
+                                    setModalSubSectionContext({
+                                      sectionType: 'sources',
+                                      subSectionKey: sec.key,
+                                      subSectionLabel: sec.label,
+                                      secItems: secItems
+                                    });
+                                    setSelectedImportMethod('local');
+                                    setIsImportModalOpen(true);
                                   }}
                                   style={{
-                                    fontSize: '6.5px',
+                                    flex: 1,
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    color: 'var(--text-bright)',
+                                    fontSize: '7.5px',
                                     fontWeight: 800,
-                                    background: 'rgba(204,122,74,0.12)',
-                                    border: '1px solid var(--accent)',
-                                    color: 'var(--accent)',
+                                    padding: '2px 4px',
                                     borderRadius: '3px',
-                                    padding: '1px 5px',
                                     cursor: 'pointer',
                                     display: 'inline-flex',
                                     alignItems: 'center',
+                                    justifyContent: 'center',
                                     gap: '2px'
                                   }}
+                                  title={`Import files into ${sec.label}`}
                                 >
-                                  🚀 Launch Mission
+                                  📥 Import
                                 </button>
-                                <select
-                                  value={subSec}
-                                  onChange={async (e) => {
-                                    const nextSub = e.target.value;
-                                    try {
-                                      const res = await fetch('/api/db/raw-data', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                          id: rd.id,
-                                          name: rd.name,
-                                          content: rd.content,
-                                          mime_type: rd.mime_type,
-                                          metadata: {
-                                            ...(rd.metadata || {}),
-                                            sub_section: nextSub,
-                                            project_name: itemProj,
-                                            tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
-                                          }
-                                        })
-                                      });
-                                      if (res.ok) {
-                                        setToast({ message: `Moved to ${nextSub}`, type: 'success', isOpen: true });
-                                        fetchWorkspaceData();
-                                      }
-                                    } catch (err) {}
+                                <button
+                                  onClick={() => {
+                                    setModalSubSectionContext({
+                                      sectionType: 'sources',
+                                      subSectionKey: sec.key,
+                                      subSectionLabel: sec.label,
+                                      secItems: secItems
+                                    });
+                                    setExportSelectedSourceIds(secItems.map(i => i.id));
+                                    setIsExportModalOpen(true);
                                   }}
                                   style={{
-                                    fontSize: '6.5px',
-                                    fontWeight: 700,
-                                    fontFamily: 'var(--sans)',
+                                    flex: 1,
                                     background: 'var(--surface-alt)',
                                     border: '1px solid var(--border-soft)',
+                                    color: 'var(--accent)',
+                                    fontSize: '7.5px',
+                                    fontWeight: 800,
+                                    padding: '2px 4px',
                                     borderRadius: '3px',
-                                    color: 'var(--muted)',
-                                    padding: '1px 3px',
-                                    outline: 'none',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '2px'
                                   }}
+                                  title={`Export ${sec.label} items`}
                                 >
-                                  <option value="discovery_scoping">Move: Discovery</option>
-                                  <option value="deep_research">Move: Deep Research</option>
-                                  <option value="data_analysis">Move: Data Analysis</option>
-                                  <option value="strategic_synthesis">Move: Strategic Synthesis</option>
-                                </select>
+                                  📤 Export
+                                </button>
                               </div>
+                            </div>
 
-                              {/* Expand Content Area */}
-                              {isExpanded && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--border-soft)', paddingTop: '5px', marginTop: '2px' }}>
-                                  <span style={{ fontSize: '7px', fontWeight: 800, color: 'var(--muted)' }}>SOURCE CONTENT (AUTO-SAVES):</span>
-                                  <textarea
-                                    style={{
+                            {/* SUB-SECTION ITEMS VERTICAL STACK */}
+                            <div style={{
+                              flex: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                              overflowY: 'auto',
+                              minHeight: 0,
+                              paddingRight: '2px'
+                            }}>
+                              {secItems.length > 0 ? (
+                                secItems.map((rd: any) => {
+                                  const isExpanded = expandedRawDataIds.includes(rd.id);
+                                  const itemProj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
+                                  const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
+                                  const isSelectedForExport = exportSelectedSourceIds.includes(rd.id);
+
+                                  return (
+                                    <div key={rd.id} style={{
                                       width: '100%',
-                                      height: '75px',
-                                      fontSize: '8px',
-                                      fontFamily: 'var(--mono)',
-                                      background: '#090d16',
-                                      border: '1px solid var(--border-soft)',
-                                      borderRadius: '4px',
-                                      padding: '4px 6px',
-                                      color: '#10b981',
-                                      resize: 'vertical',
-                                      outline: 'none'
-                                    }}
-                                    defaultValue={rd.content}
-                                    onBlur={async (e) => {
-                                      if (e.target.value !== rd.content) {
-                                        try {
-                                          const res = await fetch('/api/db/raw-data', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                              id: rd.id,
-                                              name: rd.name,
-                                              content: e.target.value,
-                                              mime_type: rd.mime_type,
-                                              metadata: {
-                                                ...(rd.metadata || {}),
-                                                project_name: itemProj,
-                                                tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
+                                      background: 'var(--surface-alt)',
+                                      border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                                      borderRadius: '5px',
+                                      padding: '6px 8px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '4px'
+                                    }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, overflow: 'hidden' }}>
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelectedForExport}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setExportSelectedSourceIds(prev => [...prev, rd.id]);
+                                                } else {
+                                                  setExportSelectedSourceIds(prev => prev.filter(id => id !== rd.id));
+                                                }
+                                              }}
+                                              style={{ cursor: 'pointer' }}
+                                              title="Select item for export"
+                                            />
+                                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                              {rd.name}
+                                            </span>
+                                          </div>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                            <button
+                                              onClick={() => toggleRawDataExpand(rd.id)}
+                                              style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '8px', cursor: 'pointer', padding: '1px' }}
+                                              title="View / edit content"
+                                            >
+                                              {isExpanded ? '▲' : '▼'}
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteRawData(rd.id)}
+                                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '9px', padding: '1px' }}
+                                              title="Delete source"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {/* Disk Path Badge */}
+                                        <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          📁 projects/{itemProj}/sources/{subSec}/{rd.name}
+                                        </span>
+
+                                        {/* Stage/Loop Dependency Badge */}
+                                        <span style={{ fontSize: '6px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 3px', borderRadius: '2px', border: '1px solid var(--border-soft)', width: 'fit-content' }}>
+                                          🔗 {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
+                                        </span>
+                                      </div>
+
+                                      {/* Action Bar */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
+                                        <button
+                                          onClick={() => {
+                                            setIsAddMissionOpen(true);
+                                            setNewMissionObjective(`Synthesize & process source "${rd.name}" in project "${itemProj}"`);
+                                          }}
+                                          style={{
+                                            fontSize: '6.5px',
+                                            fontWeight: 800,
+                                            background: 'rgba(204,122,74,0.12)',
+                                            border: '1px solid var(--accent)',
+                                            color: 'var(--accent)',
+                                            borderRadius: '2.5px',
+                                            padding: '1px 4px',
+                                            cursor: 'pointer'
+                                          }}
+                                        >
+                                          🚀 Launch
+                                        </button>
+                                        <select
+                                          value={subSec}
+                                          onChange={async (e) => {
+                                            const nextSub = e.target.value;
+                                            try {
+                                              const res = await fetch('/api/db/raw-data', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  id: rd.id,
+                                                  name: rd.name,
+                                                  content: rd.content,
+                                                  mime_type: rd.mime_type,
+                                                  metadata: {
+                                                    ...(rd.metadata || {}),
+                                                    sub_section: nextSub,
+                                                    project_name: itemProj,
+                                                    tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
+                                                  }
+                                                })
+                                              });
+                                              if (res.ok) {
+                                                setToast({ message: `Moved to ${nextSub}`, type: 'success', isOpen: true });
+                                                fetchWorkspaceData();
                                               }
-                                            })
-                                          });
-                                          if (res.ok) {
-                                            setToast({ message: 'Saved content updates!', type: 'success', isOpen: true });
-                                            fetchWorkspaceData();
-                                          }
-                                        } catch (err) {}
-                                      }
-                                    }}
-                                  />
+                                            } catch (err) {}
+                                          }}
+                                          style={{
+                                            fontSize: '6px',
+                                            fontWeight: 700,
+                                            fontFamily: 'var(--sans)',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border-soft)',
+                                            borderRadius: '2.5px',
+                                            color: 'var(--muted)',
+                                            padding: '1px 2px',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                          }}
+                                        >
+                                          <option value="discovery_scoping">Discovery</option>
+                                          <option value="deep_research">Deep Research</option>
+                                          <option value="data_analysis">Data Analysis</option>
+                                          <option value="strategic_synthesis">Strategic Synthesis</option>
+                                        </select>
+                                      </div>
+
+                                      {/* Expand Content Area */}
+                                      {isExpanded && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px', marginTop: '2px' }}>
+                                          <textarea
+                                            style={{
+                                              width: '100%',
+                                              height: '55px',
+                                              fontSize: '7.5px',
+                                              fontFamily: 'var(--mono)',
+                                              background: '#090d16',
+                                              border: '1px solid var(--border-soft)',
+                                              borderRadius: '3px',
+                                              padding: '3px 4px',
+                                              color: '#10b981',
+                                              resize: 'vertical',
+                                              outline: 'none'
+                                            }}
+                                            defaultValue={rd.content}
+                                            onBlur={async (e) => {
+                                              if (e.target.value !== rd.content) {
+                                                try {
+                                                  const res = await fetch('/api/db/raw-data', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({
+                                                      id: rd.id,
+                                                      name: rd.name,
+                                                      content: e.target.value,
+                                                      mime_type: rd.mime_type,
+                                                      metadata: {
+                                                        ...(rd.metadata || {}),
+                                                        project_name: itemProj,
+                                                        tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
+                                                      }
+                                                    })
+                                                  });
+                                                  if (res.ok) {
+                                                    setToast({ message: 'Saved content updates!', type: 'success', isOpen: true });
+                                                    fetchWorkspaceData();
+                                                  }
+                                                } catch (err) {}
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div style={{
+                                  flex: 1,
+                                  border: '1px dashed var(--border-soft)',
+                                  borderRadius: '4px',
+                                  padding: '12px 8px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  textAlign: 'center',
+                                  fontSize: '7.5px',
+                                  color: 'var(--muted)',
+                                  background: 'rgba(255,255,255,0.01)'
+                                }}>
+                                  <span>No items in {sec.label}</span>
                                 </div>
                               )}
                             </div>
-                          );
-                        })}
-
-                      {rawDataList.filter((rd: any) => {
-                        const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                        if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                        const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
-                        return sourceSubSectionFilter === 'all' || subSec === sourceSubSectionFilter;
-                      }).length === 0 && (
-                        <div style={{
-                          padding: '24px 14px',
-                          border: '1.5px dashed var(--border-soft)',
-                          borderRadius: '8px',
-                          textAlign: 'center',
-                          fontSize: '8.5px',
-                          color: 'var(--muted)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: 'rgba(255,255,255,0.015)'
-                        }}>
-                          <div style={{ fontSize: '24px' }}>📥</div>
-                          <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Sources in Sub-Section</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35', maxWidth: '240px' }}>
-                            Upload or create a new source for {sourceSubSectionFilter === 'all' ? 'this project' : sourceSubSectionFilter}.
-                          </p>
-                          <button
-                            onClick={() => setIsAddSourceModalOpen(true)}
-                            style={{
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              background: 'var(--accent)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 10px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ＋ Add First Source
-                          </button>
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -10063,198 +10051,6 @@ ${isDirector ? `
           ) : (
             <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
-                {/* DELIVERABLES HEADER & TOOLBAR */}
-                <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '11px' }}>📦</span>
-                      <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        DELIVERABLES ({systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length})
-                      </span>
-                    </div>
-
-                    {/* Project Switcher */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>📁</span>
-                      <select
-                        value={selectedProjectName}
-                        onChange={(e) => setSelectedProjectName(e.target.value)}
-                        style={{
-                          fontSize: '8px',
-                          fontWeight: 800,
-                          fontFamily: 'var(--mono)',
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '3.5px',
-                          color: 'var(--text-bright)',
-                          padding: '2px 4px',
-                          outline: 'none',
-                          cursor: 'pointer',
-                          maxWidth: '110px',
-                          textOverflow: 'ellipsis'
-                        }}
-                      >
-                        <option value="all">🌐 ALL PROJECTS ({projectsList.length})</option>
-                        {projectsList.map((p: any) => (
-                          <option key={p.id} value={p.name}>📁 {p.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => setIsCreatingProjectModal(true)}
-                        style={{
-                          background: 'var(--accent)',
-                          border: 'none',
-                          color: '#fff',
-                          fontSize: '7.5px',
-                          fontWeight: 800,
-                          padding: '2px 5px',
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        + NEW
-                      </button>
-                    </div>
-
-                    {/* Controls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <button
-                        onClick={() => setIsAddDeliverableModalOpen(true)}
-                        style={{
-                          background: '#10b981',
-                          border: 'none',
-                          color: '#ffffff',
-                          fontSize: '8px',
-                          fontWeight: 800,
-                          padding: '2.5px 7px',
-                          borderRadius: '3.5px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        ＋ Add Deliverable
-                      </button>
-                      <button
-                        onClick={() => setIsImportModalOpen(true)}
-                        style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          color: 'var(--text-bright)',
-                          fontSize: '8px',
-                          fontWeight: 800,
-                          padding: '2.5px 6px',
-                          borderRadius: '3.5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📥 Import
-                      </button>
-                      <button
-                        onClick={() => setIsExportModalOpen(true)}
-                        style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          color: 'var(--accent)',
-                          fontSize: '8px',
-                          fontWeight: 800,
-                          padding: '2.5px 6px',
-                          borderRadius: '3.5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📤 Export
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* SUB-SECTIONS FILTER & VIEW MODES */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-                    {/* Sub-sections Pills */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      {[
-                        { key: 'all', label: 'All', icon: '🌐' },
-                        { key: 'executions', label: 'Executions', icon: '⚡' },
-                        { key: 'reviews', label: 'Reviews', icon: '🛡️' },
-                        { key: 'completed', label: 'Completed', icon: '✅' }
-                      ].map(sub => (
-                        <button
-                          key={sub.key}
-                          onClick={() => setDeliverableSubSectionFilter(sub.key)}
-                          style={{
-                            fontSize: '7.5px',
-                            fontWeight: deliverableSubSectionFilter === sub.key ? 800 : 500,
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            border: '1px solid var(--border-soft)',
-                            background: deliverableSubSectionFilter === sub.key ? 'var(--text)' : 'var(--surface)',
-                            color: deliverableSubSectionFilter === sub.key ? 'var(--surface)' : 'var(--muted)',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sub.icon} {sub.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* View Mode Switcher */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        onClick={() => setYourDataSystemsView('list')}
-                        style={{
-                          fontSize: '7.5px',
-                          fontWeight: 800,
-                          background: yourDataSystemsView === 'list' ? 'var(--accent)' : 'var(--surface)',
-                          color: yourDataSystemsView === 'list' ? '#fff' : 'var(--muted)',
-                          border: '1px solid var(--border-soft)',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📝 List
-                      </button>
-                      <button
-                        onClick={() => {
-                          setYourDataSystemsView('artifact' as any);
-                          if (!selectedArtifact && systemComponents.length > 0) {
-                            handleGoToArtifact(systemComponents[0]);
-                          }
-                        }}
-                        style={{
-                          fontSize: '7.5px',
-                          fontWeight: 800,
-                          background: (yourDataSystemsView as any) === 'artifact' ? 'var(--accent)' : 'var(--surface)',
-                          color: (yourDataSystemsView as any) === 'artifact' ? '#fff' : 'var(--muted)',
-                          border: '1px solid var(--border-soft)',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        👁️ Artifact Mode
-                      </button>
-                      <button
-                        onClick={() => setYourDataSystemsView('graph')}
-                        style={{
-                          fontSize: '7.5px',
-                          fontWeight: 800,
-                          background: yourDataSystemsView === 'graph' ? 'var(--accent)' : 'var(--surface)',
-                          color: yourDataSystemsView === 'graph' ? '#fff' : 'var(--muted)',
-                          border: '1px solid var(--border-soft)',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🕸️ Graph
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
                 {/* DELIVERABLES CONTENT BODY */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '8px', overflowY: 'auto' }}>
                   {yourDataSystemsView === 'graph' ? (
@@ -10376,899 +10172,275 @@ ${isDirector ? `
                       )}
                     </div>
                   ) : (
-                    /* DELIVERABLES LIST VIEW */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {systemComponents
-                        .filter((sc: any) => {
+                    /* DELIVERABLES LIST VIEW (HORIZONTAL SUB-SECTION COLUMNS FROM LEFT TO RIGHT) */
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
+                      {[
+                        { key: 'executions', label: 'Executions', icon: '⚡', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                        { key: 'reviews', label: 'Reviews', icon: '🛡️', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                        { key: 'completed', label: 'Completed', icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
+                      ].map(sec => {
+                        const secItems = systemComponents.filter((sc: any) => {
                           const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
                           if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
                           const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
-                          if (deliverableSubSectionFilter === 'all') return true;
-                          return subSec === deliverableSubSectionFilter;
-                        })
-                        .map((sc: any) => {
-                          const itemProj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                          const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
-                          const isSelectedForExport = exportSelectedDeliverableIds.includes(sc.id);
+                          return subSec === sec.key;
+                        });
 
-                          const subSecConfig: Record<string, { label: string; color: string; bg: string }> = {
-                            executions: { label: 'Executions', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-                            reviews: { label: 'Reviews', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                            completed: { label: 'Completed', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
-                          };
-
-                          const secInfo = subSecConfig[subSec] || subSecConfig.executions;
-
-                          return (
-                            <div key={sc.id} style={{
-                              background: 'var(--surface)',
-                              border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
-                              borderRadius: '6px',
-                              padding: '7px 9px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '4px'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1, overflow: 'hidden' }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelectedForExport}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setExportSelectedDeliverableIds(prev => [...prev, sc.id]);
-                                      } else {
-                                        setExportSelectedDeliverableIds(prev => prev.filter(id => id !== sc.id));
-                                      }
-                                    }}
-                                    style={{ marginTop: '2px', cursor: 'pointer' }}
-                                    title="Select item for export"
-                                  />
-
-                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {sc.name}
-                                      </span>
-                                      <span style={{ fontSize: '6.5px', fontWeight: 800, background: secInfo.bg, color: secInfo.color, padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
-                                        {secInfo.label}
-                                      </span>
-                                    </div>
-
-                                    {/* Disk Path Badge */}
-                                    <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1.5px' }}>
-                                      📁 projects/{itemProj}/deliverables/{subSec}/{sc.name}
-                                    </span>
-
-                                    {/* Stage/Loop Dependency Badge */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
-                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 4px', borderRadius: '2px', border: '1px solid var(--border-soft)' }}>
-                                        🔗 Source: Strategic Synthesis
-                                      </span>
-                                      <span style={{ fontSize: '6.5px', color: '#10b981', fontFamily: 'var(--mono)' }}>
-                                        🛡️ Quality Gate: Passed
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                  <button
-                                    onClick={() => {
-                                      handleGoToArtifact(sc);
-                                      setYourDataSystemsView('artifact' as any);
-                                    }}
-                                    style={{
-                                      fontSize: '7.5px',
-                                      fontWeight: 800,
-                                      background: 'rgba(59,130,246,0.12)',
-                                      border: '1px solid #3b82f6',
-                                      color: '#3b82f6',
-                                      borderRadius: '3px',
-                                      padding: '2px 6px',
-                                      cursor: 'pointer'
-                                    }}
-                                    title="View Live Preview or Code Editor"
-                                  >
-                                    🚀 Go To Artifact
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteSystemComponent(sc.id)}
-                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px', padding: '2px' }}
-                                    title="Delete deliverable"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
+                        return (
+                          <div key={sec.key} style={{
+                            flex: '1 1 0px',
+                            minWidth: '0px',
+                            height: '100%',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '5px',
+                            padding: '5px 6px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '5px'
+                          }}>
+                            {/* SUB-SECTION HEADER */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
+                              {/* Sub-Section Name directly ABOVE buttons */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '10px' }}>{sec.icon}</span>
+                                <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {sec.label} ({secItems.length})
+                                </span>
                               </div>
 
-                              {/* Sub-section Switcher */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: 'rgba(0,0,0,0.15)', padding: '2.5px 4px', borderRadius: '3.5px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '6.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>Sub-section:</span>
-                                <select
-                                  value={subSec}
-                                  onChange={async (e) => {
-                                    const nextSub = e.target.value;
-                                    try {
-                                      const res = await fetch('/api/db/system-components', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                          id: sc.id,
-                                          name: sc.name,
-                                          role: sc.role,
-                                          code_snapshot: sc.code_snapshot,
-                                          metadata: {
-                                            ...(sc.metadata || {}),
-                                            sub_section: nextSub,
-                                            status: nextSub === 'completed' ? 'processed' : nextSub === 'reviews' ? 'reviewing' : 'new',
-                                            project_name: itemProj,
-                                            tenantId: sc.metadata?.tenantId || activeEntity || 'default_user'
-                                          }
-                                        })
-                                      });
-                                      if (res.ok) {
-                                        setToast({ message: `Moved deliverable to ${nextSub}`, type: 'success', isOpen: true });
-                                        fetchWorkspaceData();
-                                      }
-                                    } catch (err) {}
+                              {/* SUB-SECTION ACTION BUTTONS (IMPORT & EXPORT) */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
+                                <button
+                                  onClick={() => {
+                                    setNewDeliverableSubSection(sec.key);
+                                    setModalSubSectionContext({
+                                      sectionType: 'deliverables',
+                                      subSectionKey: sec.key,
+                                      subSectionLabel: sec.label,
+                                      secItems: secItems
+                                    });
+                                    setSelectedImportMethod('local');
+                                    setIsImportModalOpen(true);
                                   }}
                                   style={{
-                                    fontSize: '6.5px',
-                                    fontWeight: 700,
-                                    fontFamily: 'var(--sans)',
+                                    flex: 1,
                                     background: 'var(--surface-alt)',
                                     border: '1px solid var(--border-soft)',
+                                    color: 'var(--text-bright)',
+                                    fontSize: '7.5px',
+                                    fontWeight: 800,
+                                    padding: '2px 4px',
                                     borderRadius: '3px',
-                                    color: 'var(--muted)',
-                                    padding: '1px 3px',
-                                    outline: 'none',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '2px'
                                   }}
+                                  title={`Import deliverables into ${sec.label}`}
                                 >
-                                  <option value="executions">Move to: Executions</option>
-                                  <option value="reviews">Move to: Reviews</option>
-                                  <option value="completed">Move to: Completed</option>
-                                </select>
+                                  📥 Import
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setModalSubSectionContext({
+                                      sectionType: 'deliverables',
+                                      subSectionKey: sec.key,
+                                      subSectionLabel: sec.label,
+                                      secItems: secItems
+                                    });
+                                    setExportSelectedDeliverableIds(secItems.map(i => i.id));
+                                    setIsExportModalOpen(true);
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    color: 'var(--accent)',
+                                    fontSize: '7.5px',
+                                    fontWeight: 800,
+                                    padding: '2px 4px',
+                                    borderRadius: '3px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '2px'
+                                  }}
+                                  title={`Export ${sec.label} deliverables`}
+                                >
+                                  📤 Export
+                                </button>
                               </div>
                             </div>
-                          );
-                        })}
 
-                      {systemComponents.filter((sc: any) => {
-                        const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                        if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                        const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
-                        return deliverableSubSectionFilter === 'all' || subSec === deliverableSubSectionFilter;
-                      }).length === 0 && (
-                        <div style={{
-                          padding: '24px 14px',
-                          border: '1.5px dashed var(--border-soft)',
-                          borderRadius: '8px',
-                          textAlign: 'center',
-                          fontSize: '8.5px',
-                          color: 'var(--muted)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: 'rgba(255,255,255,0.015)'
-                        }}>
-                          <div style={{ fontSize: '24px' }}>📦</div>
-                          <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Deliverables in Sub-Section</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35', maxWidth: '240px' }}>
-                            Add or generate a deliverable for {deliverableSubSectionFilter === 'all' ? 'this project' : deliverableSubSectionFilter}.
-                          </p>
-                          <button
-                            onClick={() => setIsAddDeliverableModalOpen(true)}
-                            style={{
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              background: '#10b981',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 10px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ＋ Add First Deliverable
-                          </button>
-                        </div>
-                      )}
+                            {/* SUB-SECTION ITEMS VERTICAL STACK */}
+                            <div style={{
+                              flex: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px',
+                              overflowY: 'auto',
+                              minHeight: 0,
+                              paddingRight: '2px'
+                            }}>
+                              {secItems.length > 0 ? (
+                                secItems.map((sc: any) => {
+                                  const itemProj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
+                                  const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
+                                  const isSelectedForExport = exportSelectedDeliverableIds.includes(sc.id);
+
+                                  return (
+                                    <div key={sc.id} style={{
+                                      width: '100%',
+                                      background: 'var(--surface-alt)',
+                                      border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                                      borderRadius: '5px',
+                                      padding: '6px 8px',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '4px'
+                                    }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, overflow: 'hidden' }}>
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelectedForExport}
+                                              onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setExportSelectedDeliverableIds(prev => [...prev, sc.id]);
+                                                } else {
+                                                  setExportSelectedDeliverableIds(prev => prev.filter(id => id !== sc.id));
+                                                }
+                                              }}
+                                              style={{ cursor: 'pointer' }}
+                                              title="Select deliverable for export"
+                                            />
+                                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                              {sc.name}
+                                            </span>
+                                          </div>
+                                          <button
+                                            onClick={() => handleDeleteSystemComponent(sc.id)}
+                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '9px', padding: '1px' }}
+                                            title="Delete deliverable"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+
+                                        {/* Disk Path Badge */}
+                                        <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          📁 projects/{itemProj}/deliverables/{subSec}/{sc.name}
+                                        </span>
+
+                                        {/* Stage/Loop Dependency Badge */}
+                                        <span style={{ fontSize: '6px', color: '#10b981', fontFamily: 'var(--mono)', background: 'rgba(16,185,129,0.06)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
+                                          🛡️ Quality Gate: Passed
+                                        </span>
+                                      </div>
+
+                                      {/* Actions Bar */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
+                                        <button
+                                          onClick={() => {
+                                            handleGoToArtifact(sc);
+                                            setYourDataSystemsView('artifact' as any);
+                                          }}
+                                          style={{
+                                            fontSize: '6.5px',
+                                            fontWeight: 800,
+                                            background: 'rgba(59,130,246,0.12)',
+                                            border: '1px solid #3b82f6',
+                                            color: '#3b82f6',
+                                            borderRadius: '2.5px',
+                                            padding: '1px 4px',
+                                            cursor: 'pointer'
+                                          }}
+                                          title="View Live Preview or Code Editor"
+                                        >
+                                          🚀 Artifact
+                                        </button>
+
+                                        <select
+                                          value={subSec}
+                                          onChange={async (e) => {
+                                            const nextSub = e.target.value;
+                                            try {
+                                              const res = await fetch('/api/db/system-components', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  id: sc.id,
+                                                  name: sc.name,
+                                                  role: sc.role,
+                                                  code_snapshot: sc.code_snapshot,
+                                                  metadata: {
+                                                    ...(sc.metadata || {}),
+                                                    sub_section: nextSub,
+                                                    status: nextSub === 'completed' ? 'processed' : nextSub === 'reviews' ? 'reviewing' : 'new',
+                                                    project_name: itemProj,
+                                                    tenantId: sc.metadata?.tenantId || activeEntity || 'default_user'
+                                                  }
+                                                })
+                                              });
+                                              if (res.ok) {
+                                                setToast({ message: `Moved deliverable to ${nextSub}`, type: 'success', isOpen: true });
+                                                fetchWorkspaceData();
+                                              }
+                                            } catch (err) {}
+                                          }}
+                                          style={{
+                                            fontSize: '6px',
+                                            fontWeight: 700,
+                                            fontFamily: 'var(--sans)',
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border-soft)',
+                                            borderRadius: '2.5px',
+                                            color: 'var(--muted)',
+                                            padding: '1px 2px',
+                                            outline: 'none',
+                                            cursor: 'pointer'
+                                          }}
+                                        >
+                                          <option value="executions">Executions</option>
+                                          <option value="reviews">Reviews</option>
+                                          <option value="completed">Completed</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div style={{
+                                  flex: 1,
+                                  border: '1px dashed var(--border-soft)',
+                                  borderRadius: '4px',
+                                  padding: '12px 8px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  textAlign: 'center',
+                                  fontSize: '7.5px',
+                                  color: 'var(--muted)',
+                                  background: 'rgba(255,255,255,0.01)'
+                                }}>
+                                  <span>No deliverables in {sec.label}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               </div>
             </section>
-            {/*
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '12px', overflowY: 'auto' }}>
-                {yourDataSystemsView === 'graph' ? (
-                  <DependencyGraph rawDataList={rawDataList} systemComponents={systemComponents} />
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', overflowX: 'hidden' }}>
-
-
-
-                    {/* Horizontal Split Container */}
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'row', 
-                      gap: '12px', 
-                      flex: 1, 
-                      minHeight: 0,
-                      alignItems: 'stretch',
-                      width: '100%'
-                    }}>
-                  
-                      {/* ================= SECTION 1: DATAS (DATA SOURCES) ================= */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
-
-                        {/* Filtered Data Cards List (Project Isolated) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '450px', overflowY: 'auto', paddingRight: '2px' }}>
-                          {rawDataList
-                            .filter((rd: any) => {
-                              const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                              if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                              const status = rd.metadata?.status || 'new';
-                              if (rawDataFilter === 'all') return true;
-                              return status === rawDataFilter;
-                            })
-                            .map((rd: any) => {
-                              const status = rd.metadata?.status || 'new';
-                              const isExpanded = expandedRawDataIds.includes(rd.id);
-                              const itemProj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                              
-                              // Status Styling helpers
-                              let statusBg = 'rgba(245,158,11,0.08)';
-                              let statusColor = 'rgb(245,158,11)';
-                              let statusLabel = 'New';
-                              
-                              if (status === 'in_process') {
-                                statusBg = 'rgba(59,130,246,0.08)';
-                                statusColor = 'rgb(59,130,246)';
-                                statusLabel = 'Reviewing';
-                              } else if (status === 'processed') {
-                                statusBg = 'rgba(16,185,129,0.08)';
-                                statusColor = 'rgb(16,185,129)';
-                                statusLabel = 'Understood';
-                              }
-
-                              return (
-                                <div key={rd.id} style={{
-                                  background: 'var(--surface-alt)',
-                                  border: '1px solid var(--border-soft)',
-                                  borderRadius: '6px',
-                                  padding: '5px 7px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '3px'
-                                }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                    <div 
-                                      onClick={() => toggleRawDataExpand(rd.id)}
-                                      style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', cursor: 'pointer', flex: 1 }}
-                                    >
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {rd.name}
-                                        </span>
-                                        <span style={{ fontSize: '6.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '0.5px 3px', borderRadius: '2.5px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
-                                          {statusLabel}
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Exact Disk Path Badge */}
-                                      <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1px', opacity: 0.9 }}>
-                                        📁 projects/{itemProj}/data/{rd.name}
-                                      </span>
-
-                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', marginTop: '0.5px' }}>
-                                        {rd.mime_type || 'text/plain'} • {rd.created_at ? new Date(rd.created_at).toLocaleDateString() : 'Just now'}
-                                      </span>
-
-                                      {/* Hybrid storage GCS + CMEK + Vertex AI badges */}
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: '3.5px', alignItems: 'center' }}>
-                                        <span style={{ 
-                                          fontSize: '6.5px', 
-                                          fontFamily: 'var(--mono)', 
-                                          background: 'rgba(59,130,246,0.06)', 
-                                          color: '#3b82f6', 
-                                          padding: '1px 3px', 
-                                          borderRadius: '2px', 
-                                          fontWeight: 800,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          gap: '2px'
-                                        }}>
-                                          🪣 GCS Isolated
-                                        </span>
-                                        {(rd.metadata?.cmek_applied || !rd.metadata?.storage_mode) && (
-                                          <span style={{ 
-                                            fontSize: '6.5px', 
-                                            fontFamily: 'var(--mono)', 
-                                            background: 'rgba(16,185,129,0.06)', 
-                                            color: '#10b981', 
-                                            padding: '1px 3px', 
-                                            borderRadius: '2px', 
-                                            fontWeight: 800,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '2px'
-                                          }}>
-                                            🔐 CMEK
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                      <button
-                                        onClick={() => toggleRawDataExpand(rd.id)}
-                                        style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '9px', cursor: 'pointer', padding: '2px' }}
-                                        title="View/Edit content"
-                                      >
-                                        {isExpanded ? '▲' : '▼'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteRawData(rd.id)}
-                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px', padding: '2px' }}
-                                        title="Delete source file from project"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Mission Trigger Bar for Data Inputs */}
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    background: 'rgba(0,0,0,0.15)',
-                                    borderRadius: '4px',
-                                    padding: '3px 5px',
-                                    border: '1px solid var(--border-soft)',
-                                    marginTop: '2px',
-                                    flexWrap: 'wrap'
-                                  }}>
-                                    <span style={{ fontSize: '6px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>MISSIONS:</span>
-                                    <button
-                                      onClick={() => {
-                                        setIsAddMissionOpen(true);
-                                        setNewMissionCategory('system_build_from_data');
-                                        setNewMissionObjective(`Build new artifact component using dataset "${rd.name}" in project "${itemProj}"`);
-                                      }}
-                                      style={{
-                                        fontSize: '6px',
-                                        fontWeight: 800,
-                                        background: 'rgba(204,122,74,0.12)',
-                                        border: '1px solid var(--accent)',
-                                        color: 'var(--accent)',
-                                        borderRadius: '3px',
-                                        padding: '1px 4px',
-                                        cursor: 'pointer',
-                                        fontFamily: 'var(--sans)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '2px'
-                                      }}
-                                      title="Trigger a mission to build a new artifact component from this dataset"
-                                    >
-                                      🚀 Generate Artifact
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setIsAddMissionOpen(true);
-                                        setNewMissionCategory('system_optimization_from_data');
-                                        setNewMissionObjective(`Optimize existing project artifact using data input "${rd.name}" in project "${itemProj}"`);
-                                      }}
-                                      style={{
-                                        fontSize: '6px',
-                                        fontWeight: 800,
-                                        background: 'rgba(59,130,246,0.12)',
-                                        border: '1px solid #3b82f6',
-                                        color: '#3b82f6',
-                                        borderRadius: '3px',
-                                        padding: '1px 4px',
-                                        cursor: 'pointer',
-                                        fontFamily: 'var(--sans)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '2px'
-                                      }}
-                                      title="Trigger an optimization mission on existing artifacts using this dataset"
-                                    >
-                                      ⚡ Optimize Artifact
-                                    </button>
-                                  </div>
-
-                                  {/* Expand Content Area */}
-                                  {isExpanded && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-soft)', paddingTop: '6px', marginTop: '2px' }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        <span style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)' }}>DATA CONTENT VIEW / EDIT:</span>
-                                        <textarea
-                                          style={{
-                                            width: '100%',
-                                            height: '70px',
-                                            fontSize: '8px',
-                                            fontFamily: 'var(--mono)',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border-soft)',
-                                            borderRadius: '4px',
-                                            padding: '4px 6px',
-                                            color: 'var(--text)',
-                                            resize: 'vertical',
-                                            outline: 'none'
-                                          }}
-                                          defaultValue={rd.content}
-                                          onBlur={async (e) => {
-                                            if (e.target.value !== rd.content) {
-                                              try {
-                                                const res = await fetch('/api/db/raw-data', {
-                                                  method: 'POST',
-                                                  headers: { 'Content-Type': 'application/json' },
-                                                  body: JSON.stringify({
-                                                    id: rd.id,
-                                                    name: rd.name,
-                                                    content: e.target.value,
-                                                    mime_type: rd.mime_type,
-                                                    metadata: {
-                                                      ...(rd.metadata || {}),
-                                                      project_name: itemProj,
-                                                      tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
-                                                    }
-                                                  })
-                                                });
-                                                if (res.ok) {
-                                                  setToast({ message: 'Content changes saved!', type: 'success', isOpen: true });
-                                                  fetchWorkspaceData();
-                                                }
-                                              } catch (err) {
-                                                console.error(err);
-                                              }
-                                            }
-                                          }}
-                                          placeholder="Paste or edit actual business records/logs here..."
-                                        />
-                                        <span style={{ fontSize: '7px', color: 'var(--muted)', fontStyle: 'italic' }}>Auto-saves when clicking outside text area.</span>
-                                      </div>
-
-                                      {/* Quick Status Cycler buttons */}
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                        <span style={{ fontSize: '7px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>Discovery State:</span>
-                                        {(['new', 'in_process', 'processed'] as const).map((st) => (
-                                          <button
-                                            key={st}
-                                            onClick={() => handleUpdateRawDataStatus(rd, st)}
-                                            style={{
-                                              fontSize: '7px',
-                                              padding: '1.5px 4px',
-                                              borderRadius: '2.5px',
-                                              cursor: 'pointer',
-                                              background: status === st ? 'var(--text-bright)' : 'rgba(255,255,255,0.03)',
-                                              color: status === st ? 'var(--surface)' : 'var(--muted)',
-                                              border: '1px solid var(--border-soft)',
-                                              fontWeight: status === st ? 800 : 500,
-                                              textTransform: 'uppercase'
-                                            }}
-                                          >
-                                            {st === 'in_process' ? 'in-proc' : st}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          {rawDataList.filter((rd: any) => {
-                            const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                            if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                            const s = rd.metadata?.status || 'new';
-                            return rawDataFilter === 'all' || s === rawDataFilter;
-                          }).length === 0 && (
-                            <div style={{
-                              padding: '20px 14px',
-                              border: '1.5px dashed var(--border-soft)',
-                              borderRadius: '8px',
-                              textAlign: 'center',
-                              fontSize: '8.5px',
-                              color: 'var(--muted)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '8px',
-                              background: 'rgba(255,255,255,0.015)'
-                            }}>
-                              <div style={{ fontSize: '24px', filter: 'grayscale(0.3) opacity(0.85)' }}>📥</div>
-                              <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Data Inputs Found</div>
-                              <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35' }}>
-                                No data stream matched filter ({selectedProjectName}). Upload a file or import data.
-                              </p>
-                              <button
-                                onClick={() => setIsImportModalOpen(true)}
-                                style={{
-                                  fontSize: '8px',
-                                  fontWeight: 800,
-                                  background: 'rgba(204,122,74,0.15)',
-                                  color: 'var(--accent)',
-                                  border: '1px solid var(--accent)',
-                                  borderRadius: '4px',
-                                  padding: '4px 10px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  marginTop: '2px'
-                                }}
-                              >
-                                <span>📥 Import Data Source</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Vertical separator line between Data & Projects */}
-                      <div style={{ width: '1.5px', background: 'var(--border-soft)', flexShrink: 0, alignSelf: 'stretch' }} />
-
-                      {/* ================= SECTION 2: PROJECTS (PROJECT SYSTEMS) ================= */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
-
-                        {/* Filtered System Cards List (Project Isolated) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '450px', overflowY: 'auto', paddingRight: '2px' }}>
-                          {systemComponents
-                            .filter((sc: any) => {
-                              const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                              if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                              const status = sc.metadata?.status || 'new';
-                              if (systemComponentFilter === 'all') return true;
-                              return status === systemComponentFilter;
-                            })
-                            .map((sc: any) => {
-                              const status = sc.metadata?.status || 'new';
-                              const isExpanded = expandedSystemComponentIds.includes(sc.id);
-                              const itemProj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                              
-                              let statusBg = 'rgba(245,158,11,0.08)';
-                              let statusColor = 'rgb(245,158,11)';
-                              let statusLabel = 'New';
-
-                              if (status === 'in_process') {
-                                statusBg = 'rgba(59,130,246,0.08)';
-                                statusColor = 'rgb(59,130,246)';
-                                statusLabel = 'Reviewing';
-                              } else if (status === 'processed') {
-                                statusBg = 'rgba(156,163,175,0.08)';
-                                statusColor = 'rgb(156,163,175)';
-                                statusLabel = 'Understood';
-                              } else if (status === 'built_new') {
-                                statusBg = 'rgba(16,185,129,0.08)';
-                                statusColor = 'rgb(16,185,129)';
-                                statusLabel = 'Built';
-                              } else if (status === 'enhanced') {
-                                statusBg = 'rgba(139,92,246,0.12)';
-                                statusColor = '#8b5cf6';
-                                statusLabel = 'Upgraded ⚙️';
-                              }
-
-                              const hasLegacyCode = !!sc.metadata?.legacy_code;
-
-                              return (
-                                <div key={sc.id} style={{
-                                  background: 'var(--surface-alt)',
-                                  border: '1px solid var(--border-soft)',
-                                  borderRadius: '6px',
-                                  padding: '5px 7px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '3px'
-                                }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                    <div 
-                                      onClick={() => {
-                                        toggleSystemComponentExpand(sc.id);
-                                        if (!isExpanded) {
-                                          setTempActiveCode(sc.code_snapshot || '');
-                                          setTempLegacyCode(sc.metadata?.legacy_code || '');
-                                        }
-                                      }}
-                                      style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', cursor: 'pointer', flex: 1 }}
-                                    >
-                                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                                        <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                          {sc.name}
-                                        </span>
-                                        <span style={{ fontSize: '6.5px', fontWeight: 800, background: statusBg, color: statusColor, padding: '0px 3px', borderRadius: '2px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
-                                          {statusLabel}
-                                        </span>
-                                      </div>
-
-                                      {/* Exact Disk Folder Badge */}
-                                      <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1px', opacity: 0.9 }}>
-                                        📁 projects/{itemProj}/artifacts/{sc.name.replace(/[^a-zA-Z0-9_\-]/g, '_')}/
-                                      </span>
-
-                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', marginTop: '0.5px' }}>
-                                        Snapshot: {sc.code_snapshot ? sc.code_snapshot.length + ' chars' : 'empty'} {hasLegacyCode && '• Legacy Reference stored'}
-                                      </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleGoToArtifact(sc);
-                                        }}
-                                        style={{
-                                          background: 'rgba(59, 130, 246, 0.15)',
-                                          border: '1px solid #3b82f6',
-                                          color: '#3b82f6',
-                                          borderRadius: '3px',
-                                          padding: '1.5px 5px',
-                                          fontSize: '6.5px',
-                                          fontWeight: 800,
-                                          cursor: 'pointer',
-                                          fontFamily: 'var(--sans)',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '2px'
-                                        }}
-                                        title="Go To Artifact - View Live Preview & Audit Real-time Codebase"
-                                      >
-                                        🚀 Go To
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          toggleSystemComponentExpand(sc.id);
-                                          if (!isExpanded) {
-                                            setTempActiveCode(sc.code_snapshot || '');
-                                            setTempLegacyCode(sc.metadata?.legacy_code || '');
-                                          }
-                                        }}
-                                        style={{
-                                          background: 'transparent',
-                                          border: '1px solid var(--border-soft)',
-                                          color: 'var(--muted)',
-                                          borderRadius: '3px',
-                                          padding: '1.5px 4px',
-                                          fontSize: '8px',
-                                          cursor: 'pointer'
-                                        }}
-                                      >
-                                        {isExpanded ? '▲' : '▼'}
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Mission Trigger & Artifact Action Bar */}
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    background: 'rgba(0,0,0,0.15)',
-                                    borderRadius: '3px',
-                                    padding: '2px 4px',
-                                    border: '1px solid var(--border-soft)',
-                                    marginTop: '1px',
-                                    flexWrap: 'wrap'
-                                  }}>
-                                    <span style={{ fontSize: '6.5px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>ACTIONS:</span>
-                                    <button
-                                      onClick={() => handleGoToArtifact(sc)}
-                                      style={{
-                                        fontSize: '6.5px',
-                                        fontWeight: 800,
-                                        background: 'rgba(59,130,246,0.12)',
-                                        border: '1px solid #3b82f6',
-                                        color: '#3b82f6',
-                                        borderRadius: '3px',
-                                        padding: '1.5px 5px',
-                                        cursor: 'pointer',
-                                        fontFamily: 'var(--sans)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '2px'
-                                      }}
-                                      title="Go to Artifact workspace to preview or edit code"
-                                    >
-                                      🚀 Go To Workspace
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setIsAddMissionOpen(true);
-                                        setNewMissionCategory('system_optimization');
-                                        setNewMissionObjective(`Optimize system component "${sc.name}" in project "${itemProj}"`);
-                                      }}
-                                      style={{
-                                        fontSize: '6.5px',
-                                        fontWeight: 800,
-                                        background: 'rgba(139,92,246,0.12)',
-                                        border: '1px solid #8b5cf6',
-                                        color: '#8b5cf6',
-                                        borderRadius: '3px',
-                                        padding: '1.5px 5px',
-                                        cursor: 'pointer',
-                                        fontFamily: 'var(--sans)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '2px'
-                                      }}
-                                      title="Trigger an optimization mission for this system component"
-                                    >
-                                      ⚡ Optimize System
-                                    </button>
-                                  </div>
-
-                                  {isExpanded && (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px', paddingTop: '6px', borderTop: '1px solid var(--border-soft)' }}>
-                                      {/* Editor save buttons */}
-                                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        <button
-                                          onClick={() => handleUpdateSystemComponentCode(sc, tempActiveCode, tempLegacyCode)}
-                                          style={{
-                                            background: 'rgba(204,122,74,0.12)',
-                                            border: '1px solid var(--accent)',
-                                            color: 'var(--accent)',
-                                            fontSize: '7.5px',
-                                            fontWeight: 800,
-                                            padding: '1.5px 5px',
-                                            borderRadius: '3px',
-                                            cursor: 'pointer',
-                                            fontFamily: 'var(--sans)'
-                                          }}
-                                        >
-                                          💾 Save Updates
-                                        </button>
-                                      </div>
-
-                                      {/* Comparative Split screens when Enhanced & legacy code exists */}
-                                      {status === 'enhanced' && hasLegacyCode ? (
-                                        <div style={{
-                                          display: 'grid',
-                                          gridTemplateColumns: '1fr 1fr',
-                                          gap: '6px',
-                                          background: '#090d16',
-                                          padding: '6px',
-                                          borderRadius: '4px',
-                                          border: '1px solid var(--border-soft)'
-                                        }}>
-                                          <div>
-                                            <div style={{ fontSize: '7px', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', marginBottom: '3px', display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--sans)' }}>
-                                              <span>🗑️ Previous Version</span>
-                                              <span>[BEFORE]</span>
-                                            </div>
-                                            <textarea
-                                              style={{
-                                                width: '100%',
-                                                height: '70px',
-                                                fontSize: '7.5px',
-                                                fontFamily: 'var(--mono)',
-                                                color: '#ef4444',
-                                                background: 'rgba(239, 68, 68, 0.02)',
-                                                border: '1px solid rgba(239, 68, 68, 0.2)',
-                                                borderRadius: '3px',
-                                                outline: 'none',
-                                                resize: 'none',
-                                                lineHeight: 1.35
-                                              }}
-                                              value={tempLegacyCode}
-                                              onChange={(e) => setTempLegacyCode(e.target.value)}
-                                              placeholder="Previous legacy code..."
-                                            />
-                                          </div>
-                                          <div>
-                                            <div style={{ fontSize: '7px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: '3px', display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--sans)' }}>
-                                              <span>✨ Enhanced Output</span>
-                                              <span>[AFTER / ACTIVE]</span>
-                                            </div>
-                                            <textarea
-                                              style={{
-                                                width: '100%',
-                                                height: '70px',
-                                                fontSize: '7.5px',
-                                                fontFamily: 'var(--mono)',
-                                                color: '#10b981',
-                                                background: 'rgba(16, 185, 129, 0.02)',
-                                                border: '1px solid rgba(16, 185, 129, 0.2)',
-                                                borderRadius: '3px',
-                                                outline: 'none',
-                                                resize: 'none',
-                                                lineHeight: 1.35
-                                              }}
-                                              value={tempActiveCode}
-                                              onChange={(e) => setTempActiveCode(e.target.value)}
-                                              placeholder="Write enhanced / active deployment code..."
-                                            />
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        /* Standard Code area editor */
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                          <textarea
-                                            style={{
-                                              width: '100%',
-                                              height: '70px',
-                                              fontSize: '8px',
-                                              fontFamily: 'var(--mono)',
-                                              background: 'var(--surface)',
-                                              border: '1px solid var(--border-soft)',
-                                              borderRadius: '4px',
-                                              padding: '4px 6px',
-                                              color: 'var(--text)',
-                                              resize: 'vertical',
-                                              outline: 'none'
-                                            }}
-                                            value={tempActiveCode}
-                                            onChange={(e) => setTempActiveCode(e.target.value)}
-                                            placeholder="Enter source code snapshot or infrastructure configuration..."
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                          {systemComponents.filter((sc: any) => {
-                            const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                            if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                            const s = sc.metadata?.status || 'new';
-                            return systemComponentFilter === 'all' || s === systemComponentFilter;
-                          }).length === 0 && (
-                            <div style={{
-                              padding: '20px 14px',
-                              border: '1.5px dashed var(--border-soft)',
-                              borderRadius: '8px',
-                              textAlign: 'center',
-                              fontSize: '8.5px',
-                              color: 'var(--muted)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              gap: '8px',
-                              background: 'rgba(255,255,255,0.015)'
-                            }}>
-                              <div style={{ fontSize: '24px', filter: 'grayscale(0.3) opacity(0.85)' }}>⚙️</div>
-                              <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Project Systems</div>
-                              <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35' }}>
-                                No active components in project ({selectedProjectName}). Build or generate a system.
-                              </p>
-                              <button
-                                onClick={() => {
-                                  setIsAddMissionOpen(true);
-                                  setNewMissionCategory('system_build');
-                                }}
-                                style={{
-                                  fontSize: '8px',
-                                  fontWeight: 800,
-                                  background: 'rgba(16,185,129,0.15)',
-                                  color: '#10b981',
-                                  border: '1px solid #10b981',
-                                  borderRadius: '4px',
-                                  padding: '4px 10px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  marginTop: '2px'
-                                }}
-                              >
-                                <span>✨ Generate System</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-            */}
           )}
         </aside>
       </div>
@@ -14308,7 +13480,7 @@ ${isDirector ? `
                   letterSpacing: '0.04em',
                   fontFamily: 'var(--sans)'
                 }}>
-                  {dtxt.importModalTitle}
+                  {modalSubSectionContext ? `IMPORT TO ${modalSubSectionContext.subSectionLabel.toUpperCase()} (${modalSubSectionContext.sectionType.toUpperCase()})` : dtxt.importModalTitle}
                 </span>
               </div>
               <button
@@ -14409,6 +13581,26 @@ ${isDirector ? `
               flexDirection: 'column',
               gap: '16px'
             }}>
+              {modalSubSectionContext && (
+                <div style={{
+                  background: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '9.5px',
+                  color: 'var(--text-bright)'
+                }}>
+                  <span style={{ fontWeight: 800 }}>
+                    🎯 Target Sub-Section: <b style={{ color: 'var(--accent)' }}>{modalSubSectionContext.subSectionLabel}</b> ({modalSubSectionContext.sectionType.toUpperCase()})
+                  </span>
+                  <span style={{ fontSize: '8px', color: 'var(--muted)', fontWeight: 700 }}>
+                    Auto-categorized
+                  </span>
+                </div>
+              )}
               {selectedImportMethod === 'local' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {/* Raw Data Source */}
@@ -15100,7 +14292,7 @@ ${isDirector ? `
                   letterSpacing: '0.04em',
                   fontFamily: 'var(--sans)'
                 }}>
-                  {dtxt.exportModalTitle}
+                  {modalSubSectionContext ? `EXPORT FROM ${modalSubSectionContext.subSectionLabel.toUpperCase()} (${modalSubSectionContext.sectionType.toUpperCase()})` : dtxt.exportModalTitle}
                 </span>
               </div>
               <button
@@ -15179,6 +14371,60 @@ ${isDirector ? `
               flexDirection: 'column',
               gap: '16px'
             }}>
+              {modalSubSectionContext && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text-bright)' }}>
+                      Sub-Section Context: <b style={{ color: '#10b981' }}>{modalSubSectionContext.subSectionLabel}</b> ({modalSubSectionContext.sectionType.toUpperCase()})
+                    </span>
+                    <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
+                      {modalSubSectionContext.secItems?.length || 0} item(s) selected for export
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const items = modalSubSectionContext.secItems || [];
+                      if (items.length === 0) {
+                        setToast({ message: `No items to export in ${modalSubSectionContext.subSectionLabel}`, type: 'info', isOpen: true });
+                        return;
+                      }
+                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
+                      const downloadAnchor = document.createElement('a');
+                      downloadAnchor.setAttribute("href", dataStr);
+                      downloadAnchor.setAttribute("download", `fabrica_${modalSubSectionContext.sectionType}_${modalSubSectionContext.subSectionKey}_export.json`);
+                      document.body.appendChild(downloadAnchor);
+                      downloadAnchor.click();
+                      downloadAnchor.remove();
+                      setToast({ message: `Exported ${items.length} items from ${modalSubSectionContext.subSectionLabel}!`, type: 'success', isOpen: true });
+                    }}
+                    style={{
+                      background: '#10b981',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '8.5px',
+                      fontWeight: 800,
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    💾 Download JSON ({modalSubSectionContext.secItems?.length || 0})
+                  </button>
+                </div>
+              )}
               {selectedExportMethod === 'github' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {/* GitHub Connection Configuration */}

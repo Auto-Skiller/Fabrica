@@ -1,46 +1,121 @@
-# Fabrica 4-Stage Looped Pipeline & Execution Architecture
+# Fabrica Universal 4-Stage Looped Pipeline & Execution Engine
 
-This document defines the core 4-stage looped pipeline engine in Fabrica:
+This document defines the core 4-stage looped pipeline engine, mission execution protocols, skill invocation mechanisms, and loop mechanics in Fabrica:
 `Drafting ──> Planning ──> Execution ──> Delivering`
 
-## 1. PIPELINE STAGES & SUB-PHASES
+---
 
-### Stage 1: Drafting (Non-Loop stage with active Discovery Loop)
-- **Discovery & Scoping** (Loop): Interactive user brainstorming, option presentation, cost/trade-off debate, capturing parameters into `Sources / Discovery & Scoping`.
-- *Skill*: `pipeline_Drafting/pipeline_Drafting_Discovery-Scoping`
+## 1. MISSION EXECUTION ENGINE: HOW TO HANDLE MISSION EXECUTION
 
-### Stage 2: Planning (Loop stage)
-- **Deep Research & Intelligence Gathering** (Loop): Multi-vector web scrapers, documentation verification, competitor scans into `Sources / Deep Research & Intelligence Gathering`.
-  - *Skill*: `pipeline_Planning/pipeline_Planning_Deep-Research_Intelligence-Gathering`
-- **Data Analysis & Pattern Extraction** (Non-loop): Ingesting datasets, calculating metrics, detecting anomalies into `Sources / Data Analysis & Pattern Extraction`.
-  - *Skill*: `pipeline_Planning/pipeline_Planning_Data-Analysis_Pattern-Extraction`
-- **Strategic Synthesis & Decision Support** (Non-loop): Actionable Strategic Plan & Interactive Decision Matrix in `Sources / Strategic Synthesis & Decision Support`.
-  - *Skill*: `pipeline_Planning/pipeline_Planning_Strategic-Synthesis_Decision-Support`
+Mission execution is the core operational state machine of the Fabrica kernel. Whether triggered by an explicit user prompt, an automated backlog event, or an auto-generated system mission in FULL AUTO mode, the agent MUST execute missions following this universal lifecycle:
 
-### Stage 3: Execution (Non-loop stage)
-- **Generation** (Non-loop): Codebases, visual assets, automations under `Deliverables / Executions`.
-  - *Skill*: `pipeline_Execution/pipeline_Execution_Generation` (with sub-skills `Assets`, `Coding`, `Run-Automations`)
-- **Verification** (Non-loop): Cross-references `Deliverables / Executions` against `Sources / Strategic Synthesis & Decision Support`.
-  - If **FAIL**: Re-triggers Generation loop with error feedback.
-  - If **PASS**: Promotes deliverable to `Deliverables / Reviews`.
-  - *Skill*: `pipeline_Execution/pipeline_Execution_verification`
+### Step 1: Ingestion & Mission Setup
+1. **Parse Intent & Scope**: Ingest user prompt, raw data uploads, or mission card parameters.
+2. **Determine Target Mission & Pipeline**: Map the task to a mission type (`standard`, `build`, `build_from_data`, `optimization`, `optimization_from_data`, `test`, `test_from_data`, `brainstorming`, `deep_research`, `analytics`).
+3. **Register/Update Mission State**: Create or update the mission row in `db/missions.json` and database tables with status `DRAFTING` or `PLANNING`.
 
-### Stage 4: Delivering (Non-loop stage)
-- **Review** (Non-loop): User review gate for production-grade deliverables in `Deliverables / Reviews`.
-  - If **FEEDBACK GIVEN**: Moves work back to `Deliverables / Executions` and re-runs execution generation.
-  - If **ACCEPTED**: Promotes deliverable to `Deliverables / Completed`.
-  - *Skill*: `pipeline_Delivering/pipeline_Delivering_Review`
+### Step 2: Skill Discovery & Invocation (How & When to Use Skills)
+1. **When to Use Skills**: Whenever a mission phase or task requires domain-specific procedures, specialized coding frameworks, industry research protocols, or customized task rules, the agent MUST load and follow the corresponding **Skill**.
+2. **Skill Resolution Hierarchy**:
+   - Check workspace-level custom skills (`workspaces/<tenant_id>/.pi/skills/`).
+   - Check kernel-level default skills (`Fabrica_kernel/skills/`).
+3. **Skill Execution Protocol**:
+   - Call `view_file` on the target skill's `SKILL.md` file before generating domain outputs.
+   - Follow the step-by-step instructions, input/output schemas, and verification rules specified in `SKILL.md`.
+
+### Step 3: Autonomy Mode & Approval Gate Check
+Before advancing across major pipeline stages, check active autonomy mode (`db/settings.json` -> `autonomy`):
+- **FULL AUTO (`autonomous`)**: Auto-generates missions when count < 2, auto-evaluates QA gates using workspace context, automatically advances across stages (`Drafting -> Planning -> Execution -> Delivering`), and archives upon completion.
+- **SEMI-AUTO (`semi-autonomous`)**: Auto-executes tasks within stages, but holds user-created missions (`user_created: true`) at QA gates and delivery review steps for explicit user sign-off.
+- **SUPERVISED (`manual`)**: Pauses at every phase transition, proposal, and QA gate until approved by the human operator.
 
 ---
 
-## 2. EFFORT PARAMETERS & APPROVAL GATES
-- **EFFORT Level**: Sets loop depth (Low: 1 round, Medium: 2 rounds, High: 3 rounds, Deep: 5 rounds).
-- **User Approval Gates**: User can toggle Approval Gates ON/OFF globally or per-loop. When ON, execution pauses at the end of the loop/phase until approved by the user.
+## 2. PIPELINE STAGES & LOOP SYSTEMS
+
+The Fabrica kernel organizes execution into 4 sequential stages, incorporating active loop systems and verification feedback loops:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: DRAFTING                                                                      │
+│ └── Discovery & Scoping Loop (Interactive user intent alignment & scoping)             │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ STAGE 2: PLANNING                                                                      │
+│ ├── Deep Research & Intelligence Gathering Loop (Multi-vector web & doc research)      │
+│ ├── Data Analysis & Pattern Extraction (Processing datasets & detecting anomalies)    │
+│ └── Strategic Synthesis & Decision Support (Compiling Actionable Strategic Plan)       │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ STAGE 3: EXECUTION                                                                     │
+│ ├── Generation (Building codebases, automations, assets, systems)                      │
+│ └── Verification Loop (Cross-referencing deliverables vs Strategic Plan; retry on fail)│
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ STAGE 4: DELIVERING                                                                    │
+│ └── Review Gate & Feedback Loop (User review; route feedback to Generation or Complete)│
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Stage 1: Drafting (Discovery & Scoping Loop)
+- **Primary Objective**: Clarify user goals, define scope boundaries, evaluate feasibility, and collect source parameters.
+- **Discovery & Scoping Loop**: Interactive multi-turn or multi-option analysis that captures parameters into `Sources / Discovery & Scoping`.
+- **Associated Skill**: `pipeline_Drafting/pipeline_Drafting_Discovery-Scoping`
+- **Output**: Structured scoping card and initial mission parameters ready for Planning.
+
+### Stage 2: Planning (Deep Research, Analysis & Strategic Synthesis)
+- **Primary Objective**: Build an unambiguous, scored implementation blueprint prior to writing code or making system edits.
+- **Sub-Phases**:
+  1. **Deep Research & Intelligence Gathering Loop**: Conducts targeted web searches, documentation verification, and competitor scans into `Sources / Deep Research & Intelligence Gathering`.
+     - *Skill*: `pipeline_Planning/pipeline_Planning_Deep-Research_Intelligence-Gathering`
+  2. **Data Analysis & Pattern Extraction**: Ingests raw workspace datasets, calculates metrics, and identifies anomalies into `Sources / Data Analysis & Pattern Extraction`.
+     - *Skill*: `pipeline_Planning/pipeline_Planning_Data-Analysis_Pattern-Extraction`
+  3. **Strategic Synthesis & Decision Support**: Compiles a prioritized task list scored on `benefit` (HIGH/MED/LOW), `cost` (HIGH/MED/LOW), and `worth_it` (YES/NO) into `Sources / Strategic Synthesis & Decision Support`.
+     - *Skill*: `pipeline_Planning/pipeline_Planning_Strategic-Synthesis_Decision-Support`
+
+### Stage 3: Execution (Generation & Verification Loop)
+- **Primary Objective**: Sequentially execute planned tasks with transaction safety, linting, compilation, and automated validation.
+- **Sub-Phases**:
+  1. **Generation**: Creates or modifies codebases, database schemas, workflow automations, or content assets under `Deliverables / Executions`.
+     - *Skill*: `pipeline_Execution/pipeline_Execution_Generation` (with specialized sub-skills: `Assets`, `Coding`, `Run-Automations`)
+  2. **Verification Loop**: Automated quality gate that cross-references generated deliverables against `Sources / Strategic Synthesis & Decision Support`.
+     - **If FAIL**: Captures specific failure logs, re-triggers the Generation loop with error feedback, and attempts self-repair (up to 3 hypotheses).
+     - **If PASS**: Promotes verified deliverable to `Deliverables / Reviews`.
+     - *Skill*: `pipeline_Execution/pipeline_Execution_verification`
+
+### Stage 4: Delivering (Review Gate & Feedback Loop)
+- **Primary Objective**: Validate production readiness and obtain final user sign-off.
+- **Sub-Phase**:
+  1. **Review Gate**: Presents production deliverables in `Deliverables / Reviews`.
+     - **If USER FEEDBACK GIVEN**: Moves deliverable back to `Deliverables / Executions` and re-runs Generation/Verification.
+     - **If ACCEPTED**: Promotes deliverable to `Deliverables / Completed` and archives the mission (`status = 'archive'`).
+     - *Skill*: `pipeline_Delivering/pipeline_Delivering_Review`
 
 ---
 
-## 3. DEPENDENCY GRAPH & HISTORICAL TRACKING
-- **Evolutionary Tracking (Round > 1)**: In multi-round loops, previously analyzed files, URLs, and data blocks are tracked to eliminate duplicate work.
-- **Dependency Mapping**: Every deliverable item explicitly links to its source documents in `Sources`.
+## 3. EFFORT PARAMETERS & MULTI-ROUND LOOP ENGINE
+
+### EFFORT Level Configuration
+EFFORT levels govern the loop depth, search intensity, and iteration limit across research and verification loops:
+
+| EFFORT Level | Loop Rounds | Use Case |
+| :--- | :--- | :--- |
+| **LOW** | 1 Round | Simple code fixes, quick queries, standard single-file modifications |
+| **MEDIUM** | 2 Rounds | Standard feature builds, multi-file refactoring, basic research |
+| **HIGH** | 3 Rounds | Complex multi-system pipelines, deep architecture design, optimization |
+| **DEEP** | 5 Rounds | Mission-critical system builds, enterprise data ingestion, exhaustive research |
+
+### Evolutionary Tracking Across Rounds (Round > 1)
+When running multi-round loops (EFFORT >= MEDIUM):
+- **Deduplication Memory**: Previously analyzed web pages, URLs, database records, and code snippets are tracked to prevent duplicate searches.
+- **Incremental Refinement**: Each round builds upon previous findings, refining search queries and code hypotheses based on recorded gaps.
+- **Dependency Mapping**: Every item in `Deliverables` explicitly maintains relational link IDs to its source documents in `Sources`.
+
+---
+
+## 4. MULTI-TURN PERSISTENCE & REAL-TIME SYNCHRONIZATION
+
+During every turn of mission execution, the agent MUST maintain strict state synchronization:
+1. **Database Mirroring**: Update `db/missions.json`, `db/projects.json`, and database tables (`missions`, `artifacts`, `system_components`) immediately upon completing task steps.
+2. **Disk Mirroring**: Perform all physical file operations inside `missions/<mission_type>/<mission_id>/` (never edit directly in `projects/`). Upon mission completion, transfer finalized artifacts to `projects/`.
+3. **Real-time Event Logging**: Append progress logs with standardized status verbs (`[*]`, `[OK]`, `[+]`, `[WARN]`, `[ERR]`) to `runtime_state.recent_events`.
+
 
 

@@ -43,7 +43,16 @@ When asked about any system status, configuration, or file counts:
 
 ---
 
-## 6. WORKSPACE ENTITY TAG NOTATION
+## 6. MISSION EXECUTION & SKILL INVOCATION PROTOCOL
+When executing a mission, running a pipeline, or responding to complex domain requests:
+1. **Identify Required Skills**: Inspect available skills in `.pi/skills/` or `Fabrica_kernel/skills/` matching the target domain or mission phase.
+2. **Load Skill Instructions**: Use `view_file` on the target skill's `SKILL.md` before initiating domain-specific code edits or executions.
+3. **Log State Progress**: Record each phase, step, or task action using the standardized verbal notation (`[*]`, `[OK]`, `[+]`, `[WARN]`, `[ERR]`) in `runtime_state.recent_events`.
+4. **Mirror Database & Workspace Disk**: Ensure created files, updated components, and mission state transitions are immediately written to both the database and workspace disk.
+
+---
+
+## 7. WORKSPACE ENTITY TAG NOTATION
 When the user asks you to create suggestion cards, backlog items, review queues, missions, projects, system components, or raw data items, OR when you create them during execution, output explicit structural tags in your response so the workspace database indexes them instantly:
 - `[SUGGEST: Title | Description]` — Creates a recommendation card on Panel B.
 - `[BACKLOG: Title | Priority]` — Creates a backlog item (Priority: HIGH | MEDIUM | LOW).
@@ -52,4 +61,5 @@ When the user asks you to create suggestion cards, backlog items, review queues,
 - `[PROJECT: Name | Description]` — Scaffolds a project container in the workspace.
 - `[SYSTEM: Name | Role | Code]` — Creates a structured system component in Panel C.
 - `[DATA: Name | Content]` — Creates an ingested raw data resource in Panel C.
+
 
