@@ -59,7 +59,7 @@ This guide describes how Fabrica manages and processes unstructured data inputs,
 
 In Fabrica, everything is categorized into two fundamental pillars:
 1. **Raw Data (`raw_data` table)**: This contains the user's unstructured inputs. Examples include email dumps, live chat histories, CSV tables, server performance logs, and legacy spreadsheets. It acts as the "source of truth" and "context reservoir".
-2. **Artifacts (`artifacts` / `system_components` table)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a project. Projects can include multiple Artifacts of different types located under `projects/<project>/artifacts/<artifact_name>/`. Each Artifact is its own separated domain unit or codebase.
+2. **Artifacts (`artifacts` / `system_components` table)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a workspace. Each Artifact is its own separated domain unit or codebase.
 
 ### Artifact Types (`artifact_type`):
 - `codebase`: Full standalone frontend/backend/microservice codebases.

@@ -55,12 +55,10 @@ function copyDirSync(src: string, dest: string) {
  * │   ├── skills/
  * │   └── extensions/
  * ├── AGENTS.md
+ * ├── settings.json
+ * ├── runtime.json
  * ├── db/
- * │   ├── settings.json
- * │   ├── runtime.json
- * │   ├── projects.json
  * │   └── missions.json
- * ├── projects/
  * └── missions/
  *     ├── standard/ (planning/, execution/)
  *     └── [9 other mission types]/ (planning/, execution/)
@@ -78,11 +76,8 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   fs.mkdirSync(piSkillsDir, { recursive: true });
   fs.mkdirSync(piExtensionsDir, { recursive: true });
 
-  // 2. Structured States and Mappings (db/)
-  const dbDir = path.join(userRoot, 'db');
-  fs.mkdirSync(dbDir, { recursive: true });
-
-  const settingsPath = path.join(dbDir, 'settings.json');
+  // 2. Structured States and Mappings
+  const settingsPath = path.join(userRoot, 'settings.json');
   if (!fs.existsSync(settingsPath)) {
     fs.writeFileSync(settingsPath, JSON.stringify({
       language: "EN",
@@ -95,7 +90,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
     }, null, 2), 'utf8');
   }
 
-  const runtimePath = path.join(dbDir, 'runtime.json');
+  const runtimePath = path.join(userRoot, 'runtime.json');
   if (!fs.existsSync(runtimePath)) {
     fs.writeFileSync(runtimePath, JSON.stringify({
       tenant_id: tenantId,
@@ -110,22 +105,15 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
     }, null, 2), 'utf8');
   }
 
-  const projectsPath = path.join(dbDir, 'projects.json');
-  if (!fs.existsSync(projectsPath)) {
-    fs.writeFileSync(projectsPath, JSON.stringify({ projects: [] }, null, 2), 'utf8');
-  }
+  const dbDir = path.join(userRoot, 'db');
+  fs.mkdirSync(dbDir, { recursive: true });
 
   const missionsPath = path.join(dbDir, 'missions.json');
   if (!fs.existsSync(missionsPath)) {
     fs.writeFileSync(missionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
   }
 
-  // 4. Projects Directory
-  const projectsDir = path.join(userRoot, 'projects');
-  fs.mkdirSync(projectsDir, { recursive: true });
-  syncProjectsDb(tenantId);
-
-  // 5. Mission Planning Artifacts & Execution Space (missions/)
+  // 4. Mission Planning Artifacts & Execution Space (missions/)
   const missionTypes = [
     'standard', 'analytics', 'deep_research', 'brainstorming', 'build',
     'build_from_data', 'optimization', 'optimization_from_data', 'test', 'test_from_data'
@@ -203,7 +191,7 @@ export function getPiExecutionOptions(
     '--skill', path.join(process.cwd(), 'Fabrica_kernel', 'skills'),
     // context_injector: before_prompt hook — injects kernel prompts + workspace state every turn
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'context_injector.js'),
-    // workspace_sync: after_action hook — updates suggestions/backlogs/review_queues in db/runtime.json
+    // workspace_sync: after_action hook — updates suggestions/backlogs/review_queues in runtime.json
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'workspace_sync.js'),
     // registry_bridge: programmatic PI registry for skills & extensions discovery
     '--extension', path.join(process.cwd(), 'Fabrica_kernel', 'extensions', 'registry_bridge.js'),
@@ -469,113 +457,23 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
 }
 
 /**
- * Syncs the projects/ directory structure with db/projects.json
+ * Stub for project sync (projects/ and db/projects.json removed)
  */
 export function syncProjectsDb(tenantId: string = 'default_user') {
-  const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
-  const projectsDir = path.join(userRoot, 'projects');
-  const dbProjectsPath = path.join(userRoot, 'db', 'projects.json');
-
-  if (!fs.existsSync(projectsDir)) {
-    fs.mkdirSync(projectsDir, { recursive: true });
-  }
-
-  // Load existing db projects if present
-  let existingProjects: any[] = [];
-  if (fs.existsSync(dbProjectsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(dbProjectsPath, 'utf8'));
-      existingProjects = Array.isArray(parsed) ? parsed : (parsed.projects || []);
-    } catch (_) {}
-  }
-
-  // Ensure default_project folder exists
-  const defaultProjData = path.join(projectsDir, 'default_project', 'data');
-  const defaultProjArtifacts = path.join(projectsDir, 'default_project', 'artifacts');
-  fs.mkdirSync(defaultProjData, { recursive: true });
-  fs.mkdirSync(defaultProjArtifacts, { recursive: true });
-
-  const projectFolders = fs.readdirSync(projectsDir).filter(f => {
-    return fs.statSync(path.join(projectsDir, f)).isDirectory();
-  });
-
-  const diskProjects = projectFolders.map(pName => {
-    const pPath = path.join(projectsDir, pName);
-    const dataPath = path.join(pPath, 'data');
-    const artifactsPath = path.join(pPath, 'artifacts');
-    const systemsPath = path.join(pPath, 'systems');
-
-    const scanFiles = (dirPath: string, prefix: string) => {
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-        return [];
-      }
-      return fs.readdirSync(dirPath, { withFileTypes: true })
-        .filter(item => !item.name.startsWith('.'))
-        .map(item => ({
-          name: item.name,
-          path: `${prefix}/${item.name}`,
-          isDirectory: item.isDirectory()
-        }));
-    };
-
-    const dataFiles = scanFiles(dataPath, `projects/${pName}/data`);
-    const artifactsList = scanFiles(artifactsPath, `projects/${pName}/artifacts`);
-    const legacySystemsList = fs.existsSync(systemsPath) ? scanFiles(systemsPath, `projects/${pName}/systems`) : [];
-    const combinedArtifacts = [...artifactsList, ...legacySystemsList];
-
-    return {
-      id: `proj_${pName}`,
-      name: pName,
-      path: `projects/${pName}`,
-      data: dataFiles,
-      artifacts: combinedArtifacts,
-      systems: combinedArtifacts,
-      updated_at: new Date().toISOString()
-    };
-  });
-
-  const combinedMap = new Map<string, any>();
-  for (const p of existingProjects) {
-    if (p && p.name) combinedMap.set(p.name, p);
-  }
-  for (const p of diskProjects) {
-    combinedMap.set(p.name, p);
-  }
-
-  const finalProjects = Array.from(combinedMap.values());
-
-  fs.mkdirSync(path.join(userRoot, 'db'), { recursive: true });
-  fs.writeFileSync(dbProjectsPath, JSON.stringify({ projects: finalProjects }, null, 2), 'utf8');
-  return finalProjects;
+  return [];
 }
 
 /**
- * Creates project folder structure matching:
- * projects/<project_name>/
- * ├── data/
- * └── artifacts/<artifact_name>/
+ * Ensures workspace storage directories exist
  */
-export function ensureProjectDirs(tenantId: string, projectName: string, artifactName?: string) {
+export function ensureProjectDirs(tenantId: string, projectName?: string, artifactName?: string) {
   ensureUserHarness(tenantId);
-  const safeProjectName = (projectName || 'default_project').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const projectDir = path.join(process.cwd(), 'workspaces', tenantId, 'projects', safeProjectName);
-  const dataDir = path.join(projectDir, 'data');
-  
-  fs.mkdirSync(dataDir, { recursive: true });
-
-  let artifactDir: string | null = null;
-  if (artifactName) {
-    const safeArtifactName = artifactName.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    artifactDir = path.join(projectDir, 'artifacts', safeArtifactName);
-    fs.mkdirSync(artifactDir, { recursive: true });
-  } else {
-    fs.mkdirSync(path.join(projectDir, 'artifacts'), { recursive: true });
-  }
-
-  syncProjectsDb(tenantId);
-
-  return { projectDir, dataDir, artifactDir, systemDir: artifactDir, projectName: safeProjectName };
+  const safeProjectName = (projectName || 'default').replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const sourcesDir = path.join(process.cwd(), 'workspaces', tenantId, 'Sources', 'Data Analysis & Pattern Extraction');
+  const deliverablesDir = path.join(process.cwd(), 'workspaces', tenantId, 'Deliverables', 'Executions');
+  fs.mkdirSync(sourcesDir, { recursive: true });
+  fs.mkdirSync(deliverablesDir, { recursive: true });
+  return { projectDir: deliverablesDir, dataDir: sourcesDir, artifactDir: deliverablesDir, systemDir: deliverablesDir, projectName: safeProjectName };
 }
 
 /**
@@ -836,9 +734,7 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
   const normPath = path.relative(userRoot, targetPath);
 
   // Trigger real-time DB synchronization
-  if (normPath.startsWith('projects/')) {
-    syncProjectsDb(tenantId);
-  } else if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
+  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
     syncMissionsDb(tenantId);
   }
 
@@ -852,7 +748,7 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
 
 /**
  * Moves a file or directory inside the user's isolated workspace.
- * Automatically handles transfers between projects/ and missions/ and triggers real-time DB sync.
+ * Automatically handles transfers and triggers real-time DB sync.
  */
 export function moveUserFile(tenantId: string, srcRelativePath: string, destRelativePath: string): { src: string; dest: string; size: number } {
   const srcPath = resolveUserPath(tenantId, srcRelativePath);
@@ -872,9 +768,6 @@ export function moveUserFile(tenantId: string, srcRelativePath: string, destRela
   const normDest = path.relative(userRoot, destPath);
 
   // Trigger real-time DB updates for affected storage regions
-  if (normSrc.startsWith('projects/') || normDest.startsWith('projects/')) {
-    syncProjectsDb(tenantId);
-  }
   if (normSrc.startsWith('missions/') || normDest.startsWith('missions/') || normSrc.startsWith('workspace/') || normDest.startsWith('workspace/')) {
     syncMissionsDb(tenantId);
   }
@@ -907,9 +800,7 @@ export function deleteUserFile(tenantId: string, relativePath: string): boolean 
     fs.unlinkSync(targetPath);
   }
 
-  if (normPath.startsWith('projects/')) {
-    syncProjectsDb(tenantId);
-  } else if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
+  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
     syncMissionsDb(tenantId);
   }
 
@@ -921,7 +812,7 @@ export function deleteUserFile(tenantId: string, relativePath: string): boolean 
  * Updates last active timestamp and increments total runs in runtime.json
  */
 export function recordUserHarnessActivity(tenantId: string, runIncrement: number = 0) {
-  const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'db', 'runtime.json');
+  const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'runtime.json');
   try {
     let runtimeData = {
       tenant_id: tenantId,

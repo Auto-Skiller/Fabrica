@@ -20,7 +20,6 @@ import {
 import {
   ensureUserHarness,
   ensureProjectDirs,
-  syncProjectsDb,
   syncMissionsDb,
   syncMissionWorkspaceArtifacts,
   getEntityDir,
@@ -743,7 +742,6 @@ app.get("/api/entity/:name", async (req, res) => {
     const effectiveUsers = Array.from(new Set([tenantId, name, 'default_user', 'os', ...allWorkspaceDirs].filter(Boolean)));
     for (const u of effectiveUsers) {
       syncMissionsDb(u);
-      syncProjectsDb(u);
     }
 
     // Load from Relational DB Engine across all tenant aliases
@@ -1008,7 +1006,7 @@ app.get("/api/entity/:name", async (req, res) => {
     // Load runtime.json across all tenant aliases
     let runtimeJson: any = { suggestions: [], backlogs: [], review_queues: [], recent_events: [] };
     for (const tid of effectiveUsers) {
-      const runtimeJsonPath = path.join(process.cwd(), 'workspaces', tid, 'db', 'runtime.json');
+      const runtimeJsonPath = path.join(process.cwd(), 'workspaces', tid, 'runtime.json');
       if (fs.existsSync(runtimeJsonPath)) {
         try {
           const parsed = JSON.parse(fs.readFileSync(runtimeJsonPath, 'utf8'));
@@ -1049,9 +1047,6 @@ app.get("/api/entity/:name", async (req, res) => {
     // Load static prompts if available
     const prompts = readYaml(path.join(rootPath, prefix === 'os' ? 'os_prompts.yaml' : `${prefix}-prompts.yaml`)) || {};
 
-    // Sync and load projects from db/projects.json
-    const projectsList = syncProjectsDb(tenantId);
-
     res.json({
       board: boardText,
       runtime,
@@ -1059,7 +1054,7 @@ app.get("/api/entity/:name", async (req, res) => {
       toolboxes,
       inbox,
       prompts,
-      projects: projectsList
+      projects: []
     });
 
   } catch (e: any) {
@@ -1069,28 +1064,7 @@ app.get("/api/entity/:name", async (req, res) => {
 });
 
 app.get("/api/db/projects", (req, res) => {
-  try {
-    const tenantId = (req.query.tenantId as string) || (req.headers['x-tenant-id'] as string) || 'default_user';
-    const workspaceBase = path.join(process.cwd(), 'workspaces');
-    let allWorkspaceDirs: string[] = [];
-    if (fs.existsSync(workspaceBase)) {
-      try {
-        allWorkspaceDirs = fs.readdirSync(workspaceBase).filter(d => {
-          try { return fs.statSync(path.join(workspaceBase, d)).isDirectory(); } catch { return false; }
-        });
-      } catch {}
-    }
-    const targetTenants = Array.from(new Set([tenantId, 'default_user', 'os', ...allWorkspaceDirs].filter(Boolean)));
-    let allProjects: any[] = [];
-    for (const tid of targetTenants) {
-      const projs = syncProjectsDb(tid);
-      allProjects = [...allProjects, ...projs];
-    }
-    const uniqueProjects = Array.from(new Map(allProjects.map((p: any) => [p.name || p.id, p])).values());
-    res.json({ ok: true, projects: uniqueProjects });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
+  res.json({ ok: true, projects: [] });
 });
 
 app.post("/api/db/projects", (req, res) => {
@@ -1101,8 +1075,7 @@ app.post("/api/db/projects", (req, res) => {
       return res.status(400).json({ ok: false, error: "Project name is required" });
     }
     const { projectName: safeName } = ensureProjectDirs(tenantId, projectName);
-    const projects = syncProjectsDb(tenantId);
-    res.json({ ok: true, projects, projectName: safeName });
+    res.json({ ok: true, projects: [], projectName: safeName });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -2695,15 +2668,14 @@ app.post("/api/db/raw-data", async (req, res) => {
 
     console.log(`🔌 [hybrid-storage] Structured metadata saved to Supabase (id: ${entry.id})`);
 
-    // Ensure raw dataset file is stored in projects/<project_name>/data/
+    // Store raw dataset file
     const projectName = metadata?.project_name || metadata?.project || req.body?.project_name || 'default_project';
     const { dataDir } = ensureProjectDirs(tenantId, projectName);
     try {
       const targetFilePath = path.join(dataDir, `${entry.id}_${finalName.replace(/[^a-zA-Z0-9_\-\.]/g, '_')}`);
       fs.writeFileSync(targetFilePath, finalContent, 'utf8');
-      syncProjectsDb(tenantId);
     } catch (fsErr) {
-      console.warn(`⚠️ Could not write local project data file:`, fsErr);
+      console.warn(`⚠️ Could not write local dataset file:`, fsErr);
     }
 
     // 2. Upload raw document content to tenant-isolated GCS bucket (CMEK configured)
@@ -2822,7 +2794,7 @@ app.post(["/api/db/artifacts", "/api/db/system-components"], async (req, res) =>
 
     console.log(`🔌 [hybrid-storage-system] Structured artifact saved (id: ${entry.id}, type: ${finalArtifactType})`);
 
-    // Ensure artifact file is stored in projects/<project_name>/artifacts/<artifact_name>/
+    // Store artifact file in Deliverables execution space
     const projectName = metadata?.project_name || metadata?.project || req.body?.project_name || 'default_project';
     const artifactName = finalName.replace(/\.(ts|js|json|md|txt|yaml|yml)$/, '');
     const { artifactDir } = ensureProjectDirs(tenantId, projectName, artifactName);
@@ -2831,7 +2803,6 @@ app.post(["/api/db/artifacts", "/api/db/system-components"], async (req, res) =>
         const ext = finalName.includes('.') ? '' : (finalArtifactType === 'document' || finalArtifactType === 'plan' ? '.md' : '.ts');
         const artFilePath = path.join(artifactDir, `${finalName}${ext}`);
         fs.writeFileSync(artFilePath, finalCode, 'utf8');
-        syncProjectsDb(tenantId);
       } catch (sysErr) {
         console.warn(`⚠️ Could not write local artifact file:`, sysErr);
       }
@@ -3577,11 +3548,11 @@ app.post(["/api/user/:tenantId/harness/config", "/api/workspace/:tenantId/harnes
   }
 });
 
-// GET /api/user/:tenantId/db/runtime - Read workspace db/runtime.json (agent suggestions, backlogs, review_queues)
+// GET /api/user/:tenantId/db/runtime - Read workspace runtime.json (agent suggestions, backlogs, review_queues)
 app.get(["/api/user/:tenantId/db/runtime", "/api/workspace/:tenantId/db/runtime"], (req, res) => {
   try {
     const tenantId = req.params.tenantId || 'default_user';
-    const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'db', 'runtime.json');
+    const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'runtime.json');
     if (!fs.existsSync(runtimePath)) {
       return res.json({ ok: true, tenantId, runtime: { suggestions: [], backlogs: [], review_queues: [], recent_events: [] } });
     }
@@ -3592,12 +3563,12 @@ app.get(["/api/user/:tenantId/db/runtime", "/api/workspace/:tenantId/db/runtime"
   }
 });
 
-// POST /api/user/:tenantId/db/runtime - Write/merge workspace db/runtime.json (agent or UI updates)
+// POST /api/user/:tenantId/db/runtime - Write/merge workspace runtime.json (agent or UI updates)
 app.post(["/api/user/:tenantId/db/runtime", "/api/workspace/:tenantId/db/runtime"], (req, res) => {
   try {
     const tenantId = req.params.tenantId || 'default_user';
     const updates = req.body || {};
-    const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'db', 'runtime.json');
+    const runtimePath = path.join(process.cwd(), 'workspaces', tenantId, 'runtime.json');
     let existing: any = { suggestions: [], backlogs: [], review_queues: [], recent_events: [] };
     if (fs.existsSync(runtimePath)) {
       try { existing = JSON.parse(fs.readFileSync(runtimePath, 'utf8')); } catch {}
@@ -3611,11 +3582,11 @@ app.post(["/api/user/:tenantId/db/runtime", "/api/workspace/:tenantId/db/runtime
   }
 });
 
-// GET /api/user/:tenantId/db/settings - Read workspace db/settings.json (read-only agent config)
+// GET /api/user/:tenantId/db/settings - Read workspace settings.json (read-only agent config)
 app.get(["/api/user/:tenantId/db/settings", "/api/workspace/:tenantId/db/settings"], (req, res) => {
   try {
     const tenantId = req.params.tenantId || 'default_user';
-    const settingsPath = path.join(process.cwd(), 'workspaces', tenantId, 'db', 'settings.json');
+    const settingsPath = path.join(process.cwd(), 'workspaces', tenantId, 'settings.json');
     if (!fs.existsSync(settingsPath)) {
       return res.json({ ok: true, tenantId, settings: {} });
     }

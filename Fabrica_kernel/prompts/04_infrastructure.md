@@ -71,9 +71,10 @@ workspaces/<tenant_id>/
 │   ├── skills/                     # User-defined custom skills
 │   └── extensions/                 # User-defined custom extensions
 │
+├── settings.json                   # Read-only configuration (Language, internet access, autonomy, capabilities, subscription, quota, alerts)
+├── runtime.json                    # Read-Write runtime state (Suggestions, backlogs, review queues, recent_events)
+│
 ├── db/                             # Structured States and Mappings
-│   ├── settings.json               # Read-only configuration (Language, internet access, autonomy, capabilities, subscription, quota, alerts)
-│   ├── runtime.json                # Read-Write runtime state (Suggestions, backlogs, review queues, recent_events)
 │   ├── sources.json                # Data Sources & Analytical Inputs state mapping
 │   ├── deliverables.json           # Deliverables & Production Assets state mapping
 │   └── missions.json               # Mission states & mappings
@@ -105,7 +106,7 @@ workspaces/<tenant_id>/
    - System pauses at QA gates and planning proposals, requiring manual user approval before advancing phases.
 
 ### App Configuration & State Mirroring API
-User configuration and state persist across sign-out and re-login sessions and mirror automatically into `db/settings.json`, `db/runtime.json`, `db/sources.json`, `db/deliverables.json`, and `db/missions.json`:
+User configuration and state persist across sign-out and re-login sessions and mirror automatically into `settings.json`, `runtime.json`, `db/sources.json`, `db/deliverables.json`, and `db/missions.json`:
 
 - **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/prompts/` (loaded by system prompt extensions) and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/context/agents-md` and `POST /api/context/agents-md`.
 - **Tenant-Isolated Endpoints**:

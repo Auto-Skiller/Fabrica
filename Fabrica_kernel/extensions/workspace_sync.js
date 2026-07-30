@@ -6,7 +6,7 @@ import path from 'path';
  * Event hooks: `message_end` and `agent_end`
  *
  * After each agent message/turn completes, parses response text and updates
- * `db/runtime.json` for the workspace:
+ * `runtime.json` for the workspace:
  *   - suggestions[]    : next-step recommendation cards
  *   - backlogs[]       : pending tasks the agent identified
  *   - review_queues[]  : items requiring human-in-the-loop approval
@@ -27,16 +27,20 @@ export default function workspaceSyncExtension(pi) {
 
     let runtimePath = null;
     for (const d of candidateDirs) {
-      const p = path.join(d, 'db', 'runtime.json');
-      if (fs.existsSync(p)) {
-        runtimePath = p;
+      const p1 = path.join(d, 'runtime.json');
+      const p2 = path.join(d, 'db', 'runtime.json');
+      if (fs.existsSync(p1)) {
+        runtimePath = p1;
+        break;
+      } else if (fs.existsSync(p2)) {
+        runtimePath = p2;
         break;
       }
     }
 
     if (!runtimePath) {
       const targetDir = cwd || process.cwd();
-      runtimePath = path.join(targetDir, 'db', 'runtime.json');
+      runtimePath = path.join(targetDir, 'runtime.json');
     }
 
     try {
@@ -128,30 +132,6 @@ export default function workspaceSyncExtension(pi) {
         );
       }
 
-      // ── 6. Parse [PROJECT: Name | Description] ────────────────────────
-      const projectRegex = /\[PROJECT:\s*([^\]|]+?)(?:\s*\|\s*([^\]]+?))?\]/gi;
-      const projectsToSync = [];
-      while ((match = projectRegex.exec(responseText)) !== null) {
-        const name = match[1].trim();
-        const description = (match[2] || '').trim();
-        projectsToSync.push({ id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name, description, status: 'active', created_at: now });
-      }
-
-      if (projectsToSync.length > 0) {
-        for (const cd of candidateDirs) {
-          const projsPath = path.join(cd, 'db', 'projects.json');
-          let projs = [];
-          if (fs.existsSync(projsPath)) {
-            try { projs = JSON.parse(fs.readFileSync(projsPath, 'utf8')); } catch {}
-          }
-          for (const p of projectsToSync) {
-            if (!projs.some(item => item.name === p.name)) projs.push(p);
-          }
-          fs.mkdirSync(path.dirname(projsPath), { recursive: true });
-          fs.writeFileSync(projsPath, JSON.stringify(projs, null, 2), 'utf8');
-        }
-      }
-
       // ── 7. Parse [MISSION: Title | Objective | Category] ──────────────
       const missionRegex = /\[MISSION:\s*([^\]|]+?)(?:\s*\|\s*([^\]|]+?))?(?:\s*\|\s*([^\]]+?))?\]/gi;
       const missionsToSync = [];
@@ -198,7 +178,7 @@ export default function workspaceSyncExtension(pi) {
 
       // ── 9. Save runtime.json to ALL candidate directories ─────────────
       for (const cd of candidateDirs) {
-        const p = path.join(cd, 'db', 'runtime.json');
+        const p = path.join(cd, 'runtime.json');
         try {
           fs.mkdirSync(path.dirname(p), { recursive: true });
           fs.writeFileSync(p, JSON.stringify(runtime, null, 2), 'utf8');

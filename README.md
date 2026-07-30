@@ -69,10 +69,13 @@ Fabrica/
 │   │   ├── 06_modes.md        # Execution modes, phase planning & execution workflows
 │   │   └── 07_app_guide.md    # 3-Panel Workspace UI guide & overlay panel
 │   └── skills/                # 12 Read-only Built-in Kernel System Skills
-├── workspaces/<tenant_id>/    # Clean 4-Directory Isolated User Workspace
+├── workspaces/<tenant_id>/    # Clean Isolated User Workspace
 │   ├── .pi/                   # PI Agent workspace skills, extensions, & auth
-│   ├── db/                    # SQLite & JSON persistence engine (runtime.json, projects.json, etc.)
-│   ├── projects/              # Project datasets & system code components
+│   ├── settings.json          # Read-only configuration (Language, autonomy, capabilities, subscription)
+│   ├── runtime.json           # Agent runtime state (Suggestions, backlogs, review queues, recent events)
+│   ├── db/                    # JSON persistence engine (missions.json, etc.)
+│   ├── Sources/               # Data Sources & Inputs Ecosystem
+│   ├── Deliverables/          # Production Assets & Execution Outputs
 │   └── missions/              # Real-time sync mission planning & execution space
 ├── src/                       # Enterprise Backend Services
 │   ├── harness.ts             # User workspace harness & execution options

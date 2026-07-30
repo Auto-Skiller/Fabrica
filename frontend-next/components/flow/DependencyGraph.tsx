@@ -75,14 +75,14 @@ export default function DependencyGraph({ rawDataList, systemComponents }: Depen
   const nodes: GraphNode[] = [
     ...safeRawDataList.map((rd) => ({
       id: `data-${rd.id}`,
-      name: rd.name || 'Data Asset',
+      name: rd.name || 'Source Asset',
       type: 'data' as const,
       status: rd.metadata?.status || 'new',
       original: rd,
     })),
     ...safeSystemComponents.map((sc) => ({
       id: `system-${sc.id}`,
-      name: sc.name || 'System Component',
+      name: sc.name || 'Deliverable Artifact',
       type: 'system' as const,
       status: sc.status || 'new',
       original: sc,
@@ -730,7 +730,7 @@ export default function DependencyGraph({ rawDataList, systemComponents }: Depen
                 borderRadius: '2px',
                 fontFamily: 'var(--mono)'
               }}>
-                {selectedNode.type} Component
+                {selectedNode.type === 'system' ? 'Deliverable' : 'Source'} Artifact
               </span>
               <h4 style={{ margin: '2px 0 0', fontSize: '10px', fontWeight: 800, color: 'var(--text)' }}>
                 {selectedNode.name}
@@ -746,7 +746,7 @@ export default function DependencyGraph({ rawDataList, systemComponents }: Depen
 
           <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.2' }}>
             {selectedNode.type === 'system' 
-              ? `Role: ${selectedNode.original?.role || 'System Component Integration'}` 
+              ? `Role: ${selectedNode.original?.role || 'Deliverable Artifact Integration'}` 
               : `Content: ${selectedNode.original?.content ? selectedNode.original.content.substring(0, 60) + '...' : 'Empty File'}`}
           </p>
 

@@ -1,0 +1,37 @@
+{
+  "language": "EN",
+  "internet_access": true,
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "subscription": {
+    "plan": "Professional",
+    "active": true
+  },
+  "quota": {
+    "monthly_tokens": 1000000,
+    "used_tokens": 0
+  },
+  "alerts": [],
+  "autonomy": "semi-autonomous",
+  "theme": "dark",
+  "ui_lang": "EN",
+  "layout": {
+    "leftSideW": 31,
+    "sideW": 27,
+    "minCenter": true,
+    "minSide": false,
+    "leftTab": "agent",
+    "chatInputHeight": 36,
+    "agentWin": {
+      "x": 100,
+      "y": 150,
+      "w": 380,
+      "h": 480
+    },
+    "agentBtnWin": {
+      "x": 20,
+      "y": 550
+    }
+  }
+}

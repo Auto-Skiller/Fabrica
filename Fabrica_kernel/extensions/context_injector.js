@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
  *
  * Dynamically loads and injects:
  *   1. Kernel system prompt files from Fabrica_kernel/prompts/
- *   2. Active workspace state & recent events from db/runtime.json
+ *   2. Active workspace state & recent events from runtime.json
  */
 export default function contextInjectorExtension(pi) {
   if (!pi || typeof pi.on !== 'function') return;
@@ -43,12 +43,13 @@ export default function contextInjectorExtension(pi) {
       console.warn('[context_injector] Failed loading kernel prompts:', err.message);
     }
 
-    // ── 2. Load workspace runtime context from db/runtime.json ─────────
+    // ── 2. Load workspace runtime context from runtime.json ─────────
     const cwd = event.systemPromptOptions?.cwd || ctx?.cwd || process.cwd();
     const candidateRuntimePaths = [
+      path.join(cwd, 'runtime.json'),
       path.join(cwd, 'db', 'runtime.json'),
-      path.join(process.cwd(), 'db', 'runtime.json'),
-      path.join(process.cwd(), 'workspaces', 'default_user', 'db', 'runtime.json')
+      path.join(process.cwd(), 'runtime.json'),
+      path.join(process.cwd(), 'workspaces', 'default_user', 'runtime.json')
     ];
 
     const runtimePath = candidateRuntimePaths.find(p => fs.existsSync(p));

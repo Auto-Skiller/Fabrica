@@ -17,6 +17,7 @@ import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } f
 import { UserHarnessService } from '../../lib/user-harness';
 import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../lib/workspace-api';
 import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../lib/github-api';
+import JSZip from 'jszip';
 
 const consolidatedWorkflows = [
   {
@@ -224,8 +225,8 @@ const DASHBOARD_TEXT = {
     colPlanning: '📋 PLANNING',
     colExecution: '⚡ EXECUTION',
     colDone: '✅ DONE',
-    yourData: 'Your Data',
-    yourSystems: 'Your Projects',
+    yourData: 'Sources',
+    yourSystems: 'Deliveries',
     importBtn: '📥 Import',
     exportBtn: '📤 Export',
     userLabel: 'You',
@@ -419,9 +420,9 @@ const DASHBOARD_TEXT = {
     missionCategoryType: "Mission Category / Type",
     priorityLevel: "Priority Level",
     kanbanLaneStatus: "📋 Kanban Lane Status",
-    lineageLogicTitle: "💡 FABRICA LINEAGE LOGIC",
-    rawDataExplain: "📁 Raw Data: Passive information assets (customer chats history, ads performance records, master product catalogs, emails/phones list).",
-    systemCompExplain: "⚙️ System Components: Active business apps & tools running operations on your records (the storefront website code, the autonomous sales agent, tool that sends transactional emails).",
+    lineageLogicTitle: "💡 FABRICA SOURCES & DELIVERIES LOGIC",
+    rawDataExplain: "📥 Sources: Structured & unstructured context assets (Discovery & Scoping, Deep Research, Data Analysis, Strategic Synthesis).",
+    systemCompExplain: "📦 Deliveries: Executable codebases, database schemas, automations, and review gates (Executions, Reviews, Completed).",
     blueprintLineageMap: "🗺️ Blueprint Lineage Map",
     showingPortfolio: "👁️ Showing Portfolio",
     filteredToMission: "🔗 Filtered to Mission"
@@ -448,8 +449,8 @@ const DASHBOARD_TEXT = {
     colPlanning: '📋 PLANIFICATION',
     colExecution: '⚡ EXÉCUTION',
     colDone: '✅ TERMINÉ',
-    yourData: 'Vos Données',
-    yourSystems: 'Vos Projets',
+    yourData: 'Sources',
+    yourSystems: 'Livrables',
     importBtn: '📥 Importer',
     exportBtn: '📤 Exporter',
     userLabel: 'Vous',
@@ -643,9 +644,9 @@ const DASHBOARD_TEXT = {
     missionCategoryType: "Catégorie / Type de Mission",
     priorityLevel: "Niveau de Priorité",
     kanbanLaneStatus: "📋 Statut de la Colonne Kanban",
-    lineageLogicTitle: "💡 LOGIQUE DE LINÉAGE FABRICA",
-    rawDataExplain: "📁 Données Brutes : Actifs d’information passifs (historique de chat, performances pub, catalogues, listes).",
-    systemCompExplain: "⚙️ Composants Système : Applications & outils métier actifs exécutant des opérations sur vos enregistrements.",
+    lineageLogicTitle: "💡 LOGIQUE SOURCES & LIVRABLES FABRICA",
+    rawDataExplain: "📥 Sources : Actifs de contexte et recherche (Découverte & Cadrage, Recherche Approfondie, Analyse de Données, Synthèse Stratégique).",
+    systemCompExplain: "📦 Livrables : Code exécutable, schémas de BDD, automatisations et révisions (Exécutions, Révisions, Terminé).",
     blueprintLineageMap: "🗺️ Carte de Linéage du Blueprint",
     showingPortfolio: "👁️ Affichage du Portefeuille",
     filteredToMission: "🔗 Filtré sur la Mission"
@@ -672,8 +673,8 @@ const DASHBOARD_TEXT = {
     colPlanning: '📋 تخطيط',
     colExecution: '⚡ تنفيذ',
     colDone: '✅ مكتمل',
-    yourData: 'بياناتك',
-    yourSystems: 'مشاريعك',
+    yourData: 'المصادر',
+    yourSystems: 'المخرجات',
     importBtn: '📥 استيراد',
     exportBtn: '📤 تصدير',
     userLabel: 'أنت',
@@ -867,9 +868,9 @@ const DASHBOARD_TEXT = {
     missionCategoryType: "فئة / نوع المهمة",
     priorityLevel: "مستوى الأولوية",
     kanbanLaneStatus: "📋 حالة عمود كانبان",
-    lineageLogicTitle: "💡 منطق تسلسل FABRICA",
-    rawDataExplain: "📁 البيانات الخام: أصول معلومات غير نشطة (سجل المحادثات، أداء الإعلانات، الكتالوجات، القوائم).",
-    systemCompExplain: "⚙️ مكونات النظام: تطبيقات وأدوات الأعمال النشطة التي تشغل العمليات على سجلاتك.",
+    lineageLogicTitle: "💡 منطق المصادر والمخرجات في FABRICA",
+    rawDataExplain: "📥 المصادر: أصول السياق والأبحاث (الاستكشاف والتحديد، البحث العميق، تحليل البيانات، التركيب الاستراتيجي).",
+    systemCompExplain: "📦 المخرجات: البرمجيات القابلة للتنفيذ، قواعد البيانات، الأتمتة ومراحل المراجعة (التنفيذ، المراجعات، المكتمل).",
     blueprintLineageMap: "🗺️ خريطة تسلسل المخطط",
     showingPortfolio: "👁️ عرض المحفظة",
     filteredToMission: "🔗 مصفاة حسب المهمة"
@@ -1555,6 +1556,93 @@ export default function Dashboard() {
     'verification': true,
     'review': true
   });
+
+  // Loop / Stage Dependency Engine State: Tracks processed items per stage/loop to prevent redundant re-processing and force continuous evolution
+  const [processedStageItems, setProcessedStageItems] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('fabrica_stage_dependency_processed_items');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      discovery_scoping: [],
+      deep_research: [],
+      data_analysis: [],
+      strategic_synthesis: [],
+      execution: [],
+      verification: [],
+      review: []
+    };
+  });
+
+  const [forceContinuousEvolution, setForceContinuousEvolution] = useState<boolean>(true);
+  const [isDependencyEngineModalOpen, setIsDependencyEngineModalOpen] = useState<boolean>(false);
+  const [dependencyEngineActiveTab, setDependencyEngineActiveTab] = useState<'matrix' | 'graph' | 'settings'>('matrix');
+  const [dependencyEngineSearch, setDependencyEngineSearch] = useState<string>('');
+  const [selectedStageForContextBinding, setSelectedStageForContextBinding] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fabrica_stage_dependency_processed_items', JSON.stringify(processedStageItems));
+    }
+  }, [processedStageItems]);
+
+  const toggleItemProcessedForStage = (itemId: string, stageKey: string) => {
+    setProcessedStageItems(prev => {
+      const currentList = prev[stageKey] || [];
+      const exists = currentList.includes(itemId);
+      const nextList = exists ? currentList.filter(id => id !== itemId) : [...currentList, itemId];
+      return { ...prev, [stageKey]: nextList };
+    });
+  };
+
+  const isItemProcessedInStage = (itemId: string, stageKey?: string): boolean => {
+    if (stageKey) {
+      return (processedStageItems[stageKey] || []).includes(itemId);
+    }
+    return Object.values(processedStageItems).some(list => list.includes(itemId));
+  };
+
+  const getStagesWhereItemProcessed = (itemId: string): string[] => {
+    const stages: string[] = [];
+    Object.entries(processedStageItems).forEach(([stg, ids]) => {
+      if (ids.includes(itemId)) stages.push(stg);
+    });
+    return stages;
+  };
+
+  const resetStageProcessedMemory = (stageKey?: string) => {
+    if (stageKey) {
+      setProcessedStageItems(prev => ({ ...prev, [stageKey]: [] }));
+      setToast({ message: `Reset processed item memory for stage "${stageKey}"`, type: 'info', isOpen: true });
+    } else {
+      setProcessedStageItems({
+        discovery_scoping: [],
+        deep_research: [],
+        data_analysis: [],
+        strategic_synthesis: [],
+        execution: [],
+        verification: [],
+        review: []
+      });
+      setToast({ message: 'Cleared processed item memory across all pipeline loops & stages', type: 'info', isOpen: true });
+    }
+  };
+
+  const markAllSubSecItemsProcessed = (secItems: any[], stageKey: string, processed: boolean) => {
+    const itemIds = secItems.map(i => i.id);
+    setProcessedStageItems(prev => {
+      const current = prev[stageKey] || [];
+      let next: string[];
+      if (processed) {
+        next = Array.from(new Set([...current, ...itemIds]));
+      } else {
+        next = current.filter(id => !itemIds.includes(id));
+      }
+      return { ...prev, [stageKey]: next };
+    });
+  };
 
   // Markdown board states
   const [boardContent, setBoardContent] = useState<string>('');
@@ -2430,7 +2518,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         setSelectedProjectName(res.projectName || proj);
         setNewProjectNameInput('');
         setIsCreatingProjectModal(false);
-        setToast({ message: `Project "${res.projectName || proj}" created & synced with projects/ & projects.json!`, type: 'success', isOpen: true });
+        setToast({ message: `Project "${res.projectName || proj}" created successfully!`, type: 'success', isOpen: true });
         fetchWorkspaceData();
       }
     } catch (e: any) {
@@ -3935,6 +4023,73 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
       setToast({ message: `Failed to export component to GitHub: ${err.message}`, type: 'error', isOpen: true });
     } finally {
       setIsExportingGithub(false);
+    }
+  };
+
+  const handleDownloadFilesAndFolders = async () => {
+    if (!modalSubSectionContext) return;
+    const { sectionType, subSectionKey, subSectionLabel, secItems } = modalSubSectionContext;
+    const isSources = sectionType === 'sources';
+    const currentSelectedIds = isSources ? exportSelectedSourceIds : exportSelectedDeliverableIds;
+    const itemsToExport = (secItems || []).filter((item: any) => currentSelectedIds.includes(item.id));
+
+    if (itemsToExport.length === 0) {
+      setToast({ message: `Please select at least one item to export from ${subSectionLabel}`, type: 'error', isOpen: true });
+      return;
+    }
+
+    try {
+      if (itemsToExport.length === 1 && (!itemsToExport[0].metadata?.files || itemsToExport[0].metadata?.files.length === 0)) {
+        // Direct single file download (files, not json)
+        const singleItem = itemsToExport[0];
+        const singleFileName = singleItem.name || `export_${subSectionKey}.txt`;
+        const singleContent = singleItem.content || singleItem.code_snapshot || (typeof singleItem.data === 'string' ? singleItem.data : JSON.stringify(singleItem.data || singleItem, null, 2));
+
+        const blob = new Blob([singleContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = singleFileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        setToast({ message: `Downloaded file "${singleFileName}"!`, type: 'success', isOpen: true });
+      } else {
+        // Zip archive containing real files and folders (not json)
+        const zip = new JSZip();
+
+        for (const item of itemsToExport) {
+          const itemProj = item.metadata?.project_name || item.metadata?.project || 'default_project';
+          const sub = item.metadata?.sub_section || item.sub_section || subSectionKey;
+          const fileName = item.name || `item_${item.id}`;
+          const folderPath = `projects/${itemProj}/${sectionType}/${sub}`;
+
+          const fileContent = item.content || item.code_snapshot || (typeof item.data === 'string' ? item.data : JSON.stringify(item.data || item, null, 2));
+
+          if (item.metadata?.files && Array.isArray(item.metadata.files) && item.metadata.files.length > 0) {
+            for (const f of item.metadata.files) {
+              zip.file(`${folderPath}/${fileName}/${f.path || f.name}`, f.content || '');
+            }
+          } else {
+            zip.file(`${folderPath}/${fileName}`, fileContent);
+          }
+        }
+
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `fabrica_${sectionType}_${subSectionKey}_export.zip`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        setToast({ message: `Downloaded ${itemsToExport.length} file(s) & folder(s) as ZIP archive!`, type: 'success', isOpen: true });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setToast({ message: `Failed to download: ${err.message}`, type: 'error', isOpen: true });
     }
   };
 
@@ -8228,7 +8383,7 @@ ${isDirector ? `
                     </button>
                     <button
                       onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json and sync with projects/.');
+                        setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json.');
                         setToast({ message: 'Added Storage Directive snippet!', type: 'info', isOpen: true });
                       }}
                       style={{
@@ -8964,6 +9119,8 @@ ${isDirector ? `
                   <span>⚡</span>
                   <span>EFFORT</span>
                 </button>
+
+
               </div>
 
               {/* Right Group: Filters and Sorting Minimized in 1 Single Line */}
@@ -9815,13 +9972,17 @@ ${isDirector ? `
                                 </button>
                                 <button
                                   onClick={() => {
+                                    const selectedInSubSec = secItems.filter((i: any) => exportSelectedSourceIds.includes(i.id));
+                                    if (selectedInSubSec.length === 0) {
+                                      const allSecIds = secItems.map((i: any) => i.id);
+                                      setExportSelectedSourceIds(prev => Array.from(new Set([...prev, ...allSecIds])));
+                                    }
                                     setModalSubSectionContext({
                                       sectionType: 'sources',
                                       subSectionKey: sec.key,
                                       subSectionLabel: sec.label,
                                       secItems: secItems
                                     });
-                                    setExportSelectedSourceIds(secItems.map(i => i.id));
                                     setIsExportModalOpen(true);
                                   }}
                                   style={{
@@ -9914,13 +10075,43 @@ ${isDirector ? `
 
                                         {/* Disk Path Badge */}
                                         <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          📁 projects/{itemProj}/sources/{subSec}/{rd.name}
+                                          📁 sources/{subSec}/{rd.name}
                                         </span>
 
                                         {/* Stage/Loop Dependency Badge */}
-                                        <span style={{ fontSize: '6px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 3px', borderRadius: '2px', border: '1px solid var(--border-soft)', width: 'fit-content' }}>
-                                          🔗 {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                                          <span style={{ fontSize: '6px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 3px', borderRadius: '2px', border: '1px solid var(--border-soft)', width: 'fit-content' }}>
+                                            🔗 {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
+                                          </span>
+
+                                          {/* Dependency Engine Processed Badge */}
+                                          {(() => {
+                                            const processedStages = getStagesWhereItemProcessed(rd.id);
+                                            const isProcessed = processedStages.length > 0;
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() => toggleItemProcessedForStage(rd.id, subSec)}
+                                                style={{
+                                                  fontSize: '6px',
+                                                  fontWeight: 800,
+                                                  padding: '1px 3px',
+                                                  borderRadius: '2px',
+                                                  border: isProcessed ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(245,158,11,0.35)',
+                                                  background: isProcessed ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                                  color: isProcessed ? '#10b981' : '#f59e0b',
+                                                  cursor: 'pointer',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '2px'
+                                                }}
+                                                title={isProcessed ? `Processed in stage: ${processedStages.join(', ')}. Click to toggle.` : 'Unprocessed - Click to toggle processed state in dependency engine.'}
+                                              >
+                                                {isProcessed ? `✅ Processed (${processedStages.length})` : '⚡ Unprocessed'}
+                                              </button>
+                                            );
+                                          })()}
+                                        </div>
                                       </div>
 
                                       {/* Action Bar */}
@@ -10312,13 +10503,17 @@ ${isDirector ? `
                                 </button>
                                 <button
                                   onClick={() => {
+                                    const selectedInSubSec = secItems.filter((i: any) => exportSelectedDeliverableIds.includes(i.id));
+                                    if (selectedInSubSec.length === 0) {
+                                      const allSecIds = secItems.map((i: any) => i.id);
+                                      setExportSelectedDeliverableIds(prev => Array.from(new Set([...prev, ...allSecIds])));
+                                    }
                                     setModalSubSectionContext({
                                       sectionType: 'deliverables',
                                       subSectionKey: sec.key,
                                       subSectionLabel: sec.label,
                                       secItems: secItems
                                     });
-                                    setExportSelectedDeliverableIds(secItems.map(i => i.id));
                                     setIsExportModalOpen(true);
                                   }}
                                   style={{
@@ -10401,13 +10596,43 @@ ${isDirector ? `
 
                                         {/* Disk Path Badge */}
                                         <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          📁 projects/{itemProj}/deliverables/{subSec}/{sc.name}
+                                          📁 deliverables/{subSec}/{sc.name}
                                         </span>
 
                                         {/* Stage/Loop Dependency Badge */}
-                                        <span style={{ fontSize: '6px', color: '#10b981', fontFamily: 'var(--mono)', background: 'rgba(16,185,129,0.06)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
-                                          🛡️ Quality Gate: Passed
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                                          <span style={{ fontSize: '6px', color: '#10b981', fontFamily: 'var(--mono)', background: 'rgba(16,185,129,0.06)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
+                                            🛡️ Quality Gate: Passed
+                                          </span>
+
+                                          {/* Dependency Engine Processed Badge */}
+                                          {(() => {
+                                            const processedStages = getStagesWhereItemProcessed(sc.id);
+                                            const isProcessed = processedStages.length > 0;
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() => toggleItemProcessedForStage(sc.id, subSec)}
+                                                style={{
+                                                  fontSize: '6px',
+                                                  fontWeight: 800,
+                                                  padding: '1px 3px',
+                                                  borderRadius: '2px',
+                                                  border: isProcessed ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(59,130,246,0.35)',
+                                                  background: isProcessed ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)',
+                                                  color: isProcessed ? '#10b981' : '#3b82f6',
+                                                  cursor: 'pointer',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '2px'
+                                                }}
+                                                title={isProcessed ? `Processed in stage: ${processedStages.join(', ')}. Click to toggle.` : 'Unprocessed - Click to toggle processed state.'}
+                                              >
+                                                {isProcessed ? `✅ Processed (${processedStages.length})` : '📦 Deliverable Output'}
+                                              </button>
+                                            );
+                                          })()}
+                                        </div>
                                       </div>
 
                                       {/* Actions Bar */}
@@ -14815,60 +15040,166 @@ ${isDirector ? `
               flexDirection: 'column',
               gap: '16px'
             }}>
-              {modalSubSectionContext && (
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.08)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '8px'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text-bright)' }}>
-                      Sub-Section Context: <b style={{ color: '#10b981' }}>{modalSubSectionContext.subSectionLabel}</b> ({modalSubSectionContext.sectionType.toUpperCase()})
-                    </span>
-                    <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
-                      {modalSubSectionContext.secItems?.length || 0} item(s) selected for export
-                    </span>
+              {modalSubSectionContext && (() => {
+                const subSecItems = modalSubSectionContext.secItems || [];
+                const isSources = modalSubSectionContext.sectionType === 'sources';
+                const currentSelectedIds = isSources ? exportSelectedSourceIds : exportSelectedDeliverableIds;
+                const selectedSubItems = subSecItems.filter((i: any) => currentSelectedIds.includes(i.id));
+
+                const handleToggleSelectAll = () => {
+                  if (selectedSubItems.length === subSecItems.length) {
+                    if (isSources) {
+                      setExportSelectedSourceIds(prev => prev.filter(id => !subSecItems.some((i: any) => i.id === id)));
+                    } else {
+                      setExportSelectedDeliverableIds(prev => prev.filter(id => !subSecItems.some((i: any) => i.id === id)));
+                    }
+                  } else {
+                    const allSubIds = subSecItems.map((i: any) => i.id);
+                    if (isSources) {
+                      setExportSelectedSourceIds(prev => Array.from(new Set([...prev, ...allSubIds])));
+                    } else {
+                      setExportSelectedDeliverableIds(prev => Array.from(new Set([...prev, ...allSubIds])));
+                    }
+                  }
+                };
+
+                return (
+                  <div style={{
+                    background: 'rgba(16, 185, 129, 0.06)',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    borderRadius: '8px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    {/* Top Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                          Export Sub-Section: <b style={{ color: '#10b981' }}>{modalSubSectionContext.subSectionLabel}</b> ({modalSubSectionContext.sectionType.toUpperCase()})
+                        </span>
+                        <span style={{ fontSize: '8.5px', color: 'var(--muted)', fontWeight: 700 }}>
+                          {selectedSubItems.length} of {subSecItems.length} item(s) selected
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={handleToggleSelectAll}
+                          style={{
+                            background: 'var(--surface-alt)',
+                            border: '1px solid var(--border-soft)',
+                            color: 'var(--text-bright)',
+                            fontSize: '8px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {selectedSubItems.length === subSecItems.length ? '☐ Deselect All' : '☑ Select All'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDownloadFilesAndFolders}
+                          disabled={selectedSubItems.length === 0}
+                          style={{
+                            background: selectedSubItems.length > 0 ? '#10b981' : 'var(--border)',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            padding: '5px 12px',
+                            borderRadius: '5px',
+                            cursor: selectedSubItems.length > 0 ? 'pointer' : 'not-allowed',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            whiteSpace: 'nowrap',
+                            boxShadow: selectedSubItems.length > 0 ? '0 2px 4px rgba(16, 185, 129, 0.25)' : 'none'
+                          }}
+                        >
+                          ⬇️ Download Files & Folders ({selectedSubItems.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Item Selection Box */}
+                    {subSecItems.length > 0 ? (
+                      <div style={{
+                        maxHeight: '140px',
+                        overflowY: 'auto',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '6px',
+                        padding: '6px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px'
+                      }}>
+                        {subSecItems.map((item: any) => {
+                          const isChecked = currentSelectedIds.includes(item.id);
+                          const itemProj = item.metadata?.project_name || item.metadata?.project || 'default_project';
+                          const subKey = item.metadata?.sub_section || item.sub_section || modalSubSectionContext.subSectionKey;
+
+                          return (
+                            <label
+                              key={item.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '5px 8px',
+                                borderRadius: '4px',
+                                background: isChecked ? 'rgba(16, 185, 129, 0.1)' : 'var(--surface-alt)',
+                                border: isChecked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-soft)',
+                                cursor: 'pointer',
+                                userSelect: 'none'
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (isSources) {
+                                    if (e.target.checked) {
+                                      setExportSelectedSourceIds(prev => [...prev, item.id]);
+                                    } else {
+                                      setExportSelectedSourceIds(prev => prev.filter(id => id !== item.id));
+                                    }
+                                  } else {
+                                    if (e.target.checked) {
+                                      setExportSelectedDeliverableIds(prev => [...prev, item.id]);
+                                    } else {
+                                      setExportSelectedDeliverableIds(prev => prev.filter(id => id !== item.id));
+                                    }
+                                  }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                              />
+                              <span style={{ fontSize: '10px' }}>{isSources ? '📄' : '📦'}</span>
+                              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {item.name}
+                                </span>
+                                <span style={{ fontSize: '7px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {modalSubSectionContext.sectionType}/{subKey}/{item.name}
+                                </span>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '8.5px', color: 'var(--muted)', fontStyle: 'italic' }}>
+                        No items found in this sub-section.
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => {
-                      const items = modalSubSectionContext.secItems || [];
-                      if (items.length === 0) {
-                        setToast({ message: `No items to export in ${modalSubSectionContext.subSectionLabel}`, type: 'info', isOpen: true });
-                        return;
-                      }
-                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
-                      const downloadAnchor = document.createElement('a');
-                      downloadAnchor.setAttribute("href", dataStr);
-                      downloadAnchor.setAttribute("download", `fabrica_${modalSubSectionContext.sectionType}_${modalSubSectionContext.subSectionKey}_export.json`);
-                      document.body.appendChild(downloadAnchor);
-                      downloadAnchor.click();
-                      downloadAnchor.remove();
-                      setToast({ message: `Exported ${items.length} items from ${modalSubSectionContext.subSectionLabel}!`, type: 'success', isOpen: true });
-                    }}
-                    style={{
-                      background: '#10b981',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: '8.5px',
-                      fontWeight: 800,
-                      padding: '4px 10px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    💾 Download JSON ({modalSubSectionContext.secItems?.length || 0})
-                  </button>
-                </div>
-              )}
+                );
+              })()}
               {selectedExportMethod === 'github' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {/* GitHub Connection Configuration */}
@@ -17414,13 +17745,13 @@ ${isDirector ? `
                     lineHeight: 1.45
                   }}>
                     <div style={{ fontWeight: 800, color: 'var(--accent-2)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
-                      <span>💡</span> FABRICA LINEAGE LOGIC
+                      <span>💡</span> {dtxt.lineageLogicTitle || 'FABRICA SOURCES & DELIVERIES LOGIC'}
                     </div>
                     <p style={{ margin: 0, color: 'var(--text)', fontSize: '9px' }}>
-                      <b style={{ color: 'var(--accent-2)' }}>📁 Raw Data:</b> Passive information assets (customer chats history, ads performance records, master product catalogs, emails/phones list).
+                      {dtxt.rawDataExplain || '📥 Sources: Structured & unstructured context assets (Discovery & Scoping, Deep Research, Data Analysis, Strategic Synthesis).'}
                     </p>
                     <p style={{ margin: '4px 0 0', color: 'var(--text)', fontSize: '9px' }}>
-                      <b style={{ color: 'var(--accent)' }}>⚙️ System Components:</b> Active business apps & tools running operations on your records (the storefront website code, the autonomous sales agent, tool that sends transactional emails).
+                      {dtxt.systemCompExplain || '📦 Deliveries: Executable codebases, database schemas, automations, and review gates (Executions, Reviews, Completed).'}
                     </p>
                   </div>
 
@@ -17703,7 +18034,7 @@ ${isDirector ? `
                           gap: '4px'
                         }}
                       >
-                        ➕ Ingest Fabrica Raw Data / Register Component
+                        ➕ Ingest Source Asset / Register Delivery
                       </button>
                     ) : (
                       <div style={{
@@ -17744,8 +18075,8 @@ ${isDirector ? `
                             }}
                             style={{ padding: '4px', fontSize: '8.5px', background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text)' }}
                           >
-                            <option value="raw_data">📁 Raw Data</option>
-                            <option value="system">⚙️ System Component</option>
+                            <option value="raw_data">📥 Source Asset</option>
+                            <option value="system">📦 Delivery Artifact</option>
                           </select>
                         </div>
 
@@ -18131,7 +18462,7 @@ ${isDirector ? `
             {/* Modal Body */}
             <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-soft)', lineHeight: 1.5 }}>
-                Creating a project provisions an isolated directory tree under <code style={{ fontFamily: 'var(--mono)', color: 'var(--accent)', background: 'var(--surface-alt)', padding: '2px 4px', borderRadius: '4px' }}>projects/&lt;project_name&gt;/</code> containing dedicated <code style={{ fontFamily: 'var(--mono)' }}>data/</code> and <code style={{ fontFamily: 'var(--mono)' }}>systems/</code> folders, synced automatically with <code style={{ fontFamily: 'var(--mono)' }}>projects.json</code>.
+                Creating a project provisions dedicated <code style={{ fontFamily: 'var(--mono)' }}>sources/</code> and <code style={{ fontFamily: 'var(--mono)' }}>deliverables/</code> workspace context.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -18161,7 +18492,7 @@ ${isDirector ? `
               <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', padding: '10px 12px', borderRadius: '8px', fontSize: '9.5px', color: '#3b82f6', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '12px' }}>💡</span>
                 <span>
-                  All uploads and generated AI systems assigned to this project will be isolated in <strong style={{ color: 'var(--text-bright)' }}>projects/{newProjectNameInput.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_') || '...'}</strong>.
+                  All uploads and generated AI systems assigned to this project will be isolated within your active workspace.
                 </span>
               </div>
             </div>

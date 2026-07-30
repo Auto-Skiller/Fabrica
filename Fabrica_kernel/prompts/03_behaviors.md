@@ -53,7 +53,7 @@ When executing a mission, running a pipeline, or responding to complex domain re
 ---
 
 ## 7. WORKSPACE ENTITY TAG NOTATION
-When the user asks you to create suggestion cards, backlog items, review queues, missions, projects, system components, or raw data items, OR when you create them during execution, output explicit structural tags in your response so the workspace database indexes them instantly:
+When the user asks you to create suggestion cards, backlog items, review queues, missions, system components, or raw data items, OR when you create them during execution, output explicit structural tags in your response so the workspace database indexes them instantly:
 - `[SUGGEST: Title | Description]` — Creates a recommendation card on Panel B.
 - `[BACKLOG: Title | Priority]` — Creates a backlog item (Priority: HIGH | MEDIUM | LOW).
 - `[REVIEW: Title | Details]` — Creates a human-in-the-loop review item requiring user approval.

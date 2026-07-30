@@ -204,6 +204,11 @@ class DatabaseEngine {
 
   private getTenantDbPath(tenantId: string, filename: string): string {
     const safeTenant = tenantId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    if (filename === 'runtime.json' || filename === 'settings.json') {
+      const userRootDir = path.join(process.cwd(), 'workspaces', safeTenant);
+      fs.mkdirSync(userRootDir, { recursive: true });
+      return path.join(userRootDir, filename);
+    }
     const dbDir = path.join(process.cwd(), 'workspaces', safeTenant, 'db');
     fs.mkdirSync(dbDir, { recursive: true });
     return path.join(dbDir, filename);
