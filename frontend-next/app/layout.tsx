@@ -12,10 +12,9 @@ const safeFetchScript = `
     var win = typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : null);
     if (!win) return;
 
-    var _fetch = win.fetch;
-
-    var fetchGetter = function() { return _fetch; };
-    var fetchSetter = function(v) { _fetch = v; };
+    var _currentFetch = win.fetch;
+    var fetchGetter = function() { return _currentFetch; };
+    var fetchSetter = function(v) { _currentFetch = v; };
 
     var targets = [
       win,
@@ -37,7 +36,7 @@ const safeFetchScript = `
       } catch (e) {
         try {
           Object.defineProperty(t, 'fetch', {
-            value: _fetch,
+            value: _currentFetch,
             writable: true,
             configurable: true,
             enumerable: true

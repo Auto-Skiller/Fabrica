@@ -348,12 +348,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2. Production Security Headers Middleware
+// 2. Production Security Headers & CORS Middleware
 app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-tenant-id, X-Requested-With, Cache-Control, Pragma');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
   next();
 });
 
@@ -363,30 +370,34 @@ app.use(async (req: any, res: any, next: any) => {
   
   if (db.getIsSupabaseEnabled()) {
     const sbClient = db.getSupabaseClient();
+    let authenticated = false;
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       try {
         const { data: { user }, error } = await sbClient.auth.getUser(token);
-        if (error || !user) {
-          console.warn('❌ [auth] Cryptographic JWT signature verification failed:', error?.message);
-          return res.status(401).json({ ok: false, error: 'Unauthorized: Invalid or expired access token.' });
-        }
-        
-        // Lock and bind the request to the verified user's tenant ID
-        req.user = user;
-        req.headers['x-tenant-id'] = user.id;
-        
-        // Also force the query parameter tenantId to prevent any bypass vectors
-        if (req.query) {
-          req.query.tenantId = user.id;
+        if (user && !error) {
+          req.user = user;
+          req.headers['x-tenant-id'] = user.id;
+          if (req.query) {
+            req.query.tenantId = user.id;
+          }
+          authenticated = true;
         }
       } catch (err: any) {
-        return res.status(401).json({ ok: false, error: 'Unauthorized: Error parsing authentication payload.' });
+        // Token verification error
       }
-    } else {
-      // If Supabase Auth is enabled, all write operations and data fetching must require authentication
+    }
+
+    if (!authenticated) {
+      if (!req.headers['x-tenant-id']) {
+        req.headers['x-tenant-id'] = 'default_user';
+      }
+      if (req.query && !req.query.tenantId) {
+        req.query.tenantId = 'default_user';
+      }
+
       const path = req.path || '';
-      // We allow standard public pages/static assets, but protect API routes starting with /api/db, /api/entity, /api/paug, /api/agent, /api/discovery, /api/research, /api/sandbox
       const isApiRoute = path.startsWith('/api/');
       const isPublicRoute = 
         path === '/api/config/providers' || 
@@ -401,10 +412,10 @@ app.use(async (req: any, res: any, next: any) => {
         path === '/api/config' ||
         path.startsWith('/api/pi/') ||
         path.startsWith('/api/db/');
-      
+
       if (isApiRoute && !isPublicRoute) {
         console.warn(`❌ [auth] Blocking unauthenticated write request to private endpoint: "${path}"`);
-        return res.status(401).json({ ok: false, error: 'Unauthorized: Authentication required (Bearer token missing).' });
+        return res.status(401).json({ ok: false, error: 'Unauthorized: Authentication required (Bearer token missing or invalid).' });
       }
     }
   } else {
