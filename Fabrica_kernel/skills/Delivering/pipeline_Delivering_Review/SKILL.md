@@ -18,7 +18,10 @@ It is global, domain-agnostic, and outcome-driven. Its primary objective is to p
 1. **Present Deliverable for Review**: Format release notes, key changes, and verification proof for items sitting in **Deliverables / Reviews**.
 2. **User Gate Check & Review Handling**:
    - **IF USER ACCEPTS**: Promote deliverable from **Deliverables / Reviews** to **Deliverables / Completed**, log final release event, and archive mission state.
-   - **IF USER PROVIDES FEEDBACK**: Move item from **Deliverables / Reviews** back to **Deliverables / Executions** and restart the Execution generation loop with user feedback notes.
+   - **IF USER PROVIDES FEEDBACK (Not Accepted)**:
+     - **Work Relocation**: Work is **ALWAYS moved to Deliverables / Executions** when review is not accepted.
+     - **Custom Entry Loop Selection**: The user may optionally select a **Custom Entry** (any loop or stage feedback entry point, e.g. Drafting/Discovery, Planning/Strategic Synthesis, or Execution) to continue processing the full loop from that entry point based on their feedback.
+     - **Default Loop**: If no custom entry is selected by the user, the default behavior is to continue processing the full **Execution loop** based on their feedback.
 
 ## 4. Dynamic Skill Routing & Domain Mappings
 During review, the AI Agent dynamically routes subroutines based on delivery format:

@@ -1,19 +1,24 @@
 ---
 name: standard
-description: Standard Mission skill for general-purpose tasks, one-off updates, recurring maintenance routines, and direct prototyping without full 4-stage pipeline overhead.
+description: Standard Mission skill for general-purpose tasks, one-off updates, recurring maintenance routines, and flexible pipeline launchers (Full, Quick Jump, Custom Entry, Custom Selection).
 ---
 
-# Mission Workflow: Standard
+# Mission Workflow: Standard & Flexible Pipeline Launchers
 
 ## Metadata
-- **What**: Standard mission workflow for processing general work tasks, one-off updates, configuration patches, and quick maintenance routines.
-- **When**: Invoked when handling standard, general-purpose tasks that do not fit into complex multi-step pipelines.
-- **Why**: Provides a fast, flexible execution path for direct tasks, recurring maintenance rounds, and simple prototyping without unnecessary analytical overhead.
-- **Triggers**: Standard mission created by user, scheduled maintenance interval, or fast-path task initiation.
-- **Inputs**: User brief, optional raw data IDs, optional system component references.
+- **What**: Standard mission workflow for processing general work tasks, one-off updates, configuration patches, recurring maintenance routines, and targeted pipeline launchers.
+- **When**: Invoked when handling standard general-purpose tasks or launching customized multi-mode pipelines.
+- **Why**: Provides a fast, flexible execution path for direct tasks, recurring maintenance rounds, and configurable pipeline entries (Quick Jump, Custom Entry, Custom Selection) without unnecessary overhead.
+- **Triggers**: Mission creation via UI modal (`standard`, `full_pipeline`, `quick_pipeline`, `custom_entry_pipeline`, `custom_selection_pipeline`).
+- **Inputs**: User brief, optional raw data IDs, target stack specs, target file paths, selected pipeline phases.
 - **Outputs**: Code/configuration changes, execution reports, updated mission state.
 
-This workflow governs how the agent handles custom Standard missions, processing arbitrary inputs to produce arbitrary business outputs.
+This workflow governs how the agent handles custom Standard and flexible pipeline missions, processing inputs to produce business outputs across 5 launcher modes:
+1. **🎯 Standard Mission (`standard`)**: Direct goal targets & autonomous task execution.
+2. **🚀 Full Pipeline Mission (`full_pipeline`)**: End-to-end sequential execution across Stage 1 Drafting ➔ Stage 4 Delivering.
+3. **⚡ Quick Pipeline Mission (`quick_pipeline`)**: Direct phase jump into any specific stage (e.g. Stage 3 Execution), bypassing prior phases.
+4. **🔄 Custom Entry Pipeline Mission (`custom_entry_pipeline`)**: Executes the entire start-to-end pipeline starting from a selected entry phase and running sequentially through downstream stages.
+5. **🎛️ Custom Selection Pipeline Mission (`custom_selection_pipeline`)**: Executes ONLY selected loops and phases, skipping unselected ones.
 
 ---
 

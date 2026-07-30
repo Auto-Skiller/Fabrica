@@ -74,29 +74,29 @@ workspaces/<tenant_id>/
 ├── db/                             # Structured States and Mappings
 │   ├── settings.json               # Read-only configuration (Language, internet access, autonomy, capabilities, subscription, quota, alerts)
 │   ├── runtime.json                # Read-Write runtime state (Suggestions, backlogs, review queues, recent_events)
-│   ├── projects.json               # Project states & mappings
+│   ├── sources.json                # Data Sources & Analytical Inputs state mapping
+│   ├── deliverables.json           # Deliverables & Production Assets state mapping
 │   └── missions.json               # Mission states & mappings
 │
-├── projects/<project_name>/        # Project Datasets & Systems
-│   ├── data/                       # Raw datasets & imported documents
-│   └── systems/<system_name>/      # Built or imported project systems
+├── Sources/                        # Data Sources & Inputs Ecosystem
+│   ├── Discovery & Scoping/        # Scoping documentations, interactive Q&A briefs, cost/time trade-off options
+│   ├── Deep Research & Intelligence Gathering/ # Scraped docs, research papers, competitor scans, API references
+│   ├── Data Analysis & Pattern Extraction/ # Processed datasets, computed metrics, anomaly reports, trend insights
+│   └── Strategic Synthesis & Decision Support/ # Executive strategic plans, risk audits, roadmaps, decision matrices
+│
+├── Deliverables/                   # Production Assets & Execution Outputs
+│   ├── Executions/                 # Generated codebases, database schemas, workflow automations, assets
+│   ├── Reviews/                    # Verified production deliverables waiting for human sign-off
+│   └── Completed/                  # Accepted production deliverables & archived release artifacts
 │
 └── missions/                       # Mission Planning Artifacts & Execution Space
     ├── standard/<mission_id>/ (planning/, execution/)
-    ├── analytics/<mission_id>/ (planning/, execution/)
-    ├── deep_research/<mission_id>/ (planning/, execution/)
-    ├── brainstorming/<mission_id>/ (planning/, execution/)
-    ├── build/<mission_id>/ (planning/, execution/)
-    ├── build_from_data/<mission_id>/ (planning/, execution/)
-    ├── optimization/<mission_id>/ (planning/, execution/)
-    ├── optimization_from_data/<mission_id>/ (planning/, execution/)
-    ├── test/<mission_id>/ (planning/, execution/)
-    └── test_from_data/<mission_id>/ (planning/, execution/)
+    └── pipeline/<mission_id>/ (planning/, execution/)
 ```
 
 ### System Autonomy Levels
 1. **FULL AUTO (`autonomous`)**:
-   - **Auto-Mission Generation**: System automatically synthesizes and creates new contextual missions (e.g. `build`, `build_from_data`, `optimization`, `analytics`) whenever active drafting/planning mission count drops below 2.
+   - **Auto-Mission Generation**: System automatically synthesizes and creates new contextual missions whenever active drafting/planning mission count drops below 2.
    - **Auto-QA Gatekeeping**: Agent automatically answers and approves QA gates for agent/system-created missions using workspace context.
    - **Full Lifecycle Execution**: Moves missions from Planning into Execution (`missions/<type>/<id>/execution/`), sequentially finishes tasks, compiles and hot-swaps new system components, and archives completed missions (`status = 'archive'`).
 2. **SEMI-AUTO (`semi-autonomous`)**:
@@ -105,7 +105,7 @@ workspaces/<tenant_id>/
    - System pauses at QA gates and planning proposals, requiring manual user approval before advancing phases.
 
 ### App Configuration & State Mirroring API
-User configuration and state persist across sign-out and re-login sessions and mirror automatically into `db/settings.json`, `db/runtime.json`, `db/projects.json`, and `db/missions.json`:
+User configuration and state persist across sign-out and re-login sessions and mirror automatically into `db/settings.json`, `db/runtime.json`, `db/sources.json`, `db/deliverables.json`, and `db/missions.json`:
 
 - **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/prompts/` (loaded by system prompt extensions) and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/context/agents-md` and `POST /api/context/agents-md`.
 - **Tenant-Isolated Endpoints**:
@@ -126,38 +126,41 @@ User configuration and state persist across sign-out and re-login sessions and m
 
 ---
 
-## 8. AGENT OPERATING RULES: `projects/` vs `missions/`
+## 8. AGENT OPERATING RULES: `Sources/` & `Deliverables/` vs `missions/`
 
-### `projects/` Directory
-- `projects/` is the **permanent, isolated archive** repository for project data (`projects/<project_name>/data/`) and system components (`projects/<project_name>/systems/`).
-- **STRICT RULE**: The Agent must **NEVER** edit, modify, or do work directly inside the `projects/` directory.
-- **Permitted Operations on `projects/`**:
-  1. `READ` / `VIEW`: Inspecting data or system components.
+### `Sources/` & `Deliverables/` Repositories
+- `Sources/` is the **permanent repository for inputs, research, analytics, and plans** (`Discovery & Scoping`, `Deep Research & Intelligence Gathering`, `Data Analysis & Pattern Extraction`, `Strategic Synthesis & Decision Support`).
+- `Deliverables/` is the **repository for execution outputs, reviews, and completed release assets** (`Executions`, `Reviews`, `Completed`).
+- **STRICT RULE**: The Agent reads inputs from `Sources/` and generates working code, assets, or scripts into `Deliverables/Executions/`.
+- **Permitted Operations**:
+  1. `READ` / `VIEW`: Inspecting sources or deliverables.
   2. `LIST`: Listing directory contents.
-  3. `MOVE IN` / `MOVE OUT`: Transferring files/folders between `projects/` and `missions/`.
+  3. `REGISTER`: Adding validated source items or deliverables.
+  4. `RELOCATE`: Promoting items (e.g., from `Deliverables/Executions` -> `Deliverables/Reviews` upon verification success, or `Deliverables/Reviews` -> `Deliverables/Completed` upon user acceptance, or `Deliverables/Reviews` -> `Deliverables/Executions` upon review feedback).
 
 ### `missions/` Directory
 - `missions/` is the **active execution environment** (`missions/<mission_type>/<mission_id>/`).
 - **Workflow**:
-  1. When work on a data or system file is required, the Agent **moves** or creates the item inside the relevant `missions/<mission_type>/<mission_id>/` folder.
-  2. All edits, creations, tests, transforms, and iterations MUST take place inside `missions/`.
-  3. Upon completion, the Agent **moves** the finalized artifact back to the target `projects/<project_name>/` directory (`data/` or `systems/`).
+  1. All planning blueprints, intermediate scratchpads, and active task logs exist under `missions/`.
+  2. Generated code or assets are stored into `Deliverables/Executions/`.
+  3. Upon verification OK, items move to `Deliverables/Reviews/`.
+  4. Upon user sign-off, deliverables move to `Deliverables/Completed/`.
 
 ---
 
 ## 9. 3-WAY REAL-TIME BI-DIRECTIONAL SYNCHRONIZATION PROTOCOL
 
-The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Databases (`projects.json` & `missions.json`) ↔ Disk Storage (`projects/` & `missions/`)**:
+The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Databases (`sources.json`, `deliverables.json` & `missions.json`) ↔ Disk Storage (`Sources/`, `Deliverables/` & `missions/`)**:
 
 1. **User UI → DB → Disk**:
-   - When a user adds, edits, or deletes a project item or mission step in the UI, the backend updates `db/projects.json` or `db/missions.json` instantly and automatically reflects changes in the physical folders and files.
+   - When a user adds, edits, or deletes a source parameter or deliverable in the UI, the backend updates `db/sources.json`, `db/deliverables.json`, or `db/missions.json` instantly and automatically reflects changes in the physical folders and files.
 2. **Agent → DB → Disk & UI**:
    - When the agent adds, edits, or deletes something in `db/*.json` or disk storage, the physical files update instantly and the dashboard UI updates in real time.
 3. **Disk → DB → UI**:
-   - When files or folders inside `projects/` or `missions/` are added, modified, or removed, `syncProjectsDb()` and `syncMissionsDb()` immediately re-index the changes into `db/projects.json` and `db/missions.json`, broadcasting live updates to the UI.
+   - When files or folders inside `Sources/`, `Deliverables/`, or `missions/` are added, modified, or removed, `syncSourcesDb()`, `syncDeliverablesDb()`, and `syncMissionsDb()` immediately re-index the changes into `db/sources.json`, `db/deliverables.json`, and `db/missions.json`, broadcasting live updates to the UI.
 
-### `projects/` ↔ `db/projects.json`
-- Every folder, data file, and system component in `projects/` is strictly mapped to `db/projects.json` in real time.
+### `Sources/` & `Deliverables/` ↔ `db/sources.json` & `db/deliverables.json`
+- Every file and record in `Sources/` and `Deliverables/` is strictly mapped to `db/sources.json` and `db/deliverables.json` in real time.
 
 ### `missions/` ↔ `db/missions.json`
 - Every mission directory, planning blueprint (`planning/blueprint.md`, `plan.json`), execution log (`execution/execution.json`, `execution_history.md`), and active mission artifact under `missions/` is strictly mapped to `db/missions.json` in real time.

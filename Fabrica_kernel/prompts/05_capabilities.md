@@ -135,32 +135,20 @@ Every mission is a highly customized pipeline that ingests any input format, exe
 ---
 
 ## 2. AGENTIC KERNEL ARCHITECTURE TAXONOMY
-Every operation inside the Fabrica kernel is organized into three distinct structural components: Phases, Modes, and Pipelines.
+Every operation inside the Fabrica kernel is organized into four core stages operating across Sources and Deliverables:
 
-### A. Core Phases (The Stages of Execution)
-- **Planning Phase (`phase-planning.md`)**: Coordinates strategic design, analytics, research, and defining development tasks. No actual code generation or file writing happens during this phase—only analysis and scored task backlog generation.
-- **Execution Phase (`phase-execution.md`)**: Executes approved development tasks sequentially with transaction-level write safety, iterative linting, compilation, and automatic rollbacks upon failure.
-
-### B. Agent Operating Modes (The Behavioral Protocols)
-These modes define the overall agent operational behaviors, rules, laws, and required inputs/outputs when operating under specific constraints. They can be triggered by pipelines or manually by the user:
-- **Brainstorming Mode (`mode-brainstorming.md`)**: Blends analytics, exploratory deep research, and intensive user QA gates to draft new system horizons, visual options, and architecture specs.
-- **Deep Research Mode (`mode-deep_research.md`)**: Executes multi-vector technical scans, official documentation verification, and package/library research.
-- **Analytics Mode (`mode-analytics.md`)**: Gathers and parses unstructured log tables, error metrics, and support logs to identify bottlenecks.
-- **Build Mode (`mode-build.md`)**: Governs system logic formulation, shared TypeScript interface design, and structural file scaffolding.
-- **Optimization Mode (`mode-optimization.md`)**: Oversees software refactoring, continuous upgrades, security hardening, and query performance tuning.
-- **Test Mode (`mode-test.md`)**: Coordinates lint checks, automated test-suite compilation, type-safety validations, and sandbox test harness executions.
-
-### C. Standard Mission (The Custom Engine)
-- **Standard Mission (`mission-standard.md`)**: Can perform any action based on user intent and goals. It is fully flexible and dynamically leverages different Modes and Task Pipelines as needed during its lifecycle.
-
-### D. Specialized Task Pipelines (The Orchestration Sequences)
-These pipelines govern specialized task-specific workflow execution sequences. They specify the exact sequence of modes, inputs, and outputs required to solve specific business problems:
-- **Build Pipeline (`pipeline-build`)**: Moves from a raw conceptual text/idea to a fully functional, production-ready system.
-- **Build From Data Pipeline (`pipeline-build_from_data`)**: Ingests unstructured datasets (sheets, chats, logs) and transforms them into active databases, seed queries, and dashboard modules.
-- **Optimization Pipeline (`pipeline-optimization`)**: Gathers system metrics and upgrades existing codebases, schemas, and configurations for speed and robustness.
-- **Optimization From Data Pipeline (`pipeline-optimization_from_data`)**: Takes both an existing system AND raw unstructured data to perform extensive refactoring and dataset feeding.
-- **Test Pipeline (`pipeline-test`)**: Automatically compiles test suites, generates mocking utilities, and validates functional routes.
-- **Test From Data Pipeline (`pipeline-test_from_data`)**: Uses real unstructured datasets to build and execute behavioral simulation and validation tests.
+### A. The 4-Stage Looped Pipeline Engine
+1. **Stage 1: Drafting (Discovery & Scoping)**:
+   - **Discovery & Scoping (loop)**: Interactive Q&A, brainstorming, structural option presentation with cost/time trade-offs, preference capturing, and registration into `Sources / Discovery & Scoping`.
+2. **Stage 2: Planning**:
+   - **Deep Research & Intelligence Gathering (loop)**: Web searches, document scrapers, documentation & research paper gathering based on scoping, registered into `Sources / Deep Research & Intelligence Gathering`.
+   - **Data Analysis & Pattern Extraction (non-loop)**: Ingests raw inputs & research to compute metrics, detect anomalies, and extract patterns into `Sources / Data Analysis & Pattern Extraction`.
+   - **Strategic Synthesis & Decision Support (non-loop)**: Synthesizes scoping, research, and analytics into Actionable Strategic Plans and Interactive Decision Matrices in `Sources / Strategic Synthesis & Decision Support`.
+3. **Stage 3: Execution**:
+   - **Generation (non-loop)**: Generates assets, writes code, or builds automations based on strategic synthesis into `Deliverables / Executions`.
+   - **Verification (non-loop)**: Verifies execution outputs against strategic synthesis. If gap detected -> re-run execution loop based on verification feedback. If OK -> move to `Deliverables / Reviews`.
+4. **Stage 4: Delivering**:
+   - **Review Gate (non-loop)**: Presents final deliverables in `Deliverables / Reviews`. If accepted -> move to `Deliverables / Completed`. If feedback provided -> move work back to `Deliverables / Executions` to continue processing based on feedback.
 
 ---
 
@@ -168,29 +156,29 @@ These pipelines govern specialized task-specific workflow execution sequences. T
 A mission transitions through four major status blocks, visible in the tracker interface:
 
 ```
-[ DRAFTING ] ──> [ PLANNING ] ──> [ EXECUTION ] ──> [ ARCHIVE ]
+[ DRAFTING ] ──> [ PLANNING ] ──> [ EXECUTION ] ──> [ DELIVERING ] ──> [ ARCHIVE ]
 ```
 
-- **DRAFTING**: The initial scoping phase. The agent runs analytical and research loops to understand the parameters. During this phase, the mission tracks detailed **Phases** (Analytics, Research, QA).
-  - *User-Created Missions (`user_created: true`)*: Always pause at the QA gate phase, waiting for explicit user selection or approval before moving to Planning.
-  - *Agent/System-Created Missions*: In **FULL AUTO** mode, the agent automatically evaluates workspace context, answers QA gates, and advances missions to Planning automatically.
-- **PLANNING**: The mission has a clear proposal. The agent has generated a prioritized task list scored on `benefit`, `cost`, and `worth-it: yes|no`.
-  - In **FULL AUTO** or **SEMI-AUTO**, the system compiles the implementation blueprint and advances to Execution automatically. In **SUPERVISED**, it waits for user confirmation.
-- **EXECUTION**: The mission is active. The agent sequentially completes tasks, runs verification, and hot-swaps compiled production modules or logic documents into `artifacts`.
-- **ARCHIVE**: The task is finished or canceled (`status = 'archive'`). Finished missions are marked as DONE and historical progress is locked in the database.
+- **DRAFTING**: Interactive discovery and scoping loop. Captures parameters and stores approved scoping in `Sources / Discovery & Scoping`.
+- **PLANNING**: Deep research, data analysis, and strategic synthesis. Produces strategic plan and decision matrix in `Sources / Strategic Synthesis & Decision Support`.
+- **EXECUTION**: Generation of code/assets into `Deliverables / Executions`, followed by verification audit.
+- **DELIVERING**: Final review in `Deliverables / Reviews`. Promotes accepted items to `Deliverables / Completed`.
+- **ARCHIVE**: Mission completed and archived (`status = 'archive'`).
 
 ---
 
-## 4. THE 7-STEP DRAFTING PIPELINE
-For specialized pipelines (System Build, System Build From Data, System Optimization, System Optimization From Data, System Test, System Test From Data), the **DRAFTING** status is subdivided into a highly structured 7-step pipeline. Each step must be completed sequentially:
+## 4. SOURCES & DELIVERABLES ECOSYSTEM
+The kernel maintains real-time bi-directional synchronization between database records and workspace storage across two core pillars:
 
-1. **Analytics 1 (Initial Analytics)**: Analyze the user's initial inputs (e.g. ad briefs, spreadsheets, uploaded schemas), identify core boundaries, and outline gaps.
-2. **Research 1 (Initial Research)**: Query external APIs, search documentation, or scan existing systems to find matching patterns (e.g. competitor benchmarks, API routes).
-3. **Analytics 2 (Research Analytics)**: Synthesize findings from Research 1 and prepare questions for the user or enterprise stakeholder.
-4. **QA (User Confirmation Gate)**: Prompt the user with options and explanations of "why". The user makes selections or inputs custom text. **Execution freezes until the user provides input.**
-5. **Analytics 3 (User-Response Analytics)**: Analyze user feedback, mapping their preferences to system configurations (e.g. choosing custom data schemas or API endpoints).
-6. **Research 2 (Final Specific Research)**: Run highly targeted research addressing details or tools specified in the QA selection.
-7. **Analytics 4 (Final Synthesis)**: Combine all insights, research, and QA selections into a unified blueprint, ready to transition the mission status to **PLANNING**.
+1. **Sources**:
+   - `Discovery & Scoping`: User requirements, trade-off choices, and locked scoping cards.
+   - `Deep Research & Intelligence Gathering`: Scraped documentations, whitepapers, competitor scans.
+   - `Data Analysis & Pattern Extraction`: Computed metrics, statistical trend lines, anomaly audits.
+   - `Strategic Synthesis & Decision Support`: Executive plans, strategic roadmaps, and scored decision matrices.
+2. **Deliverables**:
+   - `Executions`: Generated codebases, database schemas, and visual assets under development.
+   - `Reviews`: Verified production deliverables waiting for user sign-off.
+   - `Completed`: Accepted production deliverables ready for deployment and long-term storage.
 
 ---
 

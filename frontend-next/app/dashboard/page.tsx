@@ -1543,7 +1543,18 @@ export default function Dashboard() {
   });
 
   // Launcher mission type selector
-  const [launcherModelType, setLauncherModelType] = useState<'standard' | 'full_pipeline'>('full_pipeline');
+  const [launcherModelType, setLauncherModelType] = useState<'standard' | 'full_pipeline' | 'quick_pipeline' | 'custom_entry_pipeline' | 'custom_selection_pipeline'>('full_pipeline');
+  const [quickStartPhase, setQuickStartPhase] = useState<string>('execution');
+  const [customEntryPhase, setCustomEntryPhase] = useState<string>('planning');
+  const [selectedPipelinePhases, setSelectedPipelinePhases] = useState<Record<string, boolean>>({
+    'discovery_scoping': true,
+    'deep_research': true,
+    'data_analysis': true,
+    'strategic_synthesis': true,
+    'generation': true,
+    'verification': true,
+    'review': true
+  });
 
   // Markdown board states
   const [boardContent, setBoardContent] = useState<string>('');
@@ -1731,6 +1742,7 @@ export default function Dashboard() {
   const [newBacklogItemText, setNewBacklogItemText] = useState<string>('');
   const [activeReviewItem, setActiveReviewItem] = useState<any | null>(null);
   const [reviewFeedbackText, setReviewFeedbackText] = useState<string>('');
+  const [reviewCustomEntryLoop, setReviewCustomEntryLoop] = useState<string>('execution');
   const [isSavingBacklog, setIsSavingBacklog] = useState<boolean>(false);
 
   // New states for interactive backlog item detail & review editor
@@ -1765,24 +1777,34 @@ export default function Dashboard() {
     await fetchWorkspaceData();
   };
 
-  const processReviewResponse = async (item: any, responseText: string) => {
+  const processReviewResponse = async (item: any, responseText: string, entryLoop: string = 'execution') => {
     const itemLabel = typeof item === 'string' ? item : (item.label || item.name || 'Component');
     
+    const loopLabelMap: Record<string, string> = {
+      execution: 'Execution Loop (Default - Execution Generation & Verification)',
+      drafting: 'Drafting Loop (Discovery & Scoping)',
+      planning: 'Planning Loop (Strategic Synthesis & Decision Support)',
+      custom: 'Custom Entry Loop'
+    };
+    const targetLoopName = loopLabelMap[entryLoop] || 'Execution Loop (Default)';
+
     // 1. Post a user message in the chat
-    const userMsg = `🎯 [Review Response for "${itemLabel}"]: ${responseText}`;
+    const userMsg = `🎯 [Review Response for "${itemLabel}"]: ${responseText}\n📍 Re-entry Loop Target: ${targetLoopName}\n📦 Work Location: Moved to Deliverables/Executions`;
     const updatedHistory = [...chatHistory, { sender: 'user' as const, text: userMsg }];
     setChatHistory(updatedHistory);
     setIsChatLoading(true);
     setMinLeftSide(false);
     setActiveReviewItem(null);
 
-    // 2. Set the review item status to 'responded' with the responseText
+    // 2. Set the review item status to 'responded', record custom entry loop, and relocate work to Deliverables/Executions
     const nextQueue = (runtime?.review_queue || []).map((q: any) => {
       const qLabel = typeof q === 'string' ? q : (q.label || q.name || '');
       if (qLabel === itemLabel) {
         return {
           ...(typeof q === 'string' ? { label: q } : q),
           userResponse: responseText,
+          reentryLoop: entryLoop,
+          location: 'Deliverables/Executions',
           status: 'responded'
         };
       }
@@ -1798,7 +1820,10 @@ export default function Dashboard() {
         text: h.text
       }));
 
-      const prompt = `The user provided review feedback on "${itemLabel}": "${responseText}". Please immediately process this response, acknowledge the critique, and describe how you have updated the code/infrastructure to align with this feedback.`;
+      const prompt = `The user provided review feedback on "${itemLabel}": "${responseText}".
+Re-entry Loop Target: ${targetLoopName}.
+Work status update: Work item relocated to Deliverables/Executions.
+Please immediately process this feedback starting from ${targetLoopName}, acknowledge the critique, and re-run the full pipeline loop from that entry point based on this feedback.`;
       
       const res = await api.chatAgent(prompt, formattedHistory, customApiKey, chatModel);
       if (res.ok) {
@@ -1814,7 +1839,7 @@ export default function Dashboard() {
           setIsAccountWindowOpen(true);
         }
       } else {
-        setChatHistory(prev => [...prev, { sender: 'agent', text: `Processed Review Queue feedback: "${responseText}" for "${itemLabel}". Custom prompt guidelines and active catalog rules mapped successfully.` }]);
+        setChatHistory(prev => [...prev, { sender: 'agent', text: `Processed Review Queue feedback: "${responseText}" for "${itemLabel}". Loop re-entry (${targetLoopName}) registered & work relocated to Deliverables/Executions.` }]);
         setIsAccountWindowOpen(true);
       }
       
@@ -4742,14 +4767,52 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
 
     setIsAddingMission(true);
     try {
-      // Get the initial phase (the first step of the selected category)
-      const stepsForCat = getStepsForCategory(newMissionCategory);
-      const initialPhase = stepsForCat && stepsForCat.length > 0 ? stepsForCat[0].key : 'analytics_1';
+      // Determine initial phase based on launcher mode
+      let initialPhase = 'discovery_scoping';
+      if (launcherModelType === 'quick_pipeline') {
+        initialPhase = quickStartPhase;
+      } else if (launcherModelType === 'custom_entry_pipeline') {
+        initialPhase = customEntryPhase;
+      } else if (launcherModelType === 'custom_selection_pipeline') {
+        const enabled = Object.keys(selectedPipelinePhases).filter(k => selectedPipelinePhases[k]);
+        initialPhase = enabled[0] || 'discovery_scoping';
+      } else if (launcherModelType === 'full_pipeline') {
+        initialPhase = 'discovery_scoping';
+      } else {
+        const stepsForCat = getStepsForCategory(newMissionCategory);
+        initialPhase = stepsForCat && stepsForCat.length > 0 ? stepsForCat[0].key : 'discovery_scoping';
+      }
 
       // Build category-specific custom inputs payload
-      const customInputsPayload: Record<string, any> = {};
+      const customInputsPayload: Record<string, any> = {
+        pipeline_mode: launcherModelType
+      };
       let initialGoalsDict: Record<string, any> = {};
       let initialTasksDict: Record<string, any> = {};
+
+      if (launcherModelType === 'quick_pipeline') {
+        customInputsPayload.quick_start_phase = quickStartPhase;
+        customInputsPayload.start_phase = quickStartPhase;
+        customInputsPayload.tech_stack = pipelineSelectedStack.join(', ');
+        customInputsPayload.target_path = pipelineSelectedPaths.join(', ');
+        customInputsPayload.selected_stack_list = pipelineSelectedStack;
+        customInputsPayload.selected_paths_list = pipelineSelectedPaths;
+      } else if (launcherModelType === 'custom_entry_pipeline') {
+        customInputsPayload.custom_entry_phase = customEntryPhase;
+        customInputsPayload.start_phase = customEntryPhase;
+        customInputsPayload.tech_stack = pipelineSelectedStack.join(', ');
+        customInputsPayload.target_path = pipelineSelectedPaths.join(', ');
+        customInputsPayload.selected_stack_list = pipelineSelectedStack;
+        customInputsPayload.selected_paths_list = pipelineSelectedPaths;
+      } else if (launcherModelType === 'custom_selection_pipeline') {
+        const enabledPhases = Object.keys(selectedPipelinePhases).filter(k => selectedPipelinePhases[k]);
+        customInputsPayload.selected_pipeline_phases = enabledPhases;
+        customInputsPayload.enabled_phases_list = enabledPhases;
+        customInputsPayload.tech_stack = pipelineSelectedStack.join(', ');
+        customInputsPayload.target_path = pipelineSelectedPaths.join(', ');
+        customInputsPayload.selected_stack_list = pipelineSelectedStack;
+        customInputsPayload.selected_paths_list = pipelineSelectedPaths;
+      }
 
       // Bind Extra Sources / Prior Outputs Context
       if (selectedExtraSources.length > 0) {
@@ -4799,11 +4862,13 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
         customInputsPayload.selected_gates_list = pipelineSelectedGates;
       }
 
+      const missionCategoryToUse = launcherModelType === 'standard' ? 'standard' : 'system_build';
+
       // Create mission object matching exact YAML schema:
       const missionObj = {
         model: 'standard',
-        category: newMissionCategory,
-        type: newMissionCategory,
+        category: missionCategoryToUse,
+        type: launcherModelType,
         objective: newMissionObjective,
         priority: newMissionPriority,
         phase: initialPhase,
@@ -8366,11 +8431,13 @@ ${isDirector ? `
                               overflow: 'hidden'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%', minWidth: 0 }}>
-                              <span style={{ fontSize: '8px', flexShrink: 0 }}>{s.icon || '🤖'}</span>
-                              <span style={{ fontWeight: 800, fontSize: '7.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)', flex: 1, minWidth: 0 }}>
-                                {s.title}
-                              </span>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%', minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                <span style={{ fontSize: '8px', flexShrink: 0 }}>{s.icon || '🤖'}</span>
+                                <span style={{ fontWeight: 800, fontSize: '7.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)', flex: 1, minWidth: 0 }}>
+                                  {s.title}
+                                </span>
+                              </div>
                             </div>
                             <span style={{ fontSize: '6.5px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
                               {s.desc}
@@ -9220,25 +9287,26 @@ ${isDirector ? `
                             No missions awaiting architectural approval or QA gating.
                           </p>
                           {mDraft.length > 0 && (
-                            <button
-                              onClick={() => handleUpdateMissionStatus(mDraft[0], 'planning')}
-                              style={{
-                                fontSize: '8px',
-                                fontWeight: 800,
-                                background: 'rgba(99, 102, 241, 0.12)',
-                                color: 'var(--accent)',
-                                border: '1px solid var(--accent)',
-                                borderRadius: '4px',
-                                padding: '4px 10px',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                marginTop: '2px'
-                              }}
-                            >
-                              <span>Promote "{mDraft[0].id.slice(0, 14)}..." ➔</span>
-                            </button>
+                            <div style={{ marginTop: '2px' }}>
+                              <button
+                                onClick={() => handleUpdateMissionStatus(mDraft[0], 'planning')}
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 800,
+                                  background: 'rgba(99, 102, 241, 0.12)',
+                                  color: 'var(--accent)',
+                                  border: '1px solid var(--accent)',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                <span>Promote "{mDraft[0].id.slice(0, 10)}..." ➔</span>
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -9327,48 +9395,48 @@ ${isDirector ? `
                           <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
                             All runtime components are standing by.
                           </p>
-                          {mPlan.length > 0 ? (
-                            <button
-                              onClick={() => handleUpdateMissionStatus(mPlan[0], 'execution')}
-                              style={{
-                                fontSize: '8px',
-                                fontWeight: 800,
-                                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '4px 10px',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                marginTop: '2px',
-                                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
-                              }}
-                            >
-                              <span>🚀 Launch "{mPlan[0].id.slice(0, 14)}..."</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setIsAddMissionOpen(true)}
-                              style={{
-                                fontSize: '8px',
-                                fontWeight: 800,
-                                background: 'var(--surface-alt)',
-                                color: 'var(--text-bright)',
-                                border: '1px solid var(--border-soft)',
-                                borderRadius: '4px',
-                                padding: '4px 10px',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                marginTop: '2px'
-                              }}
-                            >
-                              <span>+ Quick Register</span>
-                            </button>
-                          )}
+                          <div style={{ marginTop: '2px' }}>
+                            {mPlan.length > 0 ? (
+                              <button
+                                onClick={() => handleUpdateMissionStatus(mPlan[0], 'execution')}
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 800,
+                                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
+                                }}
+                              >
+                                <span>🚀 Launch "{mPlan[0].id.slice(0, 10)}..."</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setIsAddMissionOpen(true)}
+                                style={{
+                                  fontSize: '8px',
+                                  fontWeight: 800,
+                                  background: 'var(--surface-alt)',
+                                  color: 'var(--text-bright)',
+                                  border: '1px solid var(--border-soft)',
+                                  borderRadius: '4px',
+                                  padding: '4px 8px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }}
+                              >
+                                <span>+ Quick Register</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -10742,6 +10810,8 @@ ${isDirector ? `
         setToast={setToast}
       />
 
+      {/* ================= INTERACTIVE MOCKUP VIEWER MODAL ================= */}
+
       {/* ================= TELEMETRY & DATABASE REALTIME EVENT LOGS WINDOW ================= */}
       {isLogsWindowOpen && (
         <div style={{
@@ -11869,6 +11939,7 @@ ${isDirector ? `
 
         {/* Right: Controls & Toggles */}
         <div className="bottombar-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+
           {/* Unified Capabilities Button (Hover opens window, Click toggles ON/OFF) */}
           <button
             onClick={() => {
@@ -12222,8 +12293,8 @@ ${isDirector ? `
               {/* ================= MODAL TYPE SWITCHER ================= */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '8px',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '6px',
                 padding: '4px',
                 background: 'var(--surface-alt)',
                 border: '1.5px solid var(--border)',
@@ -12236,25 +12307,24 @@ ${isDirector ? `
                     setNewMissionCategory('standard');
                   }}
                   style={{
-                    padding: '8px 12px',
+                    padding: '6px 8px',
                     borderRadius: '6px',
                     border: launcherModelType === 'standard' ? '1.5px solid #3b82f6' : '1px solid transparent',
                     background: launcherModelType === 'standard' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
                     color: launcherModelType === 'standard' ? '#3b82f6' : 'var(--muted)',
                     fontWeight: 800,
-                    fontSize: '10px',
+                    fontSize: '9.5px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
+                    gap: '5px',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <span style={{ fontSize: '12px' }}>🎯</span>
+                  <span style={{ fontSize: '11px' }}>🎯</span>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
-                    <span>Standard / Quick Mission</span>
-                    <span style={{ fontSize: '7.5px', fontWeight: 600, opacity: 0.8 }}>Goal Targets & Autonomous Tasks</span>
+                    <span>Standard</span>
+                    <span style={{ fontSize: '7px', fontWeight: 600, opacity: 0.8 }}>Tasks & Goals</span>
                   </div>
                 </button>
 
@@ -12265,25 +12335,108 @@ ${isDirector ? `
                     setNewMissionCategory('system_build');
                   }}
                   style={{
-                    padding: '8px 12px',
+                    padding: '6px 8px',
                     borderRadius: '6px',
                     border: launcherModelType === 'full_pipeline' ? '1.5px solid #10b981' : '1px solid transparent',
                     background: launcherModelType === 'full_pipeline' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
                     color: launcherModelType === 'full_pipeline' ? '#10b981' : 'var(--muted)',
                     fontWeight: 800,
-                    fontSize: '10px',
+                    fontSize: '9.5px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
+                    gap: '5px',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <span style={{ fontSize: '12px' }}>🚀</span>
+                  <span style={{ fontSize: '11px' }}>🚀</span>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
-                    <span>Full Pipeline Mission</span>
-                    <span style={{ fontSize: '7.5px', fontWeight: 600, opacity: 0.8 }}>End-to-End: Idea ➔ Deliverable</span>
+                    <span>Full Pipeline</span>
+                    <span style={{ fontSize: '7px', fontWeight: 600, opacity: 0.8 }}>End-to-End Flow</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLauncherModelType('quick_pipeline');
+                    setNewMissionCategory('system_build');
+                  }}
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: launcherModelType === 'quick_pipeline' ? '1.5px solid #f59e0b' : '1px solid transparent',
+                    background: launcherModelType === 'quick_pipeline' ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                    color: launcherModelType === 'quick_pipeline' ? '#f59e0b' : 'var(--muted)',
+                    fontWeight: 800,
+                    fontSize: '9.5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '11px' }}>⚡</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                    <span>Quick Jump</span>
+                    <span style={{ fontSize: '7px', fontWeight: 600, opacity: 0.8 }}>Direct Phase Jump</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLauncherModelType('custom_entry_pipeline');
+                    setNewMissionCategory('system_build');
+                  }}
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: launcherModelType === 'custom_entry_pipeline' ? '1.5px solid #6366f1' : '1px solid transparent',
+                    background: launcherModelType === 'custom_entry_pipeline' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
+                    color: launcherModelType === 'custom_entry_pipeline' ? '#6366f1' : 'var(--muted)',
+                    fontWeight: 800,
+                    fontSize: '9.5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '11px' }}>🔄</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                    <span>Custom Entry</span>
+                    <span style={{ fontSize: '7px', fontWeight: 600, opacity: 0.8 }}>Start from Loop</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLauncherModelType('custom_selection_pipeline');
+                    setNewMissionCategory('system_build');
+                  }}
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: launcherModelType === 'custom_selection_pipeline' ? '1.5px solid #ec4899' : '1px solid transparent',
+                    background: launcherModelType === 'custom_selection_pipeline' ? 'rgba(236, 72, 153, 0.15)' : 'transparent',
+                    color: launcherModelType === 'custom_selection_pipeline' ? '#ec4899' : 'var(--muted)',
+                    fontWeight: 800,
+                    fontSize: '9.5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '11px' }}>🎛️</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                    <span>Custom Selection</span>
+                    <span style={{ fontSize: '7px', fontWeight: 600, opacity: 0.8 }}>Multi-Select Loops</span>
                   </div>
                 </button>
               </div>
@@ -12778,6 +12931,297 @@ ${isDirector ? `
 
                   {/* Tech Stack Specs & Target Paths */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target File Paths</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedPaths.join(', ')}
+                        onChange={(e) => setPipelineSelectedPaths(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. /frontend-next/app/dashboard/page.tsx"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Architecture Stack Specs</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedStack.join(', ')}
+                        onChange={(e) => setPipelineSelectedStack(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. Next.js 16, TypeScript, Tailwind CSS"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= MODE 3: QUICK PIPELINE MISSION ================= */}
+              {launcherModelType === 'quick_pipeline' && (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.04)',
+                  border: '1.5px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px' }}>⚡</span>
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: '#f59e0b', textTransform: 'uppercase' }}>
+                        Quick Pipeline Mission: Direct Phase Jump
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '8px', fontWeight: 700, padding: '2px 6px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', borderRadius: '4px' }}>
+                      Single Phase Jump
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: '9px', color: 'var(--muted)', margin: 0, lineHeight: '1.4' }}>
+                    Select any specific phase to jump directly into (e.g., jump straight to Stage 3 Execution). Prior stages will be bypassed.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)' }}>Target Phase Jump:</span>
+                    <select
+                      value={quickStartPhase}
+                      onChange={(e) => setQuickStartPhase(e.target.value)}
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid rgba(245, 158, 11, 0.4)',
+                        borderRadius: '5px',
+                        color: 'var(--text)',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        padding: '6px 8px'
+                      }}
+                    >
+                      <option value="discovery_scoping">💡 Stage 1: Drafting (Discovery & Scoping)</option>
+                      <option value="deep_research">🔍 Stage 2.1: Planning (Deep Research)</option>
+                      <option value="data_analysis">📊 Stage 2.2: Planning (Data Analysis)</option>
+                      <option value="strategic_synthesis">🧠 Stage 2.3: Planning (Strategic Synthesis)</option>
+                      <option value="execution">⚙️ Stage 3.1: Execution (Generation & Coding)</option>
+                      <option value="verification">🧪 Stage 3.2: Execution (Verification & Audit)</option>
+                      <option value="review">📦 Stage 4: Delivering (Production Review Gate)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ padding: '8px 10px', background: 'rgba(245, 158, 11, 0.08)', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '12px' }}>📍</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 700, color: '#f59e0b' }}>
+                      Execution Target: {quickStartPhase === 'execution' ? 'Stage 3.1 Generation & Coding' : quickStartPhase} (Immediate activation)
+                    </span>
+                  </div>
+
+                  {/* Tech Stack Specs & Target Paths */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target File Paths</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedPaths.join(', ')}
+                        onChange={(e) => setPipelineSelectedPaths(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. /frontend-next/app/dashboard/page.tsx"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Architecture Stack Specs</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedStack.join(', ')}
+                        onChange={(e) => setPipelineSelectedStack(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. Next.js 16, TypeScript, Tailwind CSS"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= MODE 4: CUSTOM ENTRY PIPELINE MISSION ================= */}
+              {launcherModelType === 'custom_entry_pipeline' && (
+                <div style={{
+                  background: 'rgba(99, 102, 241, 0.04)',
+                  border: '1.5px solid rgba(99, 102, 241, 0.3)',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px' }}>🔄</span>
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: '#6366f1', textTransform: 'uppercase' }}>
+                        Custom Entry Pipeline Mission: Start-to-End Flow
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '8px', fontWeight: 700, padding: '2px 6px', background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', borderRadius: '4px' }}>
+                      Sequential Re-entry
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: '9px', color: 'var(--muted)', margin: 0, lineHeight: '1.4' }}>
+                    Executes the entire start-to-end pipeline starting from the selected loop or phase, proceeding sequentially through all downstream stages to Delivery.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)' }}>Starting Entry Phase:</span>
+                    <select
+                      value={customEntryPhase}
+                      onChange={(e) => setCustomEntryPhase(e.target.value)}
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid rgba(99, 102, 241, 0.4)',
+                        borderRadius: '5px',
+                        color: 'var(--text)',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        padding: '6px 8px'
+                      }}
+                    >
+                      <option value="discovery_scoping">💡 Stage 1: Drafting (Discovery & Scoping)</option>
+                      <option value="deep_research">🔍 Stage 2.1: Planning (Deep Research)</option>
+                      <option value="data_analysis">📊 Stage 2.2: Planning (Data Analysis)</option>
+                      <option value="strategic_synthesis">🧠 Stage 2.3: Planning (Strategic Synthesis)</option>
+                      <option value="execution">⚙️ Stage 3.1: Execution (Generation & Coding)</option>
+                      <option value="verification">🧪 Stage 3.2: Execution (Verification & Audit)</option>
+                      <option value="review">📦 Stage 4: Delivering (Production Review Gate)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ padding: '8px 10px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '12px' }}>➡️</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 700, color: '#6366f1' }}>
+                      Pipeline Flow: [{customEntryPhase}] ──► Downstream Stages ──► Delivery
+                    </span>
+                  </div>
+
+                  {/* Tech Stack Specs & Target Paths */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target File Paths</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedPaths.join(', ')}
+                        onChange={(e) => setPipelineSelectedPaths(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. /frontend-next/app/dashboard/page.tsx"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Architecture Stack Specs</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedStack.join(', ')}
+                        onChange={(e) => setPipelineSelectedStack(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. Next.js 16, TypeScript, Tailwind CSS"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= MODE 5: CUSTOM SELECTION PIPELINE MISSION ================= */}
+              {launcherModelType === 'custom_selection_pipeline' && (
+                <div style={{
+                  background: 'rgba(236, 72, 153, 0.04)',
+                  border: '1.5px solid rgba(236, 72, 153, 0.3)',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px' }}>🎛️</span>
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: '#ec4899', textTransform: 'uppercase' }}>
+                        Custom Selection Pipeline: Multi-Selected Loops
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPipelinePhases({
+                          discovery_scoping: true, deep_research: true, data_analysis: true, strategic_synthesis: true, generation: true, verification: true, review: true
+                        })}
+                        style={{ padding: '2px 5px', fontSize: '7.5px', fontWeight: 800, background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPipelinePhases({
+                          discovery_scoping: false, deep_research: false, data_analysis: false, strategic_synthesis: false, generation: true, verification: true, review: true
+                        })}
+                        style={{ padding: '2px 5px', fontSize: '7.5px', fontWeight: 800, background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                      >
+                        Exec & Deliv Only
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPipelinePhases({
+                          discovery_scoping: false, deep_research: false, data_analysis: false, strategic_synthesis: false, generation: false, verification: false, review: false
+                        })}
+                        style={{ padding: '2px 5px', fontSize: '7.5px', fontWeight: 800, background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border-soft)', borderRadius: '3px', cursor: 'pointer' }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '9px', color: 'var(--muted)', margin: 0, lineHeight: '1.4' }}>
+                    Executes the pipeline with ONLY selected loops and phases, ignoring and skipping non-selected ones.
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    {[
+                      { key: 'discovery_scoping', label: '💡 Stage 1: Drafting (Discovery)' },
+                      { key: 'deep_research', label: '🔍 Stage 2.1: Planning (Deep Research)' },
+                      { key: 'data_analysis', label: '📊 Stage 2.2: Planning (Data Analysis)' },
+                      { key: 'strategic_synthesis', label: '🧠 Stage 2.3: Planning (Strategic Synthesis)' },
+                      { key: 'generation', label: '⚙️ Stage 3.1: Execution (Generation)' },
+                      { key: 'verification', label: '🧪 Stage 3.2: Execution (Verification)' },
+                      { key: 'review', label: '📦 Stage 4: Delivering (Review Gate)' }
+                    ].map(ph => {
+                      const isChecked = !!selectedPipelinePhases[ph.key];
+                      return (
+                        <button
+                          key={ph.key}
+                          type="button"
+                          onClick={() => setSelectedPipelinePhases({ ...selectedPipelinePhases, [ph.key]: !isChecked })}
+                          style={{
+                            padding: '6px 8px',
+                            borderRadius: '5px',
+                            border: isChecked ? '1.5px solid #ec4899' : '1px solid var(--border-soft)',
+                            background: isChecked ? 'rgba(236, 72, 153, 0.12)' : 'var(--surface)',
+                            color: isChecked ? '#ec4899' : 'var(--muted)',
+                            fontSize: '8.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <span>{ph.label}</span>
+                          <span style={{ fontSize: '9px', fontWeight: 900 }}>{isChecked ? '✓' : '—'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ padding: '6px 8px', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '5px', border: '1px solid rgba(236, 72, 153, 0.2)', fontSize: '8.5px', fontWeight: 700, color: '#ec4899' }}>
+                    🎛️ {Object.values(selectedPipelinePhases).filter(Boolean).length} of 7 phases enabled. Non-selected phases will be skipped automatically.
+                  </div>
+
+                  {/* Tech Stack Specs & Target Paths */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '2px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                       <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target File Paths</span>
                       <input
@@ -15359,6 +15803,7 @@ ${isDirector ? `
 
               {/* Action Buttons list */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+
                 <button
                   onClick={() => {
                     const label = typeof activeBacklogItem === 'string' ? activeBacklogItem : JSON.stringify(activeBacklogItem);
@@ -15534,12 +15979,44 @@ ${isDirector ? `
                 />
               </div>
 
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ fontSize: '8px', color: 'var(--muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                  🔄 Re-entry Loop Target (Custom Entry):
+                </div>
+                <select
+                  value={reviewCustomEntryLoop}
+                  onChange={(e) => setReviewCustomEntryLoop(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--text-bright)',
+                    fontSize: '9px',
+                    padding: '6px 8px',
+                    outline: 'none',
+                    fontFamily: 'var(--mono)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="execution">⚡ Execution Loop (Default - Re-runs Generation & Verification)</option>
+                  <option value="drafting">💡 Drafting Loop (Discovery & Scoping - Re-evaluates Brief)</option>
+                  <option value="planning">📊 Planning Loop (Strategic Synthesis & Decision Support)</option>
+                  <option value="custom">🛠️ Custom Loop Entry (Custom feedback loop execution)</option>
+                </select>
+                <div style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '3px', lineHeight: '1.2' }}>
+                  Unaccepted review items are <b>always relocated to Deliverables/Executions</b>.
+                </div>
+              </div>
+
               {/* Action Buttons list */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+
                 <button
                   onClick={() => {
                     if (reviewFeedbackText.trim()) {
-                      processReviewResponse(activeReviewItem, reviewFeedbackText.trim());
+                      processReviewResponse(activeReviewItem, reviewFeedbackText.trim(), reviewCustomEntryLoop);
+                      setReviewFeedbackText('');
                     } else {
                       setToast({
                         message: 'Please write some feedback before submitting.',
@@ -17051,7 +17528,6 @@ ${isDirector ? `
                                   {isPulse && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: statusColor }}></span>}
                                   {statusText}
                                 </span>
-
                                 {/* Mission Link Toggle */}
                                 <button
                                   onClick={() => handleLinkAssetToMission(item, isLinked ? '' : selectedMission.id)}

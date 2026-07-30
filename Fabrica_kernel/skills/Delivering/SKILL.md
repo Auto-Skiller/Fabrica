@@ -17,4 +17,7 @@ It is global, domain-agnostic, and outcome-driven. Its primary objective is to p
 2. Present work to the user with release notes and verification proof.
 3. Handle gate decision:
    - **User Accepts**: Move item to **Deliverables / Completed** and archive mission.
-   - **User Feedback**: Move item back to **Deliverables / Executions** and re-trigger Execution loop.
+   - **User Feedback (Not Accepted)**:
+     - Work is **ALWAYS moved to Deliverables / Executions**.
+     - Allow user to select a **Custom Entry** (any loop or stage feedback entry point) to continue processing the full loop from that entry point based on feedback.
+     - If no custom entry point is selected, default to continuing the full **Execution loop**.

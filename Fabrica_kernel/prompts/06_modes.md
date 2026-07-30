@@ -11,7 +11,7 @@ Mission execution is the core operational state machine of the Fabrica kernel. W
 
 ### Step 1: Ingestion & Mission Setup
 1. **Parse Intent & Scope**: Ingest user prompt, raw data uploads, or mission card parameters.
-2. **Determine Target Mission & Pipeline**: Map the task to a mission type (`standard`, `build`, `build_from_data`, `optimization`, `optimization_from_data`, `test`, `test_from_data`, `brainstorming`, `deep_research`, `analytics`).
+2. **Determine Target Mission & Pipeline Launcher Mode**: Map the task to a launcher mode (`standard`, `full_pipeline`, `quick_pipeline`, `custom_entry_pipeline`, `custom_selection_pipeline`).
 3. **Register/Update Mission State**: Create or update the mission row in `db/missions.json` and database tables with status `DRAFTING` or `PLANNING`.
 
 ### Step 2: Skill Discovery & Invocation (How & When to Use Skills)
@@ -84,9 +84,30 @@ The Fabrica kernel organizes execution into 4 sequential stages, incorporating a
 - **Primary Objective**: Validate production readiness and obtain final user sign-off.
 - **Sub-Phase**:
   1. **Review Gate**: Presents production deliverables in `Deliverables / Reviews`.
-     - **If USER FEEDBACK GIVEN**: Moves deliverable back to `Deliverables / Executions` and re-runs Generation/Verification.
+     - **If USER FEEDBACK GIVEN (Not Accepted)**: Work is **ALWAYS moved to Deliverables / Executions**. The user can select a **Custom Entry Target** (any loop or stage, e.g., Drafting, Deep Research, Strategic Synthesis, Generation, Verification) to continue processing the full loop from that entry point based on feedback; if unselected, the default is to continue processing the full **Execution loop** based on feedback.
      - **If ACCEPTED**: Promotes deliverable to `Deliverables / Completed` and archives the mission (`status = 'archive'`).
      - *Skill*: `pipeline_Delivering/pipeline_Delivering_Review`
+
+---
+
+## 2.1 PIPELINE MISSION EXECUTION MODES
+
+Fabrica supports 5 distinct Mission Execution Modes to accommodate both rapid fixes and structured multi-stage pipelines:
+
+1. **🎯 Standard Mission (`standard`)**:
+   - **Behavior**: Fast-path, goal-oriented execution bypassing multi-stage pipeline overhead. Focuses on user goal targets and autonomous task lists.
+
+2. **🚀 Full Pipeline Mission (`full_pipeline`)**:
+   - **Behavior**: Sequential end-to-end execution across all 4 stages: `Drafting (Discovery) ➔ Planning (Research/Analysis/Synthesis) ➔ Execution (Generation/Verification) ➔ Delivering (Review)`.
+
+3. **⚡ Quick Pipeline Mission (`quick_pipeline`)**:
+   - **Behavior**: Jump directly into any random phase or stage (e.g., jump straight to Stage 3 Execution Stage 3.1 Generation), bypassing all prior stages.
+
+4. **🔄 Custom Entry Pipeline Mission (`custom_entry_pipeline`)**:
+   - **Behavior**: Execute the entire start-to-end pipeline selecting the specific loop or phase to start from (e.g., start at Planning / Deep Research), proceeding sequentially from that entry point all the way to Delivery.
+
+5. **🎛️ Custom Selection Pipeline Mission (`custom_selection_pipeline`)**:
+   - **Behavior**: Execute the pipeline with ONLY user-selected loops and phases (multi-selection enabled), automatically skipping any non-selected stages.
 
 ---
 
@@ -113,8 +134,8 @@ When running multi-round loops (EFFORT >= MEDIUM):
 ## 4. MULTI-TURN PERSISTENCE & REAL-TIME SYNCHRONIZATION
 
 During every turn of mission execution, the agent MUST maintain strict state synchronization:
-1. **Database Mirroring**: Update `db/missions.json`, `db/projects.json`, and database tables (`missions`, `artifacts`, `system_components`) immediately upon completing task steps.
-2. **Disk Mirroring**: Perform all physical file operations inside `missions/<mission_type>/<mission_id>/` (never edit directly in `projects/`). Upon mission completion, transfer finalized artifacts to `projects/`.
+1. **Database Mirroring**: Update `db/missions.json`, `db/sources.json`, `db/deliverables.json`, and database tables (`missions`, `sources`, `deliverables`) immediately upon completing task steps.
+2. **Disk Mirroring**: Store scoping, research, analytics, and plans in `Sources/` and generated code, assets, and reviews in `Deliverables/`. Maintain active execution scratchpads under `missions/<mission_type>/<mission_id>/`.
 3. **Real-time Event Logging**: Append progress logs with standardized status verbs (`[*]`, `[OK]`, `[+]`, `[WARN]`, `[ERR]`) to `runtime_state.recent_events`.
 
 
