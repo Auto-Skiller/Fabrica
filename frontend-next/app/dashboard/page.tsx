@@ -1491,6 +1491,54 @@ export default function Dashboard() {
   const [typeFilter, setTypeFilter] = useState<string>('ALL'); // ALL, standard, brainstorming, deep_research, analytics, system_build, system_build_from_data, system_optimization, system_optimization_from_data, system_test, system_test_from_data
   const [sortOption, setSortOption] = useState<string>('default'); // default, name, priority
 
+  // Sources and Deliverables sub-section filter and selection states
+  const [sourceSubSectionFilter, setSourceSubSectionFilter] = useState<string>('all');
+  const [deliverableSubSectionFilter, setDeliverableSubSectionFilter] = useState<string>('all');
+  const [newSourceSubSection, setNewSourceSubSection] = useState<string>('discovery_scoping');
+  const [newDeliverableSubSection, setNewDeliverableSubSection] = useState<string>('executions');
+  const [exportSelectedSourceIds, setExportSelectedSourceIds] = useState<string[]>([]);
+  const [exportSelectedDeliverableIds, setExportSelectedDeliverableIds] = useState<string[]>([]);
+
+  // Add & Edit Modals states for Sources & Deliverables
+  const [isAddSourceModalOpen, setIsAddSourceModalOpen] = useState<boolean>(false);
+  const [isAddDeliverableModalOpen, setIsAddDeliverableModalOpen] = useState<boolean>(false);
+  const [newSourceTitle, setNewSourceTitle] = useState<string>('');
+  const [newSourceContent, setNewSourceContent] = useState<string>('');
+  const [newDeliverableTitle, setNewDeliverableTitle] = useState<string>('');
+  const [newDeliverableRole, setNewDeliverableRole] = useState<string>('');
+  const [newDeliverableCode, setNewDeliverableCode] = useState<string>('');
+  const [editingSourceItem, setEditingSourceItem] = useState<any | null>(null);
+  const [editingDeliverableItem, setEditingDeliverableItem] = useState<any | null>(null);
+  const [editSourceSubSection, setEditSourceSubSection] = useState<string>('discovery_scoping');
+  const [editDeliverableSubSection, setEditDeliverableSubSection] = useState<string>('executions');
+
+  // AI Agent Missions Pipeline - Approval Gates, EFFORT Parameters & Execution Logs
+  const [isGatesModalOpen, setIsGatesModalOpen] = useState<boolean>(false);
+  const [isEffortModalOpen, setIsEffortModalOpen] = useState<boolean>(false);
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState<boolean>(false);
+  const [selectedMissionLogs, setSelectedMissionLogs] = useState<{ missionId: string; logs: string[] } | null>(null);
+
+  // Approval Gates toggles across loops and non-loops
+  const [approvalGates, setApprovalGates] = useState<Record<string, boolean>>({
+    'discovery_scoping': true,
+    'deep_research': true,
+    'data_analysis': false,
+    'strategic_synthesis': true,
+    'generation': false,
+    'verification': true,
+    'review': true
+  });
+
+  // EFFORT Parameters for loops only
+  const [loopEfforts, setLoopEfforts] = useState<Record<string, 'Low' | 'Medium' | 'High' | 'Deep'>>({
+    'discovery_scoping': 'Medium',
+    'deep_research': 'High',
+    'execution_loop': 'Medium'
+  });
+
+  // Launcher mission type selector
+  const [launcherModelType, setLauncherModelType] = useState<'standard' | 'full_pipeline'>('full_pipeline');
+
   // Markdown board states
   const [boardContent, setBoardContent] = useState<string>('');
   const [isEditingBoard, setIsEditingBoard] = useState<boolean>(false);
@@ -8708,36 +8756,38 @@ ${isDirector ? `
                   padding: '6px 12px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   cursor: 'pointer',
                   height: '36px',
-                  borderBottom: '1px solid var(--border-soft)'
+                  borderBottom: '1px solid var(--border-soft)',
+                  gap: '12px'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>HQ</span>
+                  <span style={{ fontSize: '9px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
                   <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                    MISSIONS HQ ({mExec.length} EXEC • {mDraft.length + mPlan.length} PLAN • {mArchive.length} DONE • TOTAL {filteredMissions.length})
+                    AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleMissionsVertical(false); }}
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid var(--border-soft)',
-                      color: 'var(--muted)',
-                      borderRadius: '4px',
-                      padding: '2px 8px',
-                      fontSize: '8.5px',
-                      fontWeight: 800,
-                      cursor: 'pointer',
-                      fontFamily: 'var(--sans)'
-                    }}
-                  >
-                    ▲ Expand Missions HQ
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleMissionsVertical(false); }}
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border-soft)',
+                    color: 'var(--text-bright)',
+                    borderRadius: '4px',
+                    padding: '2px 10px',
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--sans)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  ▲ Expand Missions HQ
+                </button>
               </div>
             ) : (
               <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -8792,6 +8842,54 @@ ${isDirector ? `
                 >
                   <span style={{ fontSize: '11px', fontWeight: '900' }}>✨</span>
                   <span className="btn-text-label">{dtxt.btnNewMission}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsGatesModalOpen(true)}
+                  title="Configure User Approval Gates"
+                  style={{
+                    height: '22px',
+                    padding: '0 6px',
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    border: '1px solid rgba(59, 130, 246, 0.4)',
+                    color: '#3b82f6',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    lineHeight: '1',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>🛡️</span>
+                  <span>Gates</span>
+                </button>
+
+                <button
+                  onClick={() => setIsEffortModalOpen(true)}
+                  title="Adjust Loop EFFORT Parameters"
+                  style={{
+                    height: '22px',
+                    padding: '0 6px',
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.4)',
+                    color: '#f59e0b',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    lineHeight: '1',
+                    flexShrink: 0
+                  }}
+                >
+                  <span>⚡</span>
+                  <span>EFFORT</span>
                 </button>
               </div>
 
@@ -8907,30 +9005,6 @@ ${isDirector ? `
                     <option value="priority">Sort: Priority</option>
                   </select>
                 )}
-                {/* Vertical Collapse 1 Button for Missions Section */}
-                <button
-                  type="button"
-                  onClick={() => toggleMissionsVertical(true)}
-                  title="Collapse Missions HQ section vertically"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--border-soft)',
-                    color: 'var(--muted)',
-                    borderRadius: '3px',
-                    padding: '1px 6px',
-                    fontSize: '8px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    height: '16px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px',
-                    marginLeft: '4px',
-                    flexShrink: 0
-                  }}
-                >
-                  <span>↕ Collapse</span>
-                </button>
               </div>
             </div>
 
@@ -8951,7 +9025,7 @@ ${isDirector ? `
                   {/* Drafting Column */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>{dtxt.colNew} ({mDraft.length})</span>
+                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>Drafting ({mDraft.length})</span>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mDraft.map(m => (
@@ -8978,8 +9052,39 @@ ${isDirector ? `
                               🛠️ {m.target_stack}
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: '2px', alignItems: 'center' }}>
                             <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
+                            <span style={{ fontSize: '6px', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '0.5px 3px', borderRadius: '2px' }}>
+                              ⚡ {loopEfforts['discovery_scoping'] || 'Medium'} EFFORT
+                            </span>
+                            {approvalGates['discovery_scoping'] !== false && (
+                              <span style={{ fontSize: '6px', fontWeight: 800, color: '#3b82f6', background: 'rgba(59, 130, 246, 0.12)', padding: '0.5px 3px', borderRadius: '2px' }}>
+                                🛡️ Gate On
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMissionLogs({
+                                  missionId: m.id,
+                                  logs: [
+                                    `[${new Date().toLocaleTimeString()}] 🚀 Initiating AI Agent Mission: ${m.id}`,
+                                    `[${new Date().toLocaleTimeString()}] 🔄 Phase 1: Drafting (Discovery & Scoping Loop active)`,
+                                    `[${new Date().toLocaleTimeString()}] ⚡ EFFORT Level set to: ${loopEfforts['discovery_scoping'] || 'Medium'}`,
+                                    `[${new Date().toLocaleTimeString()}] 🛡️ User Approval Gate: ${approvalGates['discovery_scoping'] !== false ? 'ACTIVE (Awaiting user review)' : 'BYPASSED'}`,
+                                    `[${new Date().toLocaleTimeString()}] 📥 Indexed linked Sources context items`,
+                                    `[${new Date().toLocaleTimeString()}] 🧠 Agent synthesizing scoping trade-offs...`
+                                  ]
+                                });
+                                setIsLogsModalOpen(true);
+                              }}
+                              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-soft)', color: 'var(--text-secondary)', fontSize: '6.5px', padding: '1px 4px', borderRadius: '3px', cursor: 'pointer' }}
+                            >
+                              📜 Logs
+                            </button>
                             <button
                               className="mini accent"
                               style={{ fontSize: '6.5px', padding: '1px 4px' }}
@@ -9190,7 +9295,7 @@ ${isDirector ? `
                                 className="mini accent-2"
                                 style={{ fontSize: '6.5px', padding: '1px 3px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'archive'); }}
-                              >Done ✓</button>
+                              >Deliver ✓</button>
                             </div>
                           </div>
                         </div>
@@ -9263,10 +9368,10 @@ ${isDirector ? `
                     </div>
                   </div>
 
-                  {/* Archive Column */}
+                  {/* Delivery Column */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>{dtxt.colDone} ({mArchive.length})</span>
+                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>Delivery ({mArchive.length})</span>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mArchive.map(m => (
@@ -9347,57 +9452,174 @@ ${isDirector ? `
         {/* ================= BOTTOM WORKSPACE WRAPPER (ARTIFACT (LEFT) + PROJECTS (RIGHT)) ================= */}
         <div style={{
           flex: minCenter ? '1 1 100%' : (minBottomVertical ? '0 0 auto' : '1 1 50%'),
-          minHeight: minBottomVertical ? '32px' : '180px',
-          maxHeight: minBottomVertical ? '32px' : 'none',
+          minHeight: minBottomVertical ? '26px' : '180px',
+          maxHeight: minBottomVertical ? '26px' : 'none',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           borderTop: '1px solid var(--border-soft)',
           transition: 'all 0.2s ease'
         }}>
-          {/* Vertical Toggle 2 Header for Bottom Section */}
-          <div style={{
-            background: 'var(--surface-alt)',
-            padding: '4px 10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid var(--border-soft)',
-            height: '32px',
-            flexShrink: 0
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '8.5px', fontWeight: 900, background: '#8b5cf6', color: '#ffffff', padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase' }}>
-                WORKSPACES
-              </span>
-              <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                📦 ARTIFACTS WORKSPACE & 📂 DATA / PROJECTS
-              </span>
+          {/* Vertical Toggle Header ONLY when collapsed */}
+          {minBottomVertical ? (
+            <div style={{
+              background: 'var(--surface-alt)',
+              padding: '2px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderBottom: '1px solid var(--border-soft)',
+              height: '26px',
+              flexShrink: 0
+            }}>
+              <button
+                type="button"
+                onClick={() => toggleBottomVertical()}
+                title="Expand Artifacts & Projects section vertically"
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-soft)',
+                  color: 'var(--text-bright)',
+                  borderRadius: '3px',
+                  padding: '2px 10px',
+                  fontSize: '8.5px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  fontFamily: 'var(--sans)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                ▲ Expand Workspaces & Projects
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => toggleBottomVertical()}
-              title={minBottomVertical ? "Expand Artifacts & Projects section vertically" : "Collapse Artifacts & Projects section vertically"}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border-soft)',
-                color: 'var(--muted)',
-                borderRadius: '3px',
-                padding: '1px 6px',
-                fontSize: '8px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                fontFamily: 'var(--sans)'
-              }}
-            >
-              {minBottomVertical ? '▲ Expand Section' : '↕ Collapse Section'}
-            </button>
-          </div>
-
-          {!minBottomVertical && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden', height: '100%' }}>
+          ) : (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden', height: '100%', position: 'relative' }}>
               
-              {/* ------------ BOTTOM-LEFT: ARTIFACT WORKSPACE SECTION ------------ */}
+              {/* FLOATING 4-BUTTON DIRECTIONAL CONTROL PAD CENTERED ABOVE SECTIONS */}
+              <div style={{
+                position: 'absolute',
+                top: '3px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 40,
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '5px',
+                padding: '2px 3px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                pointerEvents: 'auto'
+              }}>
+                {/* TOP BUTTON: Pointing UP (▲) -> Top Section Vertical Toggle */}
+                <button
+                  type="button"
+                  onClick={() => toggleMissionsVertical()}
+                  title={minCenter ? "Expand Top Section (Restore Layout)" : "Collapse Top Section Upward (Maximize Bottom)"}
+                  style={{
+                    width: '42px',
+                    height: '11px',
+                    background: minCenter ? 'var(--accent)' : 'var(--surface-alt)',
+                    border: '1px solid var(--border-soft)',
+                    color: minCenter ? '#ffffff' : 'var(--text-bright)',
+                    borderRadius: '2px',
+                    fontSize: '7px',
+                    lineHeight: '9px',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                >
+                  ▲
+                </button>
+
+                {/* BOTTOM ROW: 3 Buttons (◀ Left, ▼ Below, ▶ Right) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  {/* LEFT BUTTON: Pointing LEFT (◀) -> Collapse Left Section (Artifact Workspace) */}
+                  <button
+                    type="button"
+                    onClick={() => toggleArtifactHorizontal()}
+                    title={minArtifactSection ? "Expand Left Section (Artifact Workspace)" : "Collapse Left Section (Artifact Workspace)"}
+                    style={{
+                      width: '13px',
+                      height: '12px',
+                      background: minArtifactSection ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minArtifactSection ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '9px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ◀
+                  </button>
+
+                  {/* MIDDLE BUTTON: Pointing DOWN (▼) -> Collapse Bottom Section Downward */}
+                  <button
+                    type="button"
+                    onClick={() => toggleBottomVertical()}
+                    title={minBottomVertical ? "Expand Bottom Workspace" : "Collapse Bottom Workspace Downward"}
+                    style={{
+                      width: '14px',
+                      height: '12px',
+                      background: minBottomVertical ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minBottomVertical ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '9px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ▼
+                  </button>
+
+                  {/* RIGHT BUTTON: Pointing RIGHT (▶) -> Collapse Right Section (Data & Systems) */}
+                  <button
+                    type="button"
+                    onClick={() => toggleProjectsHorizontal()}
+                    title={minSide ? "Expand Right Section (Data & Systems)" : "Collapse Right Section (Data & Systems)"}
+                    style={{
+                      width: '13px',
+                      height: '12px',
+                      background: minSide ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minSide ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '9px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ▶
+                  </button>
+                </div>
+              </div>
+              
+              {/* ------------ BOTTOM-LEFT: SOURCES SECTION ------------ */}
               <div style={{
                 flex: minSide ? '1 1 100%' : (minArtifactSection ? '0 0 38px' : '1 1 50%'),
                 minWidth: minArtifactSection ? '38px' : '0',
@@ -9422,9 +9644,9 @@ ${isDirector ? `
                       padding: '8px 4px',
                       cursor: 'pointer'
                     }}
-                    title="Click to expand Artifact Workspace"
+                    title="Click to expand Sources"
                   >
-                    <span style={{ fontSize: '10px' }}>📦</span>
+                    <span style={{ fontSize: '10px' }}>📥</span>
                     <span style={{
                       writingMode: 'vertical-rl',
                       transform: 'rotate(180deg)',
@@ -9434,7 +9656,7 @@ ${isDirector ? `
                       letterSpacing: '0.08em',
                       margin: '12px 0'
                     }}>
-                      ARTIFACT WORKSPACE
+                      SOURCES
                     </span>
                     <button
                       type="button"
@@ -9446,293 +9668,350 @@ ${isDirector ? `
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
-          <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase' }}>
-                📦 ARTIFACT WORKSPACE
-              </span>
-              <button
-                onClick={() => { setArtifactTab('preview'); toggleArtifactHorizontal(false); }}
-                style={{
-                  fontSize: '8px',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '3px',
-                  border: 'none',
-                  background: artifactTab === 'preview' ? 'var(--accent)' : 'transparent',
-                  color: artifactTab === 'preview' ? '#ffffff' : 'var(--muted)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--sans)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.15s'
-                }}
-              >
-                <span>👁️ Preview</span>
-              </button>
-              <button
-                onClick={() => { setArtifactTab('code'); toggleArtifactHorizontal(false); }}
-                style={{
-                  fontSize: '8px',
-                  fontWeight: 800,
-                  padding: '3px 10px',
-                  borderRadius: '3px',
-                  border: 'none',
-                  background: artifactTab === 'code' ? '#8b5cf6' : 'transparent',
-                  color: artifactTab === 'code' ? '#ffffff' : 'var(--muted)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--sans)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.15s'
-                }}
-              >
-                <span>💻 Code</span>
-              </button>
-            </div>
+                    {/* SOURCES HEADER & TOOLBAR */}
+                    <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '11px' }}>📥</span>
+                          <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            SOURCES ({rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length})
+                          </span>
+                        </div>
 
-            {/* Artifact Select Dropdown */}
-            <select
-              value={selectedArtifact?.id || ''}
-              onChange={(e) => {
-                const found = systemComponents.find((s: any) => s.id === e.target.value);
-                if (found) handleGoToArtifact(found);
-              }}
-              style={{
-                fontSize: '7.5px',
-                fontWeight: 800,
-                fontFamily: 'var(--mono)',
-                background: 'var(--surface)',
-                border: '1px solid var(--border-soft)',
-                borderRadius: '4px',
-                color: 'var(--text-bright)',
-                padding: '2px 4px',
-                outline: 'none',
-                cursor: 'pointer',
-                maxWidth: '120px'
-              }}
-            >
-              <option value="">Switch Artifact ({systemComponents.length})...</option>
-              {systemComponents.map((sc: any) => (
-                <option key={sc.id} value={sc.id}>
-                  📦 {sc.name}
-                </option>
-              ))}
-            </select>
-            {/* Horizontal Collapse 1 Button for Artifact Section */}
-            <button
-              onClick={() => toggleArtifactHorizontal(true)}
-              title="Collapse Artifact section horizontally"
-              style={{
-                fontSize: '8px',
-                fontWeight: 800,
-                padding: '2px 6px',
-                borderRadius: '3px',
-                border: '1px solid var(--border-soft)',
-                background: 'transparent',
-                color: 'var(--muted)',
-                cursor: 'pointer',
-                fontFamily: 'var(--sans)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px',
-                marginLeft: '4px'
-              }}
-            >
-              ◀ Collapse
-            </button>
-          </div>
-
-        {/* Section Body */}
-        {!minArtifactSection && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', padding: '8px' }}>
-            {!selectedArtifact ? (
-              /* Empty State */
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '20px',
-                textAlign: 'center',
-                gap: '10px',
-                border: '1.5px dashed var(--border-soft)',
-                borderRadius: '6px',
-                background: 'rgba(255,255,255,0.01)'
-              }}>
-                <span style={{ fontSize: '28px' }}>📦</span>
-                <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '11px' }}>No Artifact Active</div>
-                <p style={{ margin: 0, fontSize: '8.5px', color: 'var(--muted)', maxWidth: '320px', lineHeight: 1.4 }}>
-                  Click <b style={{ color: '#3b82f6' }}>"🚀 Go To"</b> under any project card on the right to view its live preview or audit codebase.
-                </p>
-                {systemComponents.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center', marginTop: '4px' }}>
-                    {systemComponents.slice(0, 5).map((sc: any) => (
-                      <button
-                        key={sc.id}
-                        onClick={() => handleGoToArtifact(sc)}
-                        style={{
-                          fontSize: '7.5px',
-                          fontWeight: 700,
-                          background: 'var(--surface-alt)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '4px',
-                          color: 'var(--text-bright)',
-                          padding: '2px 6px',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--mono)'
-                        }}
-                      >
-                        📦 {sc.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* Artifact Content Viewer */
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-                
-                {/* TAB 1: LIVE PREVIEW */}
-                {artifactTab === 'preview' && (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>
-                    {/* Preview Sub-toolbar */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '4px 8px',
-                      background: 'rgba(0,0,0,0.2)',
-                      borderRadius: '4px',
-                      border: '1px solid var(--border-soft)',
-                      fontSize: '7.5px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 800, color: '#3b82f6' }}>PREVIEW MODE:</span>
-                        <code style={{ fontSize: '7.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', fontWeight: 700 }}>
-                          {selectedArtifact.name}
-                        </code>
-                      </div>
-                    </div>
-
-                    {/* Preview Body Container */}
-                    <div style={{ flex: 1, minHeight: 0, border: '1px solid var(--border-soft)', borderRadius: '6px', overflow: 'hidden', background: '#0d1117' }}>
-                      {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
-                          <iframe
-                            srcDoc={artifactCodeText}
-                            title={`Preview - ${selectedArtifact.name}`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            onClick={() => setIsAddSourceModalOpen(true)}
                             style={{
-                              width: '100%',
-                              height: '100%',
+                              background: 'var(--accent)',
                               border: 'none',
-                              background: '#ffffff'
+                              color: '#ffffff',
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              padding: '2.5px 7px',
+                              borderRadius: '3.5px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
                             }}
-                            sandbox="allow-scripts allow-modals allow-same-origin"
-                          />
-                        ) : (
-                          <div style={{ flex: 1, padding: '12px', overflowY: 'auto', fontFamily: 'var(--sans)' }}>
-                            <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: '8px', marginBottom: '8px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                                📦 {selectedArtifact.name}
-                              </div>
-                              <div style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '2px' }}>
-                                Role: {selectedArtifact.role || 'Artifact Module'} • Project: {selectedArtifact.metadata?.project_name || selectedProjectName}
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '9px', color: 'var(--text-bright)', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)' }}>
-                              {artifactCodeText || 'No snapshot available for this artifact.'}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                {/* TAB 2: AUDIT REALTIME CODEBASE */}
-                {artifactTab === 'code' && (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>
-                    {/* Code Editor Header */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '4px 8px',
-                      background: 'rgba(0,0,0,0.2)',
-                      borderRadius: '4px',
-                      border: '1px solid var(--border-soft)',
-                      fontSize: '7.5px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                        <span style={{ fontWeight: 800, color: '#8b5cf6' }}>PATH:</span>
-                        <code style={{ fontSize: '7.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          artifacts/{selectedArtifact.name}/{artifactActiveFile || selectedArtifact.name}
-                        </code>
+                          >
+                            ＋ Add Source
+                          </button>
+                          <button
+                            onClick={() => setIsImportModalOpen(true)}
+                            style={{
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border-soft)',
+                              color: 'var(--text-bright)',
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              padding: '2.5px 6px',
+                              borderRadius: '3.5px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}
+                          >
+                            📥 Import
+                          </button>
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          onClick={handleSaveArtifactCode}
-                          disabled={isSavingArtifactCode}
-                          style={{
-                            background: 'rgba(16, 185, 129, 0.15)',
-                            border: '1px solid #10b981',
-                            color: '#10b981',
-                            fontSize: '7.5px',
-                            fontWeight: 800,
-                            padding: '2px 8px',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontFamily: 'var(--sans)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                          }}
-                          title="Save Codebase to Disk & Database"
-                        >
-                          <span>{isSavingArtifactCode ? 'Saving...' : '💾 Save Code'}</span>
-                        </button>
+                      {/* SUB-SECTIONS FILTER BAR FOR SOURCES */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
+                        {[
+                          { key: 'all', label: 'All', icon: '🌐' },
+                          { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍' },
+                          { key: 'deep_research', label: 'Deep Research', icon: '📡' },
+                          { key: 'data_analysis', label: 'Data Analysis', icon: '📊' },
+                          { key: 'strategic_synthesis', label: 'Strategic Synthesis', icon: '🎯' }
+                        ].map(sub => (
+                          <button
+                            key={sub.key}
+                            onClick={() => setSourceSubSectionFilter(sub.key)}
+                            style={{
+                              fontSize: '7.5px',
+                              fontWeight: sourceSubSectionFilter === sub.key ? 800 : 500,
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              border: '1px solid var(--border-soft)',
+                              background: sourceSubSectionFilter === sub.key ? 'var(--text)' : 'var(--surface)',
+                              color: sourceSubSectionFilter === sub.key ? 'var(--surface)' : 'var(--muted)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {sub.icon} {sub.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Code Textarea Editor */}
-                    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                      <textarea
-                        value={artifactCodeText}
-                        onChange={(e) => setArtifactCodeText(e.target.value)}
-                        placeholder="Audit and edit codebase files..."
-                        style={{
-                          width: '100%',
-                          flex: 1,
-                          minHeight: '140px',
+                    {/* SOURCES CONTENT BODY */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '8px', gap: '6px' }}>
+                      {rawDataList
+                        .filter((rd: any) => {
+                          const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
+                          if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                          const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
+                          if (sourceSubSectionFilter === 'all') return true;
+                          return subSec === sourceSubSectionFilter;
+                        })
+                        .map((rd: any) => {
+                          const isExpanded = expandedRawDataIds.includes(rd.id);
+                          const itemProj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
+                          const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
+                          const isSelectedForExport = exportSelectedSourceIds.includes(rd.id);
+
+                          const subSecConfig: Record<string, { label: string; color: string; bg: string }> = {
+                            discovery_scoping: { label: 'Discovery & Scoping', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                            deep_research: { label: 'Deep Research', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+                            data_analysis: { label: 'Data Analysis', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                            strategic_synthesis: { label: 'Strategic Synthesis', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
+                          };
+
+                          const secInfo = subSecConfig[subSec] || subSecConfig.discovery_scoping;
+
+                          return (
+                            <div key={rd.id} style={{
+                              background: 'var(--surface)',
+                              border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                              borderRadius: '6px',
+                              padding: '7px 9px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1, overflow: 'hidden' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelectedForExport}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setExportSelectedSourceIds(prev => [...prev, rd.id]);
+                                      } else {
+                                        setExportSelectedSourceIds(prev => prev.filter(id => id !== rd.id));
+                                      }
+                                    }}
+                                    style={{ marginTop: '2px', cursor: 'pointer' }}
+                                    title="Select item for export"
+                                  />
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {rd.name}
+                                      </span>
+                                      <span style={{ fontSize: '6.5px', fontWeight: 800, background: secInfo.bg, color: secInfo.color, padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
+                                        {secInfo.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Disk Path Badge */}
+                                    <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1.5px' }}>
+                                      📁 projects/{itemProj}/sources/{subSec}/{rd.name}
+                                    </span>
+
+                                    {/* Stage/Loop Dependency Badge */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 4px', borderRadius: '2px', border: '1px solid var(--border-soft)' }}>
+                                        🔗 Stage Dep: {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
+                                      </span>
+                                      <span style={{ fontSize: '6.5px', color: '#10b981', fontFamily: 'var(--mono)' }}>
+                                        ⚡ Feeds ➔ Deliverables
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <button
+                                    onClick={() => toggleRawDataExpand(rd.id)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '9px', cursor: 'pointer', padding: '2px' }}
+                                    title="View / edit content"
+                                  >
+                                    {isExpanded ? '▲' : '▼'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteRawData(rd.id)}
+                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px', padding: '2px' }}
+                                    title="Delete source"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Action Bar for Sources */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: 'rgba(0,0,0,0.15)', padding: '2.5px 4px', borderRadius: '3.5px', flexWrap: 'wrap' }}>
+                                <button
+                                  onClick={() => {
+                                    setIsAddMissionOpen(true);
+                                    setNewMissionObjective(`Synthesize & process source "${rd.name}" in project "${itemProj}"`);
+                                  }}
+                                  style={{
+                                    fontSize: '6.5px',
+                                    fontWeight: 800,
+                                    background: 'rgba(204,122,74,0.12)',
+                                    border: '1px solid var(--accent)',
+                                    color: 'var(--accent)',
+                                    borderRadius: '3px',
+                                    padding: '1px 5px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}
+                                >
+                                  🚀 Launch Mission
+                                </button>
+                                <select
+                                  value={subSec}
+                                  onChange={async (e) => {
+                                    const nextSub = e.target.value;
+                                    try {
+                                      const res = await fetch('/api/db/raw-data', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          id: rd.id,
+                                          name: rd.name,
+                                          content: rd.content,
+                                          mime_type: rd.mime_type,
+                                          metadata: {
+                                            ...(rd.metadata || {}),
+                                            sub_section: nextSub,
+                                            project_name: itemProj,
+                                            tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
+                                          }
+                                        })
+                                      });
+                                      if (res.ok) {
+                                        setToast({ message: `Moved to ${nextSub}`, type: 'success', isOpen: true });
+                                        fetchWorkspaceData();
+                                      }
+                                    } catch (err) {}
+                                  }}
+                                  style={{
+                                    fontSize: '6.5px',
+                                    fontWeight: 700,
+                                    fontFamily: 'var(--sans)',
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    borderRadius: '3px',
+                                    color: 'var(--muted)',
+                                    padding: '1px 3px',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <option value="discovery_scoping">Move: Discovery</option>
+                                  <option value="deep_research">Move: Deep Research</option>
+                                  <option value="data_analysis">Move: Data Analysis</option>
+                                  <option value="strategic_synthesis">Move: Strategic Synthesis</option>
+                                </select>
+                              </div>
+
+                              {/* Expand Content Area */}
+                              {isExpanded && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--border-soft)', paddingTop: '5px', marginTop: '2px' }}>
+                                  <span style={{ fontSize: '7px', fontWeight: 800, color: 'var(--muted)' }}>SOURCE CONTENT (AUTO-SAVES):</span>
+                                  <textarea
+                                    style={{
+                                      width: '100%',
+                                      height: '75px',
+                                      fontSize: '8px',
+                                      fontFamily: 'var(--mono)',
+                                      background: '#090d16',
+                                      border: '1px solid var(--border-soft)',
+                                      borderRadius: '4px',
+                                      padding: '4px 6px',
+                                      color: '#10b981',
+                                      resize: 'vertical',
+                                      outline: 'none'
+                                    }}
+                                    defaultValue={rd.content}
+                                    onBlur={async (e) => {
+                                      if (e.target.value !== rd.content) {
+                                        try {
+                                          const res = await fetch('/api/db/raw-data', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              id: rd.id,
+                                              name: rd.name,
+                                              content: e.target.value,
+                                              mime_type: rd.mime_type,
+                                              metadata: {
+                                                ...(rd.metadata || {}),
+                                                project_name: itemProj,
+                                                tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
+                                              }
+                                            })
+                                          });
+                                          if (res.ok) {
+                                            setToast({ message: 'Saved content updates!', type: 'success', isOpen: true });
+                                            fetchWorkspaceData();
+                                          }
+                                        } catch (err) {}
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                      {rawDataList.filter((rd: any) => {
+                        const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
+                        if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                        const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
+                        return sourceSubSectionFilter === 'all' || subSec === sourceSubSectionFilter;
+                      }).length === 0 && (
+                        <div style={{
+                          padding: '24px 14px',
+                          border: '1.5px dashed var(--border-soft)',
+                          borderRadius: '8px',
+                          textAlign: 'center',
                           fontSize: '8.5px',
-                          fontFamily: 'var(--mono)',
-                          background: '#090d16',
-                          color: '#10b981',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          outline: 'none',
-                          resize: 'none',
-                          lineHeight: 1.45,
-                          tabSize: 2
-                        }}
-                      />
+                          color: 'var(--muted)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '24px' }}>📥</div>
+                          <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Sources in Sub-Section</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35', maxWidth: '240px' }}>
+                            Upload or create a new source for {sourceSubSectionFilter === 'all' ? 'this project' : sourceSubSectionFilter}.
+                          </p>
+                          <button
+                            onClick={() => setIsAddSourceModalOpen(true)}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              background: 'var(--accent)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 10px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ＋ Add First Source
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-
               </div>
-            )}
-          </div>
-        )}
-      </div>
-    )}
-  </div>
 
-              {/* ------------ BOTTOM-RIGHT: PROJECTS & DATA SECTION ------------ */}
+              {/* ------------ BOTTOM-RIGHT: DELIVERABLES SECTION ------------ */}
               <div style={{
                 flex: minArtifactSection ? '1 1 100%' : (minSide ? '0 0 38px' : '1 1 50%'),
                 minWidth: minSide ? '38px' : '0',
@@ -9743,299 +10022,573 @@ ${isDirector ? `
                 overflow: 'hidden',
                 transition: 'all 0.2s ease'
               }}>
-                {/* ============ RIGHT COLUMN: PIPELINES, INGEST & CONSULTING ============ */}
+                {/* ============ RIGHT COLUMN: DELIVERABLES ============ */}
                 <aside className={`col side ${minSide ? 'min' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
           {minSide ? (
             <div
-              className="side-rail"
               onClick={() => toggleProjectsHorizontal(false)}
-              title="Click to expand Data & Systems section"
+              style={{
+                width: '38px',
+                height: '100%',
+                background: 'var(--surface-alt)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '8px 4px',
+                cursor: 'pointer',
+                overflow: 'hidden'
+              }}
+              title="Click to expand Deliverables"
             >
-              <div className="rail-head">
-                <span className="rail-badge" style={{ background: '#6366f1', color: '#ffffff', fontSize: '9px', fontWeight: 900, padding: '2px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>SRC</span>
-                <span className="rail-title" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em', margin: '8px 0', fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                  DATA & SYSTEMS
-                </span>
-              </div>
-              <div className="rail-metrics">
-                <div className="mmetric hi" title="Raw Data Inputs Registered">
-                  <span style={{ fontSize: '11px' }}>📁</span>
-                  <b>{rawDataList.length}</b>
-                  <span className="w">INPUTS</span>
-                </div>
-                <div className="mmetric" title="Connected Project Systems">
-                  <span style={{ fontSize: '11px' }}>⚙️</span>
-                  <b style={{ color: '#06b6d4' }}>{systemComponents.length}</b>
-                  <span className="w">SYSTEMS</span>
-                </div>
-                <div className="mmetric" title="Total Combined Data & Systems">
-                  <span style={{ fontSize: '11px' }}>📊</span>
-                  <b style={{ color: '#f59e0b' }}>{rawDataList.length + systemComponents.length}</b>
-                  <span className="w">TOTAL</span>
-                </div>
-                <div className="mmetric" title="Active Signal Context">
-                  <span style={{ fontSize: '11px' }}>⚡</span>
-                  <b style={{ color: '#10b981' }}>{ecomDataItems.length}</b>
-                  <span className="w">SIGNAL</span>
-                </div>
-              </div>
-              <div className="rail-expand-prompt" style={{ marginTop: 'auto', fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <span>EXPAND ‹</span>
-              </div>
+              <span style={{ fontSize: '10px' }}>📦</span>
+              <span style={{
+                writingMode: 'vertical-rl',
+                transform: 'rotate(180deg)',
+                fontSize: '9px',
+                fontWeight: 900,
+                color: 'var(--text-bright)',
+                letterSpacing: '0.08em',
+                margin: '12px 0'
+              }}>
+                DELIVERABLES
+              </span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); toggleProjectsHorizontal(false); }}
+                style={{ marginTop: 'auto', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '10px', cursor: 'pointer' }}
+              >
+                ◀
+              </button>
             </div>
           ) : (
             <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
-              {/* Structured Multi-Project Header & Toolbar */}
-              <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)', flexShrink: 0 }}>
-                {/* Header Row 1: Section Title & Control Toggles */}
-                <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                    <span style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.04em', color: 'var(--text-bright)', whiteSpace: 'nowrap' }}>📂 DATA & SYSTEMS</span>
-                    <span style={{
-                      fontSize: '6.5px',
-                      fontFamily: 'var(--mono)',
-                      background: 'rgba(16, 185, 129, 0.08)',
-                      color: '#10b981',
-                      border: '1px solid rgba(16, 185, 129, 0.2)',
-                      borderRadius: '3px',
-                      padding: '2px 5px',
-                      fontWeight: 800,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      whiteSpace: 'nowrap'
-                    }} title="Real-time disk watcher active for db/projects.json and projects/ directory">
-                      <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10b981' }} />
-                      SYNCED
-                    </span>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
+                {/* DELIVERABLES HEADER & TOOLBAR */}
+                <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '6px', borderBottom: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '11px' }}>📦</span>
+                      <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        DELIVERABLES ({systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length})
+                      </span>
+                    </div>
+
+                    {/* Project Switcher */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>📁</span>
+                      <select
+                        value={selectedProjectName}
+                        onChange={(e) => setSelectedProjectName(e.target.value)}
+                        style={{
+                          fontSize: '8px',
+                          fontWeight: 800,
+                          fontFamily: 'var(--mono)',
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '3.5px',
+                          color: 'var(--text-bright)',
+                          padding: '2px 4px',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          maxWidth: '110px',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        <option value="all">🌐 ALL PROJECTS ({projectsList.length})</option>
+                        {projectsList.map((p: any) => (
+                          <option key={p.id} value={p.name}>📁 {p.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setIsCreatingProjectModal(true)}
+                        style={{
+                          background: 'var(--accent)',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '7.5px',
+                          fontWeight: 800,
+                          padding: '2px 5px',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        + NEW
+                      </button>
+                    </div>
+
+                    {/* Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        onClick={() => setIsAddDeliverableModalOpen(true)}
+                        style={{
+                          background: '#10b981',
+                          border: 'none',
+                          color: '#ffffff',
+                          fontSize: '8px',
+                          fontWeight: 800,
+                          padding: '2.5px 7px',
+                          borderRadius: '3.5px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                      >
+                        ＋ Add Deliverable
+                      </button>
+                      <button
+                        onClick={() => setIsImportModalOpen(true)}
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border-soft)',
+                          color: 'var(--text-bright)',
+                          fontSize: '8px',
+                          fontWeight: 800,
+                          padding: '2.5px 6px',
+                          borderRadius: '3.5px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📥 Import
+                      </button>
+                      <button
+                        onClick={() => setIsExportModalOpen(true)}
+                        style={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border-soft)',
+                          color: 'var(--accent)',
+                          fontSize: '8px',
+                          fontWeight: 800,
+                          padding: '2.5px 6px',
+                          borderRadius: '3.5px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📤 Export
+                      </button>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                    <button
-                      onClick={() => setYourDataSystemsView('list')}
-                      style={{
-                        fontSize: '8px',
-                        background: yourDataSystemsView === 'list' ? 'var(--accent)' : 'var(--surface)',
-                        color: yourDataSystemsView === 'list' ? '#fff' : 'var(--muted)',
-                        border: '1px solid var(--border-soft)',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'var(--sans)',
-                        transition: 'all 0.15s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      📝 List
-                    </button>
-                    <button
-                      onClick={() => setYourDataSystemsView('graph')}
-                      style={{
-                        fontSize: '8px',
-                        background: yourDataSystemsView === 'graph' ? 'var(--accent)' : 'var(--surface)',
-                        color: yourDataSystemsView === 'graph' ? '#fff' : 'var(--muted)',
-                        border: '1px solid var(--border-soft)',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'var(--sans)',
-                        transition: 'all 0.15s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      🕸️ Graph
-                    </button>
-                    {/* Horizontal Collapse 2 Button for Projects Section */}
-                    <button
-                      onClick={() => toggleProjectsHorizontal(true)}
-                      title="Collapse Projects section horizontally"
-                      style={{
-                        fontSize: '8px',
-                        background: 'transparent',
-                        color: 'var(--muted)',
-                        border: '1px solid var(--border-soft)',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        fontFamily: 'var(--sans)',
-                        transition: 'all 0.15s ease',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      Collapse ▶
-                    </button>
-                  </div>
-                </div>
-
-                {/* Header Row 2: Dedicated Active Project Switcher Toolbar */}
-                <div style={{ padding: '6px 4px 6px 3px', borderTop: '1px solid var(--border-soft)', background: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
-                      📁 PROJECT:
-                    </span>
-                    <select
-                      value={selectedProjectName}
-                      onChange={(e) => setSelectedProjectName(e.target.value)}
-                      style={{
-                        flex: 1,
-                        minWidth: '110px',
-                        fontSize: '9px',
-                        fontWeight: 800,
-                        fontFamily: 'var(--mono)',
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text-bright)',
-                        padding: '3px 0px',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        textOverflow: 'ellipsis',
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap'
-                      }}
-                      title="Select Active Project Workspace"
-                    >
-                      <option value="all" style={{ background: '#121826', color: '#fff' }}>🌐 ALL PROJECTS ({projectsList.length})</option>
-                      {projectsList.map((p: any) => (
-                        <option key={p.id} value={p.name} style={{ background: '#121826', color: '#fff' }}>
-                          📁 {p.name}
-                        </option>
+                  {/* SUB-SECTIONS FILTER & VIEW MODES */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                    {/* Sub-sections Pills */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      {[
+                        { key: 'all', label: 'All', icon: '🌐' },
+                        { key: 'executions', label: 'Executions', icon: '⚡' },
+                        { key: 'reviews', label: 'Reviews', icon: '🛡️' },
+                        { key: 'completed', label: 'Completed', icon: '✅' }
+                      ].map(sub => (
+                        <button
+                          key={sub.key}
+                          onClick={() => setDeliverableSubSectionFilter(sub.key)}
+                          style={{
+                            fontSize: '7.5px',
+                            fontWeight: deliverableSubSectionFilter === sub.key ? 800 : 500,
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            border: '1px solid var(--border-soft)',
+                            background: deliverableSubSectionFilter === sub.key ? 'var(--text)' : 'var(--surface)',
+                            color: deliverableSubSectionFilter === sub.key ? 'var(--surface)' : 'var(--muted)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {sub.icon} {sub.label}
+                        </button>
                       ))}
-                    </select>
-                    <button
-                      onClick={() => setIsCreatingProjectModal(true)}
-                      style={{
-                        background: 'var(--accent)',
-                        border: 'none',
-                        color: '#ffffff',
-                        fontSize: '8px',
-                        fontWeight: 800,
-                        padding: '3px 4px 3px 3px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                      title="Create New Project Workspace"
-                    >
-                      + NEW
-                    </button>
-                  </div>
+                    </div>
 
-                  {/* Moved Import/Export buttons to replace Data/Systems counter text */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <button
-                      onClick={() => setIsImportModalOpen(true)}
-                      style={{
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text-bright)',
-                        fontSize: '7.5px',
-                        fontWeight: 800,
-                        padding: '2px 3px 2px 1px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                      title="Import Codebase / Data"
-                    >
-                      📥 IMPORT
-                    </button>
-                    <button
-                      onClick={() => setIsExportModalOpen(true)}
-                      style={{
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--accent)',
-                        fontSize: '7.5px',
-                        fontWeight: 800,
-                        padding: '2px 3px 2px 1px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                      title="Export Project / GitHub Sync"
-                    >
-                      📤 EXPORT
-                    </button>
+                    {/* View Mode Switcher */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <button
+                        onClick={() => setYourDataSystemsView('list')}
+                        style={{
+                          fontSize: '7.5px',
+                          fontWeight: 800,
+                          background: yourDataSystemsView === 'list' ? 'var(--accent)' : 'var(--surface)',
+                          color: yourDataSystemsView === 'list' ? '#fff' : 'var(--muted)',
+                          border: '1px solid var(--border-soft)',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📝 List
+                      </button>
+                      <button
+                        onClick={() => {
+                          setYourDataSystemsView('artifact' as any);
+                          if (!selectedArtifact && systemComponents.length > 0) {
+                            handleGoToArtifact(systemComponents[0]);
+                          }
+                        }}
+                        style={{
+                          fontSize: '7.5px',
+                          fontWeight: 800,
+                          background: (yourDataSystemsView as any) === 'artifact' ? 'var(--accent)' : 'var(--surface)',
+                          color: (yourDataSystemsView as any) === 'artifact' ? '#fff' : 'var(--muted)',
+                          border: '1px solid var(--border-soft)',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        👁️ Artifact Mode
+                      </button>
+                      <button
+                        onClick={() => setYourDataSystemsView('graph')}
+                        style={{
+                          fontSize: '7.5px',
+                          fontWeight: 800,
+                          background: yourDataSystemsView === 'graph' ? 'var(--accent)' : 'var(--surface)',
+                          color: yourDataSystemsView === 'graph' ? '#fff' : 'var(--muted)',
+                          border: '1px solid var(--border-soft)',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🕸️ Graph
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Header Row 3: Disk Storage Directory Mapping */}
-                <div style={{
-                  background: 'rgba(204,122,74,0.04)',
-                  borderTop: '1px solid var(--border-soft)',
-                  padding: '3px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '7.5px',
-                  color: 'var(--muted)',
-                  fontFamily: 'var(--mono)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    <span style={{ color: 'var(--accent)', fontWeight: 800 }}>PATH:</span>
-                    <code style={{ color: 'var(--text-bright)', fontWeight: 700 }}>
-                      projects/{selectedProjectName === 'all' ? '*' : selectedProjectName}/
-                    </code>
-                    <span style={{ opacity: 0.7 }}>(data/ & systems/)</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.8, flexShrink: 0 }}>
-                    <span>db/projects.json</span>
-                  </div>
+                {/* DELIVERABLES CONTENT BODY */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '8px', overflowY: 'auto' }}>
+                  {yourDataSystemsView === 'graph' ? (
+                    <DependencyGraph rawDataList={rawDataList} systemComponents={systemComponents} />
+                  ) : (yourDataSystemsView as any) === 'artifact' ? (
+                    /* ARTIFACT VIEWER MODE */
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>
+                      {/* Artifact Selector Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>SELECT DELIVERABLE:</span>
+                          <select
+                            value={selectedArtifact?.id || ''}
+                            onChange={(e) => {
+                              const found = systemComponents.find(sc => sc.id === e.target.value);
+                              if (found) handleGoToArtifact(found);
+                            }}
+                            style={{
+                              fontSize: '8.5px',
+                              fontWeight: 800,
+                              fontFamily: 'var(--mono)',
+                              background: 'var(--surface-alt)',
+                              border: '1px solid var(--border-soft)',
+                              borderRadius: '3px',
+                              color: 'var(--text-bright)',
+                              padding: '2px 6px',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {systemComponents.map(sc => (
+                              <option key={sc.id} value={sc.id}>📦 {sc.name}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            onClick={() => setArtifactTab('preview')}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              padding: '2px 7px',
+                              borderRadius: '3px',
+                              border: 'none',
+                              background: artifactTab === 'preview' ? 'var(--accent)' : 'transparent',
+                              color: artifactTab === 'preview' ? '#fff' : 'var(--muted)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            👁️ Preview
+                          </button>
+                          <button
+                            onClick={() => setArtifactTab('code')}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              padding: '2px 7px',
+                              borderRadius: '3px',
+                              border: 'none',
+                              background: artifactTab === 'code' ? '#8b5cf6' : 'transparent',
+                              color: artifactTab === 'code' ? '#fff' : 'var(--muted)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            💻 Code
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Preview / Code Content */}
+                      {selectedArtifact ? (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                          {artifactTab === 'preview' ? (
+                            <div style={{ flex: 1, minHeight: 0, border: '1px solid var(--border-soft)', borderRadius: '6px', overflow: 'hidden', background: '#0d1117' }}>
+                              {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
+                                <iframe
+                                  srcDoc={artifactCodeText}
+                                  title={`Preview - ${selectedArtifact.name}`}
+                                  style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }}
+                                  sandbox="allow-scripts allow-modals allow-same-origin"
+                                />
+                              ) : (
+                                <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+                                  <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px', marginBottom: '8px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-bright)' }}>📦 {selectedArtifact.name}</div>
+                                    <div style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '2px' }}>Role: {selectedArtifact.role || 'Deliverable Module'}</div>
+                                  </div>
+                                  <div style={{ fontSize: '8.5px', color: 'var(--text-bright)', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)' }}>
+                                    {artifactCodeText || 'No snapshot available.'}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 6px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                                <span style={{ fontSize: '7.5px', color: '#8b5cf6', fontWeight: 800 }}>artifacts/{selectedArtifact.name}</span>
+                                <button
+                                  onClick={handleSaveArtifactCode}
+                                  disabled={isSavingArtifactCode}
+                                  style={{ background: '#10b981', color: '#fff', border: 'none', fontSize: '7.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '3px', cursor: 'pointer' }}
+                                >
+                                  {isSavingArtifactCode ? 'Saving...' : '💾 Save Code'}
+                                </button>
+                              </div>
+                              <textarea
+                                value={artifactCodeText}
+                                onChange={(e) => setArtifactCodeText(e.target.value)}
+                                style={{ flex: 1, minHeight: '120px', fontSize: '8.5px', fontFamily: 'var(--mono)', background: '#090d16', color: '#10b981', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px', outline: 'none', resize: 'none' }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '10px' }}>
+                          No deliverable selected.
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* DELIVERABLES LIST VIEW */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {systemComponents
+                        .filter((sc: any) => {
+                          const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
+                          if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                          const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
+                          if (deliverableSubSectionFilter === 'all') return true;
+                          return subSec === deliverableSubSectionFilter;
+                        })
+                        .map((sc: any) => {
+                          const itemProj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
+                          const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
+                          const isSelectedForExport = exportSelectedDeliverableIds.includes(sc.id);
+
+                          const subSecConfig: Record<string, { label: string; color: string; bg: string }> = {
+                            executions: { label: 'Executions', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                            reviews: { label: 'Reviews', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                            completed: { label: 'Completed', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
+                          };
+
+                          const secInfo = subSecConfig[subSec] || subSecConfig.executions;
+
+                          return (
+                            <div key={sc.id} style={{
+                              background: 'var(--surface)',
+                              border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                              borderRadius: '6px',
+                              padding: '7px 9px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flex: 1, overflow: 'hidden' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelectedForExport}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setExportSelectedDeliverableIds(prev => [...prev, sc.id]);
+                                      } else {
+                                        setExportSelectedDeliverableIds(prev => prev.filter(id => id !== sc.id));
+                                      }
+                                    }}
+                                    style={{ marginTop: '2px', cursor: 'pointer' }}
+                                    title="Select item for export"
+                                  />
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {sc.name}
+                                      </span>
+                                      <span style={{ fontSize: '6.5px', fontWeight: 800, background: secInfo.bg, color: secInfo.color, padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase', fontFamily: 'var(--sans)' }}>
+                                        {secInfo.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Disk Path Badge */}
+                                    <span style={{ fontSize: '6.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', marginTop: '1.5px' }}>
+                                      📁 projects/{itemProj}/deliverables/{subSec}/{sc.name}
+                                    </span>
+
+                                    {/* Stage/Loop Dependency Badge */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', flexWrap: 'wrap' }}>
+                                      <span style={{ fontSize: '6.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 4px', borderRadius: '2px', border: '1px solid var(--border-soft)' }}>
+                                        🔗 Source: Strategic Synthesis
+                                      </span>
+                                      <span style={{ fontSize: '6.5px', color: '#10b981', fontFamily: 'var(--mono)' }}>
+                                        🛡️ Quality Gate: Passed
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <button
+                                    onClick={() => {
+                                      handleGoToArtifact(sc);
+                                      setYourDataSystemsView('artifact' as any);
+                                    }}
+                                    style={{
+                                      fontSize: '7.5px',
+                                      fontWeight: 800,
+                                      background: 'rgba(59,130,246,0.12)',
+                                      border: '1px solid #3b82f6',
+                                      color: '#3b82f6',
+                                      borderRadius: '3px',
+                                      padding: '2px 6px',
+                                      cursor: 'pointer'
+                                    }}
+                                    title="View Live Preview or Code Editor"
+                                  >
+                                    🚀 Go To Artifact
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSystemComponent(sc.id)}
+                                    style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px', padding: '2px' }}
+                                    title="Delete deliverable"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Sub-section Switcher */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', background: 'rgba(0,0,0,0.15)', padding: '2.5px 4px', borderRadius: '3.5px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '6.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>Sub-section:</span>
+                                <select
+                                  value={subSec}
+                                  onChange={async (e) => {
+                                    const nextSub = e.target.value;
+                                    try {
+                                      const res = await fetch('/api/db/system-components', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          id: sc.id,
+                                          name: sc.name,
+                                          role: sc.role,
+                                          code_snapshot: sc.code_snapshot,
+                                          metadata: {
+                                            ...(sc.metadata || {}),
+                                            sub_section: nextSub,
+                                            status: nextSub === 'completed' ? 'processed' : nextSub === 'reviews' ? 'reviewing' : 'new',
+                                            project_name: itemProj,
+                                            tenantId: sc.metadata?.tenantId || activeEntity || 'default_user'
+                                          }
+                                        })
+                                      });
+                                      if (res.ok) {
+                                        setToast({ message: `Moved deliverable to ${nextSub}`, type: 'success', isOpen: true });
+                                        fetchWorkspaceData();
+                                      }
+                                    } catch (err) {}
+                                  }}
+                                  style={{
+                                    fontSize: '6.5px',
+                                    fontWeight: 700,
+                                    fontFamily: 'var(--sans)',
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    borderRadius: '3px',
+                                    color: 'var(--muted)',
+                                    padding: '1px 3px',
+                                    outline: 'none',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <option value="executions">Move to: Executions</option>
+                                  <option value="reviews">Move to: Reviews</option>
+                                  <option value="completed">Move to: Completed</option>
+                                </select>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {systemComponents.filter((sc: any) => {
+                        const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
+                        if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                        const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
+                        return deliverableSubSectionFilter === 'all' || subSec === deliverableSubSectionFilter;
+                      }).length === 0 && (
+                        <div style={{
+                          padding: '24px 14px',
+                          border: '1.5px dashed var(--border-soft)',
+                          borderRadius: '8px',
+                          textAlign: 'center',
+                          fontSize: '8.5px',
+                          color: 'var(--muted)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: 'rgba(255,255,255,0.015)'
+                        }}>
+                          <div style={{ fontSize: '24px' }}>📦</div>
+                          <div style={{ fontWeight: 800, color: 'var(--text-bright)', fontSize: '10px' }}>No Deliverables in Sub-Section</div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.35', maxWidth: '240px' }}>
+                            Add or generate a deliverable for {deliverableSubSectionFilter === 'all' ? 'this project' : deliverableSubSectionFilter}.
+                          </p>
+                          <button
+                            onClick={() => setIsAddDeliverableModalOpen(true)}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              background: '#10b981',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '4px 10px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ＋ Add First Deliverable
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-
+            </section>
+            {/*
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '12px', overflowY: 'auto' }}>
                 {yourDataSystemsView === 'graph' ? (
                   <DependencyGraph rawDataList={rawDataList} systemComponents={systemComponents} />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', overflowX: 'hidden' }}>
 
-                    {/* Top Banner Header in ONE horizontal line mirroring 2-column split */}
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'row',
-                      alignItems: 'center', 
-                      gap: '12px', 
-                      borderBottom: '1.5px solid var(--border-soft)', 
-                      paddingBottom: '6px',
-                      width: '100%'
-                    }}>
-                      {/* Left Half: Your Data */}
-                      <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '4px' }}>
-                        <span style={{ fontSize: '9px' }}>📥</span>
-                        <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          DATA INPUTS ({rawDataList.filter(rd => selectedProjectName === 'all' || (rd.metadata?.project_name || rd.metadata?.project || 'default_project') === selectedProjectName).length})
-                        </h3>
-                      </div>
 
-                      {/* Header Vertical Divider Line */}
-                      <div style={{ width: '1.5px', height: '14px', background: 'var(--border-soft)', flexShrink: 0 }} />
-
-                      {/* Right Half: Your Systems */}
-                      <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '4px' }}>
-                        <span style={{ fontSize: '9px' }}>⚙️</span>
-                        <h3 style={{ margin: 0, fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', fontFamily: 'var(--sans)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          PROJECT SYSTEMS ({systemComponents.filter(sc => selectedProjectName === 'all' || (sc.metadata?.project_name || sc.metadata?.project || 'default_project') === selectedProjectName).length})
-                        </h3>
-                      </div>
-                    </div>
 
                     {/* Horizontal Split Container */}
                     <div style={{ 
@@ -10050,129 +10603,6 @@ ${isDirector ? `
                   
                       {/* ================= SECTION 1: DATAS (DATA SOURCES) ================= */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
-
-                        {/* Search Bar Block with Dropdown Filter on the left */}
-                        <div style={{
-                          background: 'rgba(229,147,32,0.03)',
-                          border: '1px solid rgba(229,147,32,0.15)',
-                          borderRadius: '6px',
-                          padding: '6px 8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '5px'
-                        }}>
-                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', width: '100%', minWidth: 0 }}>
-                            {/* Compact Status Filter Dropdown for Data */}
-                            <select
-                              value={rawDataFilter}
-                              onChange={(e) => setRawDataFilter(e.target.value as any)}
-                              style={{
-                                fontSize: '6.5px',
-                                fontFamily: 'var(--sans)',
-                                background: 'var(--surface)',
-                                border: '1px solid var(--border-soft)',
-                                borderRadius: '3px',
-                                padding: '1px',
-                                color: 'var(--text)',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                                width: '38px',
-                                flexShrink: 0
-                              }}
-                              title="Filter Data Status"
-                            >
-                              <option value="all">ALL</option>
-                              <option value="new">NEW</option>
-                              <option value="in_process">REV</option>
-                              <option value="processed">UND</option>
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="AI Semantic Search"
-                              title="AI Semantic Search"
-                              value={semanticSearchQuery}
-                              onChange={(e) => setSemanticSearchQuery(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSemanticSearch(semanticSearchQuery);
-                              }}
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                fontSize: '8px',
-                                fontFamily: 'var(--sans)',
-                                background: 'var(--surface)',
-                                border: '1px solid var(--border-soft)',
-                                borderRadius: '3px',
-                                padding: '2px 4px',
-                                color: 'var(--text)',
-                                outline: 'none'
-                              }}
-                            />
-                            <button
-                              className="mini primary"
-                              onClick={() => handleSemanticSearch(semanticSearchQuery)}
-                              disabled={isSearchingSemantic}
-                              title="Search"
-                              style={{ 
-                                padding: '1px 2px', 
-                                fontSize: '6.5px', 
-                                fontWeight: 700,
-                                flexShrink: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            >
-                              {isSearchingSemantic ? '...' : '🔍'}
-                            </button>
-                          </div>
-                          {semanticSearchResults && (
-                            <div style={{ 
-                              display: 'flex', 
-                              flexDirection: 'column', 
-                              gap: '4px', 
-                              background: 'var(--surface)', 
-                              padding: '5px', 
-                              borderRadius: '4px', 
-                              border: '1px solid var(--border-soft)',
-                              maxHeight: '110px',
-                              overflowY: 'auto'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '7px', fontWeight: 800, color: 'var(--muted)' }}>MATCHES FOUND:</span>
-                                <button 
-                                  style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '7px', cursor: 'pointer' }}
-                                  onClick={() => setSemanticSearchResults(null)}
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                              {semanticSearchResults.length === 0 ? (
-                                <span style={{ fontSize: '7.5px', color: 'var(--muted)', fontStyle: 'italic' }}>No index matches found. Try uploading a file or using a broader term.</span>
-                              ) : (
-                                semanticSearchResults.map((res: any, idx: number) => (
-                                  <div key={idx} style={{ 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    gap: '1px', 
-                                    borderBottom: idx < semanticSearchResults.length - 1 ? '1px solid var(--border-soft)' : 'none', 
-                                    paddingBottom: idx < semanticSearchResults.length - 1 ? '3px' : '0', 
-                                    paddingTop: idx > 0 ? '3px' : '0' 
-                                  }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                      <span style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--text-bright)' }}>{res.title}</span>
-                                      <span style={{ fontSize: '6px', color: 'var(--accent)', background: 'rgba(229,147,32,0.06)', padding: '0.5px 3px', borderRadius: '2px', fontFamily: 'var(--mono)' }}>GCS Isolated</span>
-                                    </div>
-                                    <span style={{ fontSize: '6px', color: 'var(--muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{res.link}</span>
-                                    <p style={{ margin: 0, fontSize: '7px', color: 'var(--muted)', lineHeight: '1.2' }}>{res.snippet}</p>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </div>
 
                         {/* Filtered Data Cards List (Project Isolated) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '450px', overflowY: 'auto', paddingRight: '2px' }}>
@@ -10486,131 +10916,6 @@ ${isDirector ? `
 
                       {/* ================= SECTION 2: PROJECTS (PROJECT SYSTEMS) ================= */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
-
-                        {/* Search Bar Block with Dropdown Filter on the left */}
-                        <div style={{
-                          background: 'rgba(229,147,32,0.03)',
-                          border: '1px solid rgba(229,147,32,0.15)',
-                          borderRadius: '6px',
-                          padding: '6px 8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '5px'
-                        }}>
-                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', width: '100%', minWidth: 0 }}>
-                            {/* Compact Status Filter Dropdown for Projects */}
-                            <select
-                              value={systemComponentFilter}
-                              onChange={(e) => setSystemComponentFilter(e.target.value as any)}
-                              style={{
-                                fontSize: '6.5px',
-                                fontFamily: 'var(--sans)',
-                                background: 'var(--surface)',
-                                border: '1px solid var(--border-soft)',
-                                borderRadius: '3px',
-                                padding: '1px',
-                                color: 'var(--text)',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                                width: '38px',
-                                flexShrink: 0
-                              }}
-                              title="Filter Projects Status"
-                            >
-                              <option value="all">ALL</option>
-                              <option value="new">NEW</option>
-                              <option value="in_process">REV</option>
-                              <option value="processed">UND</option>
-                              <option value="built_new">BUILT</option>
-                              <option value="enhanced">UPG</option>
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="AI Semantic Search"
-                              title="AI Semantic Search"
-                              value={sysSemanticSearchQuery}
-                              onChange={(e) => setSysSemanticSearchQuery(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSysSemanticSearch(sysSemanticSearchQuery);
-                              }}
-                              style={{
-                                flex: 1,
-                                minWidth: 0,
-                                fontSize: '8px',
-                                fontFamily: 'var(--sans)',
-                                background: 'var(--surface)',
-                                border: '1px solid var(--border-soft)',
-                                borderRadius: '3px',
-                                padding: '2px 4px',
-                                color: 'var(--text)',
-                                outline: 'none'
-                              }}
-                            />
-                            <button
-                              className="mini primary"
-                              onClick={() => handleSysSemanticSearch(sysSemanticSearchQuery)}
-                              disabled={isSearchingSysSemantic}
-                              title="Search"
-                              style={{ 
-                                padding: '1px 2px', 
-                                fontSize: '6.5px', 
-                                fontWeight: 700,
-                                flexShrink: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            >
-                              {isSearchingSysSemantic ? '...' : '🔍'}
-                            </button>
-                          </div>
-                          {sysSemanticSearchResults && (
-                            <div style={{ 
-                              display: 'flex', 
-                              flexDirection: 'column', 
-                              gap: '4px', 
-                              background: 'var(--surface)', 
-                              padding: '5px', 
-                              borderRadius: '4px', 
-                              border: '1px solid var(--border-soft)',
-                              maxHeight: '110px',
-                              overflowY: 'auto'
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '7px', fontWeight: 800, color: 'var(--muted)' }}>MATCHES FOUND:</span>
-                                <button 
-                                  style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '7px', cursor: 'pointer' }}
-                                  onClick={() => setSysSemanticSearchResults(null)}
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                              {sysSemanticSearchResults.length === 0 ? (
-                                <span style={{ fontSize: '7.5px', color: 'var(--muted)', fontStyle: 'italic' }}>No index matches found. Try uploading a system or using a broader term.</span>
-                              ) : (
-                                sysSemanticSearchResults.map((res: any, idx: number) => (
-                                  <div key={idx} style={{ 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    gap: '1px', 
-                                    borderBottom: idx < sysSemanticSearchResults.length - 1 ? '1px solid var(--border-soft)' : 'none', 
-                                    paddingBottom: idx < sysSemanticSearchResults.length - 1 ? '3px' : '0', 
-                                    paddingTop: idx > 0 ? '3px' : '0' 
-                                  }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                      <span style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--text-bright)' }}>{res.title}</span>
-                                      <span style={{ fontSize: '6px', color: 'var(--accent)', background: 'rgba(229,147,32,0.06)', padding: '0.5px 3px', borderRadius: '2px', fontFamily: 'var(--mono)' }}>GCS Isolated</span>
-                                    </div>
-                                    <span style={{ fontSize: '6px', color: 'var(--muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{res.link}</span>
-                                    <p style={{ margin: 0, fontSize: '7px', color: 'var(--muted)', lineHeight: '1.2' }}>{res.snippet}</p>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </div>
 
                         {/* Filtered System Cards List (Project Isolated) */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '450px', overflowY: 'auto', paddingRight: '2px' }}>
@@ -10963,6 +11268,7 @@ ${isDirector ? `
                 )}
               </div>
             </section>
+            */}
           )}
         </aside>
       </div>
@@ -12739,48 +13045,78 @@ ${isDirector ? `
             </div>
 
             {/* Body */}
-            <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', maxHeight: '70vh' }}>
-              {/* Presets choice */}
-              <div>
-                <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{dtxt.quickPresets}</span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '6px' }}>
-                  {missionPresets.map(preset => (
-                    <button
-                      key={preset.id}
-                      onClick={() => {
-                        setNewMissionId(preset.id);
-                        setNewMissionObjective(preset.objective);
-                        setNewMissionCategory(preset.category as any);
-                        setNewMissionPriority(preset.priority as any);
-                      }}
-                      style={{
-                        padding: '6px 8px',
-                        background: 'var(--surface-alt)',
-                        border: '1.5px solid var(--border-soft)',
-                        borderRadius: '6px',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        fontSize: '9px',
-                        transition: 'all 0.15s',
-                        borderColor: newMissionId === preset.id ? 'var(--accent-2)' : 'var(--border-soft)',
-                        color: 'var(--text)',
-                        minWidth: 0,
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, marginBottom: '2px', display: 'flex', justifyContent: 'space-between', gap: '4px', alignItems: 'center', minWidth: 0 }}>
-                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1 }}>{preset.name}</span>
-                        <span style={{ fontSize: '7px', opacity: 0.8, background: 'rgba(255,255,255,0.06)', padding: '1px 3px', borderRadius: '4px', flexShrink: 0 }}>{preset.category}</span>
-                      </div>
-                      <span style={{ fontSize: '8px', color: 'var(--muted)', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{preset.objective}</span>
-                    </button>
-                  ))}
-                </div>
+            <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', maxHeight: '72vh' }}>
+              
+              {/* ================= MODAL TYPE SWITCHER ================= */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                padding: '4px',
+                background: 'var(--surface-alt)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '8px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLauncherModelType('standard');
+                    setNewMissionCategory('standard');
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: launcherModelType === 'standard' ? '1.5px solid #3b82f6' : '1px solid transparent',
+                    background: launcherModelType === 'standard' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    color: launcherModelType === 'standard' ? '#3b82f6' : 'var(--muted)',
+                    fontWeight: 800,
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '12px' }}>🎯</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                    <span>Standard / Quick Mission</span>
+                    <span style={{ fontSize: '7.5px', fontWeight: 600, opacity: 0.8 }}>Goal Targets & Autonomous Tasks</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLauncherModelType('full_pipeline');
+                    setNewMissionCategory('system_build');
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: launcherModelType === 'full_pipeline' ? '1.5px solid #10b981' : '1px solid transparent',
+                    background: launcherModelType === 'full_pipeline' ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                    color: launcherModelType === 'full_pipeline' ? '#10b981' : 'var(--muted)',
+                    fontWeight: 800,
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '12px' }}>🚀</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                    <span>Full Pipeline Mission</span>
+                    <span style={{ fontSize: '7.5px', fontWeight: 600, opacity: 0.8 }}>End-to-End: Idea ➔ Deliverable</span>
+                  </div>
+                </button>
               </div>
 
-              <div style={{ height: '1px', background: 'var(--border-soft)' }}></div>
-
-              {/* Form Inputs */}
+              {/* Common Header Info: Mission ID & Priority */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--muted)' }}>{dtxt.missionIdLabel}</span>
@@ -12803,37 +13139,6 @@ ${isDirector ? `
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--muted)' }}>{dtxt.categoryLabel}</span>
-                  <select
-                    value={newMissionCategory}
-                    onChange={(e) => setNewMissionCategory(e.target.value as any)}
-                    style={{
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '4px',
-                      color: 'var(--text)',
-                      fontSize: '10px',
-                      padding: '5.5px 8px',
-                      outline: 'none',
-                      fontWeight: 700
-                    }}
-                  >
-                    <option value="standard">🎯 Standard Mission</option>
-                    <option value="analytics">📊 Mode: Analytics</option>
-                    <option value="deep_research">🔬 Mode: Deep Research</option>
-                    <option value="brainstorming">🧠 Mode: Brainstorming</option>
-                    <option value="system_build">⚙️ Pipeline: System Build</option>
-                    <option value="system_build_from_data">🗄️ Pipeline: System Build From Data</option>
-                    <option value="system_optimization">⚡ Pipeline: System Optimization</option>
-                    <option value="system_optimization_from_data">📈 Pipeline: Optimization From Data</option>
-                    <option value="system_test">🧪 Pipeline: System Test</option>
-                    <option value="system_test_from_data">📊 Pipeline: System Test From Data</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--muted)' }}>{dtxt.priorityLabel}</span>
                   <select
                     value={newMissionPriority}
@@ -12845,7 +13150,8 @@ ${isDirector ? `
                       color: 'var(--text)',
                       fontSize: '10px',
                       padding: '5.5px 8px',
-                      outline: 'none'
+                      outline: 'none',
+                      fontWeight: 700
                     }}
                   >
                     <option value="LOW">LOW</option>
@@ -12856,6 +13162,7 @@ ${isDirector ? `
                 </div>
               </div>
 
+              {/* Objective Description Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--muted)' }}>{dtxt.objectiveLabel}</span>
@@ -12877,7 +13184,7 @@ ${isDirector ? `
                       gap: '4px'
                     }}
                   >
-                    ✨ AI Suggestions from Objective Text
+                    ✨ AI Auto-Suggest Objective
                   </button>
                 </div>
                 <textarea
@@ -12899,1030 +13206,490 @@ ${isDirector ? `
                 />
               </div>
 
-              {/* ================= CATEGORY-SPECIFIC CUSTOM INPUTS PANEL ================= */}
-              <div style={{
-                background: 'rgba(59, 130, 246, 0.05)',
-                border: '1.5px solid rgba(59, 130, 246, 0.2)',
-                borderRadius: '8px',
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    🎛️ Custom Ingest Specs: {getCategoryLabel(newMissionCategory).toUpperCase()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleAiAutoGenerateInputs('all')}
-                    disabled={isAiGeneratingInputs}
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: '8.5px',
-                      fontWeight: 800,
-                      padding: '3px 9px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    {isAiGeneratingInputs ? '✨ Synthesizing All Sections...' : '⚡ Auto-Generate All Sections (Keep Selections)'}
-                  </button>
-                </div>
-
-                {newMissionCategory === 'standard' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ fontSize: '8.5px', color: 'var(--muted)', lineHeight: 1.3 }}>
-                      Tailored goal & task backlog manager for standard strategic directives.
-                    </div>
-
-                    {/* Goals List Manager */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          🎯 Strategic Goals ({newStandardGoals.length})
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('goals')}
-                          style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Goals
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '80px', overflowY: 'auto' }}>
-                        {newStandardGoals.map((g, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', padding: '3px 6px', borderRadius: '4px', border: '1px solid var(--border-soft)', fontSize: '8.5px' }}>
-                            <span style={{ color: 'var(--text)', fontWeight: 600 }}>{g}</span>
-                            <button
-                              type="button"
-                              onClick={() => setNewStandardGoals(newStandardGoals.filter((_, i) => i !== idx))}
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer', padding: '0 2px' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={newStandardGoalInput}
-                          onChange={(e) => setNewStandardGoalInput(e.target.value)}
-                          placeholder="Type custom strategic goal..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && newStandardGoalInput.trim()) {
-                              e.preventDefault();
-                              setNewStandardGoals([...newStandardGoals, newStandardGoalInput.trim()]);
-                              setNewStandardGoalInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (newStandardGoalInput.trim()) {
-                              setNewStandardGoals([...newStandardGoals, newStandardGoalInput.trim()]);
-                              setNewStandardGoalInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ＋ Add Goal
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Tasks List Manager */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          📋 Execution Tasks ({newStandardTasks.length})
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('tasks')}
-                          style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Tasks
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '80px', overflowY: 'auto' }}>
-                        {newStandardTasks.map((t, idx) => (
-                          <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', padding: '3px 6px', borderRadius: '4px', border: '1px solid var(--border-soft)', fontSize: '8.5px' }}>
-                            <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>{t}</span>
-                            <button
-                              type="button"
-                              onClick={() => setNewStandardTasks(newStandardTasks.filter((_, i) => i !== idx))}
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer', padding: '0 2px' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={newStandardTaskInput}
-                          onChange={(e) => setNewStandardTaskInput(e.target.value)}
-                          placeholder="Type execution task (e.g. task_4: Build UI endpoint)..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && newStandardTaskInput.trim()) {
-                              e.preventDefault();
-                              setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
-                              setNewStandardTaskInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (newStandardTaskInput.trim()) {
-                              setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
-                              setNewStandardTaskInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ＋ Add Task
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {newMissionCategory === 'analytics' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Target Data / Systems Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          🗄️ Target Data / Projects (Multi-Select)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('analytics_systems')}
-                          style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Datasets
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['ecom_orders_2026.csv', 'user_sessions_telemetry', 'stripe_invoices_db', 'customer_cohorts_v2', 'api_gateway_latency_logs'].map(sys => {
-                          const isSelected = analyticsSelectedSystems.includes(sys);
-                          return (
-                            <button
-                              type="button"
-                              key={sys}
-                              onClick={() => {
-                                if (isSelected) setAnalyticsSelectedSystems(analyticsSelectedSystems.filter(s => s !== sys));
-                                else setAnalyticsSelectedSystems([...analyticsSelectedSystems, sys]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #3b82f6' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#3b82f6' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                fontFamily: 'var(--mono)'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{sys}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={analyticsSystemCustomInput}
-                          onChange={(e) => setAnalyticsSystemCustomInput(e.target.value)}
-                          placeholder="Or type custom dataset/system (e.g. redis_dump.json)..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && analyticsSystemCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!analyticsSelectedSystems.includes(analyticsSystemCustomInput.trim())) {
-                                setAnalyticsSelectedSystems([...analyticsSelectedSystems, analyticsSystemCustomInput.trim()]);
-                              }
-                              setAnalyticsSystemCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (analyticsSystemCustomInput.trim()) {
-                              if (!analyticsSelectedSystems.includes(analyticsSystemCustomInput.trim())) {
-                                setAnalyticsSelectedSystems([...analyticsSelectedSystems, analyticsSystemCustomInput.trim()]);
-                              }
-                              setAnalyticsSystemCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Key KPI Metrics Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          📈 Key KPI Metrics (Multi-Select)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('analytics_kpis')}
-                          style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen KPIs
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['Conversion Rate (%)', 'CAC (Customer Acquisition)', 'LTV (Lifetime Value)', 'Cohort Retention (%)', 'Churn Rate (%)', 'AOV (Average Order Value)'].map(kpi => {
-                          const isSelected = analyticsSelectedKpis.includes(kpi);
-                          return (
-                            <button
-                              type="button"
-                              key={kpi}
-                              onClick={() => {
-                                if (isSelected) setAnalyticsSelectedKpis(analyticsSelectedKpis.filter(k => k !== kpi));
-                                else setAnalyticsSelectedKpis([...analyticsSelectedKpis, kpi]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #10b981' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#10b981' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{kpi}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={analyticsKpiCustomInput}
-                          onChange={(e) => setAnalyticsKpiCustomInput(e.target.value)}
-                          placeholder="Add custom KPI metric..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && analyticsKpiCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!analyticsSelectedKpis.includes(analyticsKpiCustomInput.trim())) {
-                                setAnalyticsSelectedKpis([...analyticsSelectedKpis, analyticsKpiCustomInput.trim()]);
-                              }
-                              setAnalyticsKpiCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (analyticsKpiCustomInput.trim()) {
-                              if (!analyticsSelectedKpis.includes(analyticsKpiCustomInput.trim())) {
-                                setAnalyticsSelectedKpis([...analyticsSelectedKpis, analyticsKpiCustomInput.trim()]);
-                              }
-                              setAnalyticsKpiCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Breakdown Segments Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          📊 Breakdown Segments & Dimensions (Multi-Select)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('analytics_dimensions')}
-                          style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#8b5cf6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Dimensions
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['Region / Geography', 'Cohort Signup Month', 'Device Type (Mobile/Desktop)', 'Acquisition Channel', 'Customer Pricing Plan'].map(dim => {
-                          const isSelected = analyticsSelectedDimensions.includes(dim);
-                          return (
-                            <button
-                              type="button"
-                              key={dim}
-                              onClick={() => {
-                                if (isSelected) setAnalyticsSelectedDimensions(analyticsSelectedDimensions.filter(d => d !== dim));
-                                else setAnalyticsSelectedDimensions([...analyticsSelectedDimensions, dim]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(139, 92, 246, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #8b5cf6' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#8b5cf6' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{dim}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={analyticsDimensionCustomInput}
-                          onChange={(e) => setAnalyticsDimensionCustomInput(e.target.value)}
-                          placeholder="Add custom segment dimension..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && analyticsDimensionCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!analyticsSelectedDimensions.includes(analyticsDimensionCustomInput.trim())) {
-                                setAnalyticsSelectedDimensions([...analyticsSelectedDimensions, analyticsDimensionCustomInput.trim()]);
-                              }
-                              setAnalyticsDimensionCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (analyticsDimensionCustomInput.trim()) {
-                              if (!analyticsSelectedDimensions.includes(analyticsDimensionCustomInput.trim())) {
-                                setAnalyticsSelectedDimensions([...analyticsSelectedDimensions, analyticsDimensionCustomInput.trim()]);
-                              }
-                              setAnalyticsDimensionCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#8b5cf6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {newMissionCategory === 'deep_research' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Research Source Engine Selector */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                        🔍 Research Grounding Engine Source
-                      </span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-                        {[
-                          { key: 'llm', label: '🔒 LLM Knowledge Base', desc: 'Internal Model Training' },
-                          { key: 'web', label: '🌐 Live Internet Search', desc: 'Real-time Web Crawl' },
-                          { key: 'youtube', label: '▶️ YouTube Research', desc: 'Video Transcripts & Talks' },
-                          { key: 'web_youtube', label: '⚡ Live Internet + YouTube', desc: 'Full Hybrid Crawl' }
-                        ].map(src => {
-                          const isSelected = researchSourceType === src.key;
-                          return (
-                            <button
-                              type="button"
-                              key={src.key}
-                              onClick={() => setResearchSourceType(src.key as any)}
-                              style={{
-                                background: isSelected ? 'rgba(239, 68, 68, 0.15)' : 'var(--surface)',
-                                border: isSelected ? '1.5px solid #ef4444' : '1px solid var(--border-soft)',
-                                borderRadius: '5px',
-                                padding: '5px 8px',
-                                textAlign: 'left',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '2px'
-                              }}
-                            >
-                              <span style={{ fontSize: '8.5px', fontWeight: 800, color: isSelected ? '#ef4444' : 'var(--text)' }}>
-                                {src.label}
-                              </span>
-                              <span style={{ fontSize: '7px', color: 'var(--muted)' }}>
-                                {src.desc}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Research Query Focus Topics Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          🔬 Research Topics & Vectors (Multi-Select)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('research_topics')}
-                          style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Topics
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['Competitive AI Agent Architecture Audit', 'Vector RAG Benchmarks', 'Multi-Agent Consensus Protocols', 'Autonomous Swarm Execution Papers'].map(topic => {
-                          const isSelected = researchSelectedTopics.includes(topic);
-                          return (
-                            <button
-                              type="button"
-                              key={topic}
-                              onClick={() => {
-                                if (isSelected) setResearchSelectedTopics(researchSelectedTopics.filter(t => t !== topic));
-                                else setResearchSelectedTopics([...researchSelectedTopics, topic]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(239, 68, 68, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #ef4444' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#ef4444' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{topic}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={researchTopicCustomInput}
-                          onChange={(e) => setResearchTopicCustomInput(e.target.value)}
-                          placeholder="Add custom research topic..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && researchTopicCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!researchSelectedTopics.includes(researchTopicCustomInput.trim())) {
-                                setResearchSelectedTopics([...researchSelectedTopics, researchTopicCustomInput.trim()]);
-                              }
-                              setResearchTopicCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (researchTopicCustomInput.trim()) {
-                              if (!researchSelectedTopics.includes(researchTopicCustomInput.trim())) {
-                                setResearchSelectedTopics([...researchSelectedTopics, researchTopicCustomInput.trim()]);
-                              }
-                              setResearchTopicCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Target Source Domains / Channels Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          🌐 Target Domains & Source Channels
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('research_sources')}
-                          style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Sources
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['ArXiv.org Research Papers', 'YouTube Tech Transcripts & Talks', 'GitHub Engineering Repos', 'Tech Blogs', 'SEC Financial Filings'].map(src => {
-                          const isSelected = researchSelectedSources.includes(src);
-                          return (
-                            <button
-                              type="button"
-                              key={src}
-                              onClick={() => {
-                                if (isSelected) setResearchSelectedSources(researchSelectedSources.filter(s => s !== src));
-                                else setResearchSelectedSources([...researchSelectedSources, src]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #10b981' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#10b981' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{src}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {newMissionCategory === 'brainstorming' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Creative Themes Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          💡 Creative Brief Focus Areas (Multi-Select)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('brainstorm_themes')}
-                          style={{ background: 'rgba(236, 72, 153, 0.12)', border: '1px solid rgba(236, 72, 153, 0.3)', color: '#ec4899', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Themes
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['Autonomous Workflow Automation', 'Generative UI & Dynamic Dashboards', 'Self-Healing Distributed Systems', 'Zero-Latency Edge State Sync'].map(theme => {
-                          const isSelected = brainstormSelectedThemes.includes(theme);
-                          return (
-                            <button
-                              type="button"
-                              key={theme}
-                              onClick={() => {
-                                if (isSelected) setBrainstormSelectedThemes(brainstormSelectedThemes.filter(t => t !== theme));
-                                else setBrainstormSelectedThemes([...brainstormSelectedThemes, theme]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(236, 72, 153, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #ec4899' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#ec4899' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{theme}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={brainstormThemeCustomInput}
-                          onChange={(e) => setBrainstormThemeCustomInput(e.target.value)}
-                          placeholder="Add custom ideation theme..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && brainstormThemeCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!brainstormSelectedThemes.includes(brainstormThemeCustomInput.trim())) {
-                                setBrainstormSelectedThemes([...brainstormSelectedThemes, brainstormThemeCustomInput.trim()]);
-                              }
-                              setBrainstormThemeCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (brainstormThemeCustomInput.trim()) {
-                              if (!brainstormSelectedThemes.includes(brainstormThemeCustomInput.trim())) {
-                                setBrainstormSelectedThemes([...brainstormSelectedThemes, brainstormThemeCustomInput.trim()]);
-                              }
-                              setBrainstormThemeCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(236, 72, 153, 0.15)', border: '1px solid rgba(236, 72, 153, 0.3)', color: '#ec4899', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Framework & Constraints */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Thinking Framework</span>
-                        <select
-                          value={brainstormFramework}
-                          onChange={(e) => setBrainstormFramework(e.target.value)}
-                          style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '9px', padding: '4px 6px' }}
-                        >
-                          <option value="McKinsey 7S Framework">McKinsey 7S Framework</option>
-                          <option value="Blue Ocean Strategy">Blue Ocean Strategy</option>
-                          <option value="First Principles Decomposition">First Principles Decomposition</option>
-                          <option value="SCAMPER Innovation Matrix">SCAMPER Innovation Matrix</option>
-                          <option value="Design Thinking Empathy Map">Design Thinking Empathy Map</option>
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Evaluation Constraints</span>
-                          <button
-                            type="button"
-                            onClick={() => handleAiAutoGenerateInputs('brainstorm_constraints')}
-                            style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 5px', borderRadius: '3px', fontSize: '7px', fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            ✨ Auto-Gen
-                          </button>
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                          {['Zero external SDKs', '<100ms Latency', '100% Type-Safe'].map(c => {
-                            const isSelected = brainstormSelectedConstraints.includes(c);
-                            return (
-                              <button
-                                type="button"
-                                key={c}
-                                onClick={() => {
-                                  if (isSelected) setBrainstormSelectedConstraints(brainstormSelectedConstraints.filter(x => x !== c));
-                                  else setBrainstormSelectedConstraints([...brainstormSelectedConstraints, c]);
-                                }}
-                                style={{
-                                  background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'var(--surface)',
-                                  border: isSelected ? '1px solid #3b82f6' : '1px solid var(--border-soft)',
-                                  color: isSelected ? '#3b82f6' : 'var(--text)',
-                                  borderRadius: '3px',
-                                  padding: '2px 5px',
-                                  fontSize: '7.5px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isSelected ? '✓ ' : '＋ '}{c}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {newMissionCategory.startsWith('system_') && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Highlight Banner for SYSTEM BUILD */}
-                    {newMissionCategory === 'system_build' && (
-                      <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', padding: '6px 10px', borderRadius: '6px', fontSize: '8.5px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '11px' }}>⚙️</span>
-                        <span><b>SYSTEM BUILD ARCHETYPE:</b> Tailored for fresh new builds built directly from idea prompts, text specs, & architecture blueprints.</span>
-                      </div>
-                    )}
-
-                    {/* Build Mode Selector */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                        🔨 System Construction Mode
-                      </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {[
-                          { key: 'scratch', label: '🌱 Fresh Scratch Build' },
-                          { key: 'extension', label: '🧩 Module Extension' },
-                          { key: 'refactor', label: '⚡ Refactor / Optimization' }
-                        ].map(m => (
-                          <button
-                            type="button"
-                            key={m.key}
-                            onClick={() => setSystemBuildMode(m.key as any)}
-                            style={{
-                              flex: 1,
-                              background: systemBuildMode === m.key ? 'rgba(16, 185, 129, 0.18)' : 'var(--surface)',
-                              border: systemBuildMode === m.key ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
-                              color: systemBuildMode === m.key ? '#10b981' : 'var(--text)',
-                              borderRadius: '4px',
-                              padding: '4px',
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {m.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Architecture Tech Stack Multi-Select */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          💻 Architecture & Tech Stack Specs
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleAiAutoGenerateInputs('system_stack')}
-                          style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          ✨ Auto-Gen Stack
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {['React 19 / Next.js 16', 'TypeScript 5.8', 'Tailwind CSS v4', 'Node.js ESM / Express', 'Firestore / Firebase Auth', 'PostgreSQL / Drizzle ORM'].map(stk => {
-                          const isSelected = pipelineSelectedStack.includes(stk);
-                          return (
-                            <button
-                              type="button"
-                              key={stk}
-                              onClick={() => {
-                                if (isSelected) setPipelineSelectedStack(pipelineSelectedStack.filter(s => s !== stk));
-                                else setPipelineSelectedStack([...pipelineSelectedStack, stk]);
-                              }}
-                              style={{
-                                background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'var(--surface)',
-                                border: isSelected ? '1px solid #10b981' : '1px solid var(--border-soft)',
-                                color: isSelected ? '#10b981' : 'var(--text)',
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                fontSize: '8px',
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {isSelected ? '✓ ' : '＋ '}{stk}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                        <input
-                          type="text"
-                          value={pipelineStackCustomInput}
-                          onChange={(e) => setPipelineStackCustomInput(e.target.value)}
-                          placeholder="Add custom library / stack spec..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && pipelineStackCustomInput.trim()) {
-                              e.preventDefault();
-                              if (!pipelineSelectedStack.includes(pipelineStackCustomInput.trim())) {
-                                setPipelineSelectedStack([...pipelineSelectedStack, pipelineStackCustomInput.trim()]);
-                              }
-                              setPipelineStackCustomInput('');
-                            }
-                          }}
-                          style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (pipelineStackCustomInput.trim()) {
-                              if (!pipelineSelectedStack.includes(pipelineStackCustomInput.trim())) {
-                                setPipelineSelectedStack([...pipelineSelectedStack, pipelineStackCustomInput.trim()]);
-                              }
-                              setPipelineStackCustomInput('');
-                            }
-                          }}
-                          style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Target Paths & Verification Gates */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target Paths</span>
-                        <input
-                          type="text"
-                          value={pipelineSelectedPaths.join(', ')}
-                          onChange={(e) => setPipelineSelectedPaths(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                          placeholder="e.g. /frontend-next/app/dashboard/page.tsx, server.ts"
-                          style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Verification Gates</span>
-                          <button
-                            type="button"
-                            onClick={() => handleAiAutoGenerateInputs('system_paths_gates')}
-                            style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 5px', borderRadius: '3px', fontSize: '7px', fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            ✨ Auto-Gen
-                          </button>
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-                          {['QA Unit Tests', 'TypeScript Compile Check', 'Build Synthesis'].map(gate => {
-                            const isSelected = pipelineSelectedGates.includes(gate);
-                            return (
-                              <button
-                                type="button"
-                                key={gate}
-                                onClick={() => {
-                                  if (isSelected) setPipelineSelectedGates(pipelineSelectedGates.filter(g => g !== gate));
-                                  else setPipelineSelectedGates([...pipelineSelectedGates, gate]);
-                                }}
-                                style={{
-                                  background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'var(--surface)',
-                                  border: isSelected ? '1px solid #3b82f6' : '1px solid var(--border-soft)',
-                                  color: isSelected ? '#3b82f6' : 'var(--text)',
-                                  borderRadius: '3px',
-                                  padding: '2px 5px',
-                                  fontSize: '7.5px',
-                                  fontWeight: 700,
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isSelected ? '✓ ' : '＋ '}{gate}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ================= EXTRA SOURCES & PRIOR OUTPUTS SELECTOR ================= */}
+              {/* ================= MODE 1: STANDARD / QUICK MISSION ================= */}
+              {launcherModelType === 'standard' && (
                 <div style={{
-                  background: 'rgba(139, 92, 246, 0.05)',
-                  border: '1.5px solid rgba(139, 92, 246, 0.25)',
+                  background: 'rgba(59, 130, 246, 0.04)',
+                  border: '1.5px solid rgba(59, 130, 246, 0.25)',
                   borderRadius: '8px',
-                  padding: '10px 12px',
+                  padding: '12px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '8px',
-                  marginTop: '4px'
+                  gap: '10px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        🔗 Extra Sources / Stored Prior Outputs ({selectedExtraSources.length})
+                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#3b82f6', textTransform: 'uppercase' }}>
+                        🎯 Standard / Quick Mission Config
                       </span>
-                      <span style={{ fontSize: '7px', background: 'rgba(139, 92, 246, 0.18)', color: '#8b5cf6', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
-                        STRICT PIPELINE BINDING
+                      <span style={{ fontSize: '7.5px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                        PASSES: Drafting ➔ Planning ➔ Execution ➔ Delivery
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAiAutoGenerateInputs('extra_sources')}
-                      style={{ background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.35)', color: '#8b5cf6', padding: '2px 7px', borderRadius: '4px', fontSize: '8px', fontWeight: 800, cursor: 'pointer' }}
-                    >
-                      ✨ Auto-Suggest Extra Sources
-                    </button>
                   </div>
 
-                  {/* Multi-select chips for stored outputs */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxHeight: '110px', overflowY: 'auto' }}>
-                    {getAvailableExtraSources().map(src => {
-                      const isSelected = selectedExtraSources.includes(src.id);
-                      let catBadgeColor = '#3b82f6';
-                      let catIcon = '📊';
-                      if (src.category === 'deep_research') { catBadgeColor = '#ef4444'; catIcon = '🔬'; }
-                      else if (src.category === 'brainstorming') { catBadgeColor = '#ec4899'; catIcon = '💡'; }
-                      else if (src.category.startsWith('system_')) { catBadgeColor = '#10b981'; catIcon = '⚙️'; }
-                      else if (src.category === 'standard') { catBadgeColor = '#f59e0b'; catIcon = '🎯'; }
+                  <div style={{ fontSize: '8.5px', color: 'var(--muted)', lineHeight: 1.35 }}>
+                    Supports custom user goal targets & autonomous multi-step agent execution tasks.
+                  </div>
 
-                      return (
+                  {/* Quick Presets row */}
+                  <div>
+                    <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                      ⚡ Quick Presets
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '5px' }}>
+                      {missionPresets.map(preset => (
                         <button
+                          key={preset.id}
                           type="button"
-                          key={src.id}
                           onClick={() => {
-                            if (isSelected) {
-                              setSelectedExtraSources(selectedExtraSources.filter(id => id !== src.id));
-                            } else {
-                              setSelectedExtraSources([...selectedExtraSources, src.id]);
-                            }
+                            setNewMissionId(preset.id);
+                            setNewMissionObjective(preset.objective);
+                            setNewMissionPriority(preset.priority as any);
                           }}
                           style={{
-                            background: isSelected ? 'rgba(139, 92, 246, 0.22)' : 'var(--surface)',
-                            border: isSelected ? '1.5px solid #8b5cf6' : '1px solid var(--border-soft)',
-                            borderRadius: '6px',
-                            padding: '4px 8px',
+                            padding: '5px 7px',
+                            background: newMissionId === preset.id ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface)',
+                            border: newMissionId === preset.id ? '1.5px solid #3b82f6' : '1px solid var(--border-soft)',
+                            borderRadius: '5px',
                             textAlign: 'left',
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            transition: 'all 0.15s ease'
+                            fontSize: '8.5px',
+                            color: 'var(--text)'
                           }}
                         >
-                          <span style={{ fontSize: '9px' }}>{catIcon}</span>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: isSelected ? '#8b5cf6' : 'var(--text)' }}>
-                              {src.title}
-                            </span>
-                            <span style={{ fontSize: '7px', color: 'var(--muted)', display: 'flex', gap: '4px' }}>
-                              <span style={{ color: catBadgeColor, fontWeight: 700 }}>{getCategoryLabel(src.category)}</span>
-                              <span>•</span>
-                              <span>ID: {src.id}</span>
-                            </span>
-                          </div>
-                          <span style={{ fontSize: '9px', fontWeight: 900, color: isSelected ? '#8b5cf6' : 'var(--muted)', marginLeft: '4px' }}>
-                            {isSelected ? '✓' : '＋'}
-                          </span>
+                          <div style={{ fontWeight: 700, color: newMissionId === preset.id ? '#3b82f6' : 'var(--text)' }}>{preset.name}</div>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>{preset.objective}</span>
                         </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Custom Extra Source Text / URI Input */}
-                  <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
-                    <input
-                      type="text"
-                      value={extraSourcesCustomInput}
-                      onChange={(e) => setExtraSourcesCustomInput(e.target.value)}
-                      placeholder="Or enter custom Extra Source URI/Path (e.g. s3://analytics/q3.csv or docs/spec.md)..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && extraSourcesCustomInput.trim()) {
-                          e.preventDefault();
-                          if (!selectedExtraSources.includes(extraSourcesCustomInput.trim())) {
-                            setSelectedExtraSources([...selectedExtraSources, extraSourcesCustomInput.trim()]);
-                          }
-                          setExtraSourcesCustomInput('');
-                        }
-                      }}
-                      style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (extraSourcesCustomInput.trim()) {
-                          if (!selectedExtraSources.includes(extraSourcesCustomInput.trim())) {
-                            setSelectedExtraSources([...selectedExtraSources, extraSourcesCustomInput.trim()]);
-                          }
-                          setExtraSourcesCustomInput('');
-                        }
-                      }}
-                      style={{ background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#8b5cf6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                    >
-                      Add Custom
-                    </button>
-                  </div>
-
-                  {/* Active Selected Extra Sources summary list */}
-                  {selectedExtraSources.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px', background: 'var(--surface)', padding: '5px 8px', borderRadius: '5px', border: '1px solid var(--border-soft)' }}>
-                      <span style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)', width: '100%' }}>Active Linked Pipeline Context ({selectedExtraSources.length}):</span>
-                      {selectedExtraSources.map((sId) => {
-                        const matchingObj = getAvailableExtraSources().find(x => x.id === sId);
-                        return (
-                          <div key={sId} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', color: '#8b5cf6', padding: '2px 6px', borderRadius: '4px', fontSize: '8px', fontWeight: 700 }}>
-                            <span>🔗 {matchingObj ? matchingObj.title : sId}</span>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedExtraSources(selectedExtraSources.filter(x => x !== sId))}
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '8px', cursor: 'pointer', padding: '0 1px' }}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        );
-                      })}
+                      ))}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
 
-              {/* ================= STEP PIPELINE PREVIEW CARD ================= */}
-              <div>
-                <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                  🗺️ Sequential Pipeline Steps Preview
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '120px', overflowY: 'auto', background: 'var(--surface-alt)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
-                  {getStepsForCategory(newMissionCategory).map((st, i) => (
-                    <div key={st.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', padding: '3px 6px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--mono)' }}>#{i + 1}</span>
-                        <span style={{ fontWeight: 700, color: 'var(--text)' }}>{st.label}</span>
-                      </div>
-                      <span style={{ fontSize: '7px', background: 'rgba(255,255,255,0.06)', padding: '1px 4px', borderRadius: '3px', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>
-                        Mode: {st.mode}
+                  {/* Strategic Goals List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        🎯 Strategic Goals ({newStandardGoals.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAiAutoGenerateInputs('goals')}
+                        style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ✨ Auto-Gen Goals
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '70px', overflowY: 'auto' }}>
+                      {newStandardGoals.map((g, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', padding: '3px 6px', borderRadius: '4px', border: '1px solid var(--border-soft)', fontSize: '8.5px' }}>
+                          <span style={{ color: 'var(--text)', fontWeight: 600 }}>{g}</span>
+                          <button
+                            type="button"
+                            onClick={() => setNewStandardGoals(newStandardGoals.filter((_, i) => i !== idx))}
+                            style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                      <input
+                        type="text"
+                        value={newStandardGoalInput}
+                        onChange={(e) => setNewStandardGoalInput(e.target.value)}
+                        placeholder="Type strategic goal..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newStandardGoalInput.trim()) {
+                            e.preventDefault();
+                            setNewStandardGoals([...newStandardGoals, newStandardGoalInput.trim()]);
+                            setNewStandardGoalInput('');
+                          }
+                        }}
+                        style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newStandardGoalInput.trim()) {
+                            setNewStandardGoals([...newStandardGoals, newStandardGoalInput.trim()]);
+                            setNewStandardGoalInput('');
+                          }
+                        }}
+                        style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ＋ Add Goal
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Execution Tasks List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        📋 Autonomous Agent Execution Tasks ({newStandardTasks.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleAiAutoGenerateInputs('tasks')}
+                        style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', padding: '1px 6px', borderRadius: '3px', fontSize: '7.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ✨ Auto-Gen Tasks
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '70px', overflowY: 'auto' }}>
+                      {newStandardTasks.map((t, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface)', padding: '3px 6px', borderRadius: '4px', border: '1px solid var(--border-soft)', fontSize: '8.5px' }}>
+                          <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>{t}</span>
+                          <button
+                            type="button"
+                            onClick={() => setNewStandardTasks(newStandardTasks.filter((_, i) => i !== idx))}
+                            style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+                      <input
+                        type="text"
+                        value={newStandardTaskInput}
+                        onChange={(e) => setNewStandardTaskInput(e.target.value)}
+                        placeholder="Type execution task..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newStandardTaskInput.trim()) {
+                            e.preventDefault();
+                            setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
+                            setNewStandardTaskInput('');
+                          }
+                        }}
+                        style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newStandardTaskInput.trim()) {
+                            setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
+                            setNewStandardTaskInput('');
+                          }
+                        }}
+                        style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        ＋ Add Task
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= MODE 2: FULL PIPELINE MISSION ================= */}
+              {launcherModelType === 'full_pipeline' && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.04)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#10b981', textTransform: 'uppercase' }}>
+                        🚀 End-to-End Full Pipeline Architecture
+                      </span>
+                      <span style={{ fontSize: '7.5px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                        4 MAIN PHASES (DRAFTING ➔ PLANNING ➔ EXECUTION ➔ DELIVERING)
                       </span>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Pipeline Overview Box */}
+                  <div style={{ fontSize: '8.5px', color: 'var(--text-bright)', background: 'var(--surface-alt)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-soft)', lineHeight: 1.4 }}>
+                    Executes the full pipeline from <b>Idea to Production-Grade Deliverable</b>. Integrates specialized skills, automated verification feedback loops, and user approval gates.
+                  </div>
+
+                  {/* 4 PHASES BREAKDOWN & CONFIGURATION TREE */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    
+                    {/* PHASE 1: DRAFTING */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#ec4899', background: 'rgba(236, 72, 153, 0.15)', padding: '1px 5px', borderRadius: '3px' }}>PHASE 1</span>
+                          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)' }}>Drafting Phase (Non-Loop Phase)</span>
+                        </div>
+                      </div>
+
+                      {/* Sub-loop 1.1 */}
+                      <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#ec4899' }}>🔄 1.1 Discovery & Scoping (Loop)</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Gate:</span>
+                              <input
+                                type="checkbox"
+                                checked={approvalGates['discovery_scoping'] !== false}
+                                onChange={(e) => setApprovalGates({ ...approvalGates, discovery_scoping: e.target.checked })}
+                              />
+                            </label>
+                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Effort:</span>
+                              <select
+                                value={loopEfforts['discovery_scoping'] || 'Medium'}
+                                onChange={(e) => setLoopEfforts({ ...loopEfforts, discovery_scoping: e.target.value as any })}
+                                style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '3px', fontSize: '7.5px', color: 'var(--text)' }}
+                              >
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Deep">Deep</option>
+                              </select>
+                            </label>
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.3 }}>
+                          • Agent engages in interactive Q&A/brainstorming ➔ Debates strategy & trade-offs ➔ Stores parameters in <b>Sources/Discovery & Scoping</b>.
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* PHASE 2: PLANNING */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#3b82f6', background: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '3px' }}>PHASE 2</span>
+                          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)' }}>Planning Phase (🔄 Loop Phase)</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {/* 2.1 Deep Research */}
+                        <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#ef4444' }}>🔄 2.1 Deep Research & Intelligence Gathering (Loop)</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span>Gate:</span>
+                                <input
+                                  type="checkbox"
+                                  checked={approvalGates['deep_research'] !== false}
+                                  onChange={(e) => setApprovalGates({ ...approvalGates, deep_research: e.target.checked })}
+                                />
+                              </label>
+                              <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span>Effort:</span>
+                                <select
+                                  value={loopEfforts['deep_research'] || 'High'}
+                                  onChange={(e) => setLoopEfforts({ ...loopEfforts, deep_research: e.target.value as any })}
+                                  style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '3px', fontSize: '7.5px', color: 'var(--text)' }}
+                                >
+                                  <option value="Low">Low</option>
+                                  <option value="Medium">Medium</option>
+                                  <option value="High">High</option>
+                                  <option value="Deep">Deep</option>
+                                </select>
+                              </label>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                            Operates on <i>Sources/Discovery & Scoping</i> ➔ Web scrapers & ArXiv papers ➔ Outputs into <b>Sources/Deep Research & Intelligence Gathering</b>.
+                          </span>
+                        </div>
+
+                        {/* 2.2 Data Analysis */}
+                        <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#3b82f6' }}>📄 2.2 Data Analysis & Pattern Extraction (Non-Loop)</span>
+                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Gate:</span>
+                              <input
+                                type="checkbox"
+                                checked={approvalGates['data_analysis'] === true}
+                                onChange={(e) => setApprovalGates({ ...approvalGates, data_analysis: e.target.checked })}
+                              />
+                            </label>
+                          </div>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                            Operates on <i>Discovery + Research</i> ➔ Computes key metrics & anomalies ➔ Outputs into <b>Sources/Data Analysis & Pattern Extraction</b>.
+                          </span>
+                        </div>
+
+                        {/* 2.3 Strategic Synthesis */}
+                        <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#8b5cf6' }}>📄 2.3 Strategic Synthesis & Decision Support (Non-Loop)</span>
+                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Gate:</span>
+                              <input
+                                type="checkbox"
+                                checked={approvalGates['strategic_synthesis'] !== false}
+                                onChange={(e) => setApprovalGates({ ...approvalGates, strategic_synthesis: e.target.checked })}
+                              />
+                            </label>
+                          </div>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                            Synthesizes all sources into Actionable Strategic Plan & Decision Matrix ➔ <b>Sources/Strategic Synthesis & Decision Support</b>.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PHASE 3: EXECUTION */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.15)', padding: '1px 5px', borderRadius: '3px' }}>PHASE 3</span>
+                          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)' }}>Execution Phase (🔄 Execution Loop Driver)</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {/* 3.1 Generation */}
+                        <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#f59e0b' }}>⚙️ 3.1 Generation (Non-Loop)</span>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                            Operates on <i>Strategic Synthesis</i> or Verification/Review feedback ➔ Generates Assets & Code ➔ Outputs into <b>Deliverables/Executions</b>.
+                          </span>
+                        </div>
+
+                        {/* 3.2 Verification */}
+                        <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#10b981' }}>🧪 3.2 Verification & Compliance Audit (Non-Loop)</span>
+                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Gate:</span>
+                              <input
+                                type="checkbox"
+                                checked={approvalGates['verification'] !== false}
+                                onChange={(e) => setApprovalGates({ ...approvalGates, verification: e.target.checked })}
+                              />
+                            </label>
+                          </div>
+                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                            Verifies Executions match Strategic Synthesis with zero gaps. <i>If NOT OK ➔ Re-loops to Generation. If OK ➔ Moves to <b>Deliverables/Reviews</b>.</i>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PHASE 4: DELIVERING */}
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#10b981', background: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '3px' }}>PHASE 4</span>
+                          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)' }}>Delivering Phase (Non-Loop Phase)</span>
+                        </div>
+                      </div>
+
+                      <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#10b981' }}>📦 4.1 Production Deliverable Review</span>
+                          <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <span>Gate:</span>
+                            <input
+                              type="checkbox"
+                              checked={approvalGates['review'] !== false}
+                              onChange={(e) => setApprovalGates({ ...approvalGates, review: e.target.checked })}
+                            />
+                          </label>
+                        </div>
+                        <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                          Final production deliverable in <b>Deliverables/Reviews</b>. <i>If Accepted ➔ <b>Deliverables/Completed</b>. If Feedback ➔ Re-loops to Executions.</i>
+                        </span>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Tech Stack Specs & Target Paths */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Target File Paths</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedPaths.join(', ')}
+                        onChange={(e) => setPipelineSelectedPaths(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. /frontend-next/app/dashboard/page.tsx"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)' }}>Architecture Stack Specs</span>
+                      <input
+                        type="text"
+                        value={pipelineSelectedStack.join(', ')}
+                        onChange={(e) => setPipelineSelectedStack(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                        placeholder="e.g. Next.js 16, TypeScript, Tailwind CSS"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= EXTRA SOURCES / PRIOR OUTPUTS BINDING ================= */}
+              <div style={{
+                background: 'rgba(139, 92, 246, 0.05)',
+                border: '1.5px solid rgba(139, 92, 246, 0.25)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#8b5cf6', textTransform: 'uppercase' }}>
+                    🔗 Linked Context / Sources ({selectedExtraSources.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAiAutoGenerateInputs('extra_sources')}
+                    style={{ background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.35)', color: '#8b5cf6', padding: '2px 7px', borderRadius: '4px', fontSize: '8px', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    ✨ Suggest Linked Sources
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxHeight: '90px', overflowY: 'auto' }}>
+                  {getAvailableExtraSources().map(src => {
+                    const isSelected = selectedExtraSources.includes(src.id);
+                    return (
+                      <button
+                        type="button"
+                        key={src.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedExtraSources(selectedExtraSources.filter(id => id !== src.id));
+                          } else {
+                            setSelectedExtraSources([...selectedExtraSources, src.id]);
+                          }
+                        }}
+                        style={{
+                          background: isSelected ? 'rgba(139, 92, 246, 0.22)' : 'var(--surface)',
+                          border: isSelected ? '1.5px solid #8b5cf6' : '1px solid var(--border-soft)',
+                          borderRadius: '5px',
+                          padding: '3px 7px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        <span style={{ fontSize: '8px', fontWeight: 800, color: isSelected ? '#8b5cf6' : 'var(--text)' }}>
+                          {src.title}
+                        </span>
+                        <span style={{ fontSize: '8px', fontWeight: 900, color: isSelected ? '#8b5cf6' : 'var(--muted)' }}>
+                          {isSelected ? '✓' : '＋'}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
             </div>
 
             {/* Footer */}
@@ -13962,8 +13729,428 @@ ${isDirector ? `
         </div>
       )}
 
+      {/* ================= USER APPROVAL GATES CONTROL MODAL ================= */}
+      {isGatesModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border-soft)',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '560px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>🛡️</span>
+                <div>
+                  <b style={{ fontSize: '12px', color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    User Approval Gates Control
+                  </b>
+                  <span style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'block' }}>
+                    Enable or disable approval gates across pipeline loops & non-loops
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsGatesModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--muted)',
+                  padding: '4px 8px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
 
+            {/* Body */}
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
+                ℹ️ <b>Gate Logic:</b> When an approval gate is <b>ON</b>, the autonomous agent will pause execution at that specific phase step and await your explicit confirmation before advancing.
+              </div>
 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { key: 'discovery_scoping', phase: '1. Drafting', name: 'Discovery & Scoping', type: 'loop', desc: 'Interactive Q&A & trade-off debate (loop)' },
+                  { key: 'deep_research', phase: '2. Planning', name: 'Deep Research & Intelligence Gathering', type: 'loop', desc: 'Web searches, PDFs & competitor extraction (loop)' },
+                  { key: 'data_analysis', phase: '2. Planning', name: 'Data Analysis & Pattern Extraction', type: 'non-loop', desc: 'Anomaly detection & metric computation (non-loop)' },
+                  { key: 'strategic_synthesis', phase: '2. Planning', name: 'Strategic Synthesis & Decision Support', type: 'non-loop', desc: 'Actionable plan & decision matrix (non-loop)' },
+                  { key: 'generation', phase: '3. Execution', name: 'Generation', type: 'non-loop', desc: 'Code & asset generation into Deliverables (non-loop)' },
+                  { key: 'verification', phase: '3. Execution', name: 'Verification', type: 'non-loop', desc: 'Gap analysis vs Strategic Synthesis (non-loop)' },
+                  { key: 'review', phase: '4. Delivering', name: 'Review', type: 'non-loop', desc: 'Final production deliverable review (non-loop)' }
+                ].map(gate => {
+                  const isEnabled = approvalGates[gate.key] !== false;
+                  return (
+                    <div
+                      key={gate.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: 'var(--surface-alt)',
+                        border: isEnabled ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--border-soft)',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px', color: 'var(--accent)' }}>
+                            {gate.phase}
+                          </span>
+                          <b style={{ fontSize: '9.5px', color: 'var(--text-bright)' }}>{gate.name}</b>
+                          <span style={{ fontSize: '7px', fontWeight: 800, background: gate.type === 'loop' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: gate.type === 'loop' ? '#f59e0b' : 'var(--accent)', padding: '1px 4px', borderRadius: '3px' }}>
+                            {gate.type === 'loop' ? '🔄 LOOP' : '📄 NON-LOOP'}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '8px', color: 'var(--muted)' }}>{gate.desc}</span>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setApprovalGates(prev => ({ ...prev, [gate.key]: !isEnabled }));
+                        }}
+                        style={{
+                          background: isEnabled ? '#3b82f6' : 'var(--surface)',
+                          border: isEnabled ? 'none' : '1px solid var(--border-soft)',
+                          color: isEnabled ? '#ffffff' : 'var(--muted)',
+                          fontSize: '8.5px',
+                          fontWeight: 800,
+                          padding: '4px 10px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {isEnabled ? '🛡️ GATE ON' : '⚪ GATE OFF'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '12px 18px',
+              borderTop: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
+                Gates apply dynamically to all active mission runs.
+              </span>
+              <button
+                onClick={() => {
+                  setToast({ message: 'User Approval Gates updated successfully!', type: 'success', isOpen: true });
+                  setIsGatesModalOpen(false);
+                }}
+                className="mini accent"
+                style={{ padding: '6px 14px', fontSize: '9.5px', fontWeight: 800 }}
+              >
+                Save Configuration ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= EFFORT PARAMETER CONTROL MODAL ================= */}
+      {isEffortModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border-soft)',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '540px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>⚡</span>
+                <div>
+                  <b style={{ fontSize: '12px', color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Effort Parameter Control (Loops Only)
+                  </b>
+                  <span style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'block' }}>
+                    Adjust computing intensity & iteration depth for loop-based pipeline stages
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEffortModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--muted)',
+                  padding: '4px 8px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
+                ⚡ <b>EFFORT Scaling:</b> EFFORT parameters control iteration caps, search depth, and LLM reasoning cycles exclusively for <b>LOOP</b> components. Non-loops run deterministically.
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { key: 'discovery_scoping', phase: 'Drafting Phase', name: 'Discovery & Scoping Loop', desc: 'Controls Q&A trade-off depth & option synthesis' },
+                  { key: 'deep_research', phase: 'Planning Phase', name: 'Deep Research & Intelligence Loop', desc: 'Controls web crawl depth, PDF extractions & paper audits' },
+                  { key: 'execution_loop', phase: 'Execution Phase', name: 'Verification & Regeneration Loop', desc: 'Controls automated gap-fixing retry attempts' }
+                ].map(item => {
+                  const currentEffort = loopEfforts[item.key] || 'Medium';
+                  return (
+                    <div
+                      key={item.key}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '8px',
+                        padding: '10px 12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '1px 5px', borderRadius: '3px' }}>
+                            🔄 {item.phase}
+                          </span>
+                          <b style={{ fontSize: '10px', color: 'var(--text-bright)' }}>{item.name}</b>
+                        </div>
+                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#f59e0b' }}>
+                          Current: {currentEffort}
+                        </span>
+                      </div>
+
+                      <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)' }}>{item.desc}</p>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                        {[
+                          { val: 'Low', label: 'Low (1x)', desc: 'Fast turnaround' },
+                          { val: 'Medium', label: 'Medium (2x)', desc: 'Balanced reasoning' },
+                          { val: 'High', label: 'High (3x)', desc: 'Thorough analysis' },
+                          { val: 'Deep', label: 'Deep (5x)', desc: 'Exhaustive search' }
+                        ].map(eff => {
+                          const isSel = currentEffort === eff.val;
+                          return (
+                            <button
+                              key={eff.val}
+                              onClick={() => setLoopEfforts(prev => ({ ...prev, [item.key]: eff.val as any }))}
+                              style={{
+                                background: isSel ? 'rgba(245, 158, 11, 0.2)' : 'var(--surface)',
+                                border: isSel ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                                borderRadius: '5px',
+                                padding: '6px 4px',
+                                textAlign: 'center',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}
+                            >
+                              <b style={{ fontSize: '8.5px', color: isSel ? '#f59e0b' : 'var(--text)' }}>{eff.label}</b>
+                              <span style={{ fontSize: '6.5px', color: 'var(--muted)' }}>{eff.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '12px 18px',
+              borderTop: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
+                EFFORT parameters apply to active and future loop executions.
+              </span>
+              <button
+                onClick={() => {
+                  setToast({ message: 'EFFORT parameters updated successfully!', type: 'success', isOpen: true });
+                  setIsEffortModalOpen(false);
+                }}
+                className="mini accent"
+                style={{ padding: '6px 14px', fontSize: '9.5px', fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none' }}
+              >
+                Apply EFFORT ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= REAL-TIME EXECUTION LOGS MODAL ================= */}
+      {isLogsModalOpen && selectedMissionLogs && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border-soft)',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '640px',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '14px 18px',
+              borderBottom: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>📜</span>
+                <div>
+                  <b style={{ fontSize: '12px', color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Real-Time Agent Execution Logs
+                  </b>
+                  <span style={{ fontSize: '8.5px', color: 'var(--accent)', fontFamily: 'var(--mono)', display: 'block' }}>
+                    Mission ID: {selectedMissionLogs.missionId}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLogsModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--muted)',
+                  padding: '4px 8px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto', background: '#090d16', fontFamily: 'var(--mono)' }}>
+              {selectedMissionLogs.logs.map((log, idx) => (
+                <div key={idx} style={{ fontSize: '9px', color: log.includes('ERROR') ? '#ef4444' : log.includes('SUCCESS') || log.includes('Verified') ? '#10b981' : log.includes('Gate') ? '#f59e0b' : '#3b82f6', lineHeight: 1.4, borderBottom: '1px dashed rgba(255,255,255,0.05)', paddingBottom: '4px' }}>
+                  {log}
+                </div>
+              ))}
+              {selectedMissionLogs.logs.length === 0 && (
+                <div style={{ fontSize: '9px', color: 'var(--muted)', textAlign: 'center', padding: '20px' }}>
+                  No execution logs recorded yet. Launch mission to stream runtime logs.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '12px 18px',
+              borderTop: '1px solid var(--border-soft)',
+              background: 'var(--surface-alt)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
+                Live stream connected • Real-time pipeline audit log
+              </span>
+              <button
+                onClick={() => setIsLogsModalOpen(false)}
+                className="mini ghost"
+                style={{ padding: '6px 14px', fontSize: '9.5px' }}
+              >
+                Close Logs ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= CUSTOM CONFIRMATION DIALOG ================= */}
       {confirmModal && confirmModal.isOpen && (

@@ -151,7 +151,7 @@ class DatabaseEngine {
   private dbCache = new SimpleCache();
 
   public getIsSupabaseEnabled(): boolean {
-    return this.useSupabase;
+    return !!this.supabaseClient;
   }
 
   public getSupabaseClient(): any {
@@ -181,14 +181,15 @@ class DatabaseEngine {
     const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
     
     if (sbUrl && sbKey) {
-      console.log('🔌 [db] Supabase keys detected. Initializing Supabase Cloud Persistence layer.');
+      console.log('🔌 [db] Supabase Auth keys detected. Initializing Supabase Auth client for user logins.');
       this.supabaseClient = createClient(sbUrl, sbKey);
-      this.useSupabase = true;
     } else {
-      console.log('🔌 [db] No Supabase keys found in environment. Booting high-contrast file-backed SQLite/JSON persistence layer.');
-      this.useSupabase = false;
-      this.loadLocalDb();
+      console.log('🔌 [db] No Supabase keys found in environment.');
     }
+    
+    // Always use file-backed local JSON persistence for all app data
+    this.useSupabase = false;
+    this.loadLocalDb();
     
     // Seed database if empty
     this.seedIfEmpty();

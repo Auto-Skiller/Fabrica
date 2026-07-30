@@ -21,12 +21,12 @@
       browser window changing size.
    ============================================================ */
 :root {
-  --bg: #FAF9F6;
-  --grid: #EAEAEF;
+  --bg: #ffffff;
+  --grid: transparent;
   --surface: #ffffff;
-  --surface-alt: #F2F2F7;
-  --border: #1C1C1E;
-  --border-soft: #D1D1D6;
+  --surface-alt: #F8FAFC;
+  --border: #E2E8F0;
+  --border-soft: #E2E8F0;
   --text: #1C1C1E;
   --muted: #7E7E86;
   --accent: #CC7A4A;      /* Fabrica Copper */
@@ -35,36 +35,14 @@
   --status-success: #10b981;
   --status-error: #ef4444;
   --status-warn: #f59e0b;
-  --shadow: 0.28rem 0.28rem 0 rgba(28, 28, 30, 0.12);
-  --shadow-sm: 0.14rem 0.14rem 0 rgba(28, 28, 30, 0.08);
-  --r: 10px;
+  --shadow: none;
+  --shadow-sm: none;
+  --r: 0px;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --sans: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-display: "Space Grotesk", var(--sans);
-  /* App layout floor. Below this width, individual sections (topbar,
-     bottombar, the runtime/board sidebar) previously had to squeeze their
-     own content independently — each handling overflow differently — which
-     produced overlapping topbar/bottombar items and a sidebar that needed
-     its own separate horizontal scroll to reach. Instead, the WHOLE page
-     stops shrinking at this floor and scrolls horizontally as one coherent
-     unit (see body overflow-x below), so every section always renders at a
-     workable size and nothing overlaps or gets clipped past the edge. */
   --app-min-w: 1200px;
 
-  /* ── Per-panel minimum widths ─────────────────────────────────────────────
-     These prevent buttons / controls from overlapping when a panel is either
-     partially dragged narrow OR fully minimised with the toggle button.
-     • Panel A (lsidebar / System Maps)  : wide enough for the autonomy
-       selector row and icon+label sidebar controls.
-     • Panel B (missions / Chat)          : wide enough for the mission board
-       cards and chat input row.
-     • Panel C (sidebar / Data & Systems) : wide enough for the dual-column
-       50/50 header controls and action buttons.
-     The --minw variable is the icon-strip width shown when a panel is fully
-     collapsed — raised from 58 px to 200 px so the strip can still render its
-     buttons without squeezing.  Individual panels that need more room in the
-     collapsed state can override --minw locally via inline style.
-  ────────────────────────────────────────────────────────────────────────── */
   --panel-a-min-w: 280px;
   --panel-b-min-w: 320px;
   --panel-c-min-w: 280px;
@@ -72,11 +50,11 @@
 }
 [data-theme="dark"] {
   --bg: #121214;
-  --grid: #1C1C1E;
-  --surface: #1C1C1E;
-  --surface-alt: #2C2C2E;
-  --border: #48484A;
-  --border-soft: #3A3A3C;
+  --grid: transparent;
+  --surface: #121214;
+  --surface-alt: #1C1C1E;
+  --border: #2C2C2E;
+  --border-soft: #2C2C2E;
   --text: #FAF9F6;
   --muted: #8E8E93;
   --accent: #CC7A4A;
@@ -85,8 +63,8 @@
   --status-success: #10b981;
   --status-error: #f43f5e;
   --status-warn: #f59e0b;
-  --shadow: 0.28rem 0.28rem 0 rgba(0,0,0,0.4);
-  --shadow-sm: 0.14rem 0.14rem 0 rgba(0,0,0,0.3);
+  --shadow: none;
+  --shadow-sm: none;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,21 +85,11 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
 body.dashboard-body {
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 26px 26px;
+  background-color: var(--surface);
   height: 100%;
   min-width: var(--app-min-w);
-  /* Vertical scrolling stays fully internal (panels manage their own),
-     but horizontal scrolling is now handled ONCE, here, for the whole
-     app shell — see --app-min-w above. */
   overflow-x: auto;
   overflow-y: hidden;
-  /* Coordinate-safe vertical stack: topbar / main / bottombar sized by their
-     OWN fluid content (flex), never by a hardcoded rem guess. This is what
-     lets the topbar grow/shrink (wrapping controls, fluid padding) without
-     the main grid or bottombar ever clipping or leaving a gap. */
   display: flex;
   flex-direction: column;
 }
@@ -142,7 +110,7 @@ body.dashboard-body {
   justify-content: space-between;
   gap: clamp(0.2rem, 0.5vw, 0.6rem);
   padding: clamp(0.22rem, 0.4vw, 0.4rem) clamp(0.4rem, 0.7vw, 0.8rem);
-  border-bottom: 0.22rem solid var(--border);
+  border-bottom: 1px solid var(--border);
   background: var(--surface);
   min-height: 2.4rem;
   height: auto;
@@ -263,7 +231,7 @@ body.dashboard-body {
   text-overflow: ellipsis;
   cursor: pointer;
   border-radius: 0.45rem;
-  border: 0.15rem solid var(--border);
+  border: 1px solid var(--border);
   background: var(--surface-alt);
   transition: border-color 0.14s ease, background 0.14s ease, transform 0.1s ease;
 }
@@ -284,7 +252,7 @@ body.dashboard-body {
 /* Compact mission-toggle chips — tighter than .kpi */
 .kpi-ms {
   font-size: clamp(0.46rem, 0.6vw, 0.6rem); color: var(--muted);
-  background: var(--surface-alt); border: 0.1rem solid var(--border);
+  background: var(--surface-alt); border: 1px solid var(--border);
   border-radius: 0.35rem; padding: 0.15rem 0.35rem;
   white-space: nowrap; flex-shrink: 0; cursor: pointer;
   line-height: 1.2;
@@ -321,7 +289,7 @@ body.dashboard-body {
 .missions-cfg-btn {
   display: inline-flex; align-items: center; gap: 5px;
   background: var(--accent, #f2a93b); color: var(--accent-contrast, #1a1a1a);
-  padding: 3px clamp(4px, 0.55vw, 10px); border-radius: 6px; border: 2px solid var(--border);
+  padding: 3px clamp(4px, 0.55vw, 10px); border-radius: 6px; border: 1px solid var(--border);
   font-size: clamp(0.48rem, 0.8vw, 0.72rem); font-weight: 800; letter-spacing: 0.04rem;
   white-space: nowrap; flex-shrink: 0; cursor: pointer;
   transition: opacity 0.14s ease, transform 0.1s ease, box-shadow 0.14s ease;
@@ -332,7 +300,7 @@ body.dashboard-body {
 /* Controls area (theme + entity select) */
 .tb-controls { display: flex; align-items: center; gap: clamp(3px, 0.4vw, 7px); flex-shrink: 0; margin-left: clamp(3px, 0.4vw, 7px); }
 .theme-toggle {
-  background: var(--surface-alt); border: 0.15rem solid var(--border); color: var(--text);
+  background: var(--surface-alt); border: 1px solid var(--border); color: var(--text);
   border-radius: 0.55rem; box-shadow: var(--shadow-sm); flex-shrink: 0;
   font-size: clamp(0.68rem, 0.95vw, 0.9rem);
   padding: clamp(0.18rem, 0.3vw, 0.4rem) clamp(0.3rem, 0.5vw, 0.62rem);
@@ -344,7 +312,7 @@ body.dashboard-body {
   padding: clamp(0.16rem, 0.28vw, 0.38rem) clamp(0.22rem, 0.4vw, 0.65rem) !important;
   min-width: 0; max-width: clamp(58px, 7.5vw, 120px);
   background: var(--surface-alt); color: var(--text);
-  border: 0.15rem solid var(--border); border-radius: 0.55rem;
+  border: 1px solid var(--border); border-radius: 0.55rem;
   cursor: pointer; transition: border-color 0.14s ease;
 }
 .tb-entity-select:hover { border-color: var(--accent, #f2a93b); }
@@ -352,7 +320,7 @@ body.dashboard-body {
 /* Generic inputs / selects used across the topbar and panels */
 .filter, .pane-head select, input[type="text"] {
   background: var(--surface-alt); color: var(--text);
-  border: 0.15rem solid var(--border); border-radius: 0.55rem;
+  border: 1px solid var(--border); border-radius: 0.55rem;
   padding: clamp(0.28rem, 0.4vw, 0.4rem) clamp(0.5rem, 0.7vw, 0.7rem);
   font-size: clamp(0.66rem, 0.8vw, 0.8rem);
 }
@@ -363,7 +331,7 @@ body.dashboard-body {
   padding: clamp(2px, 0.28vw, 3px) clamp(6px, 0.6vw, 9px);
   margin-left: auto;
   white-space: nowrap; flex-shrink: 0;
-  background: var(--accent); border: 2px solid var(--border); color: var(--accent-contrast);
+  background: var(--accent); border: 1px solid var(--border); color: var(--accent-contrast);
   border-radius: 6px; cursor: pointer; font-weight: 700;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -394,6 +362,7 @@ button.mini.danger:hover { background: #c73a3a; }
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  gap: 0;
 }
 .col.lside {
   flex: 0 0 340px;
@@ -406,24 +375,25 @@ button.mini.danger:hover { background: #c73a3a; }
   overflow: hidden;
   position: relative;
   border-right: 1px solid var(--border-soft);
-  padding: clamp(0.4rem, 0.7vw, 0.7rem);
+  padding: 0;
+  gap: 0;
 }
-.col.top  { padding-right: 0; }
-.col.side { overflow: visible; position: relative; padding-left: 0; }
-.col.min  { padding: 0; min-width: var(--minw); }
-.col { display: flex; flex-direction: column; gap: clamp(0.4rem, 0.7vw, 0.7rem); padding: clamp(0.4rem, 0.7vw, 0.7rem); overflow: hidden; min-height: 0; transition: padding 200ms ease-in-out, gap 200ms ease-in-out; }
+.col.top  { padding: 0; gap: 0; }
+.col.side { overflow: visible; position: relative; padding: 0; gap: 0; }
+.col.min  { padding: 0; min-width: var(--minw); gap: 0; }
+.col { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; min-height: 0; transition: padding 200ms ease-in-out, gap 200ms ease-in-out; }
 
 .pane {
   position: relative;
-  background: var(--surface); border: 0.22rem solid var(--border); border-radius: var(--r);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 0;
   padding: clamp(0.55rem, 0.9vw, 0.85rem); display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: var(--shadow); min-height: 0; flex: 1;
+  box-shadow: none; min-height: 0; flex: 1;
 }
 .pane h3 {
   font-size: clamp(0.68rem, 0.8vw, 0.78rem); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05rem;
   margin-bottom: 0.55rem; display: flex; align-items: center; gap: 0.55rem; font-weight: 800;
 }
-.pane h3 .badge { margin-left: auto; background: var(--accent); color: var(--accent-contrast); border: 0.15rem solid var(--border); border-radius: 1.4rem; padding: 0.08rem 0.55rem; font-size: 0.65rem; }
+.pane h3 .badge { margin-left: auto; background: var(--accent); color: var(--accent-contrast); border: 1px solid var(--border); border-radius: 1.4rem; padding: 0.08rem 0.55rem; font-size: 0.65rem; }
 .pane-head { display: flex; align-items: center; gap: clamp(0.4rem, 0.6vw, 0.55rem); margin-bottom: 0.5rem; flex-wrap: wrap; }
 .pane-head h3 { font-size: clamp(0.7rem, 0.85vw, 0.8rem); color: var(--muted); text-transform: uppercase; font-weight: 800; }
 .pane-head .mini { margin-left: 0; }
@@ -745,19 +715,19 @@ button.mini.danger:hover { background: #c73a3a; }
 .rail-metrics .mmetric.warn .w::before { content: "⚠ "; }
 .rail-news { display: flex; flex-direction: column; align-items: flex-start; gap: 0.28rem; width: 100%; margin-top: 0.15rem; }
 
-.right-tabs { display: flex; gap: 0; border-bottom: 3px solid var(--border); margin-bottom: 10px; flex-shrink: 0; }
+.right-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 10px; flex-shrink: 0; }
 .right-tabs button {
-  flex: 1; background: var(--surface); border: 2px solid var(--border); border-bottom: none;
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-bottom: none;
   padding: clamp(0.35rem, 0.5vw, 0.5rem); font-weight: 800; text-transform: uppercase;
   font-size: clamp(0.62rem, 0.78vw, 0.78rem); cursor: pointer; color: var(--muted);
 }
 .right-tabs button.on { background: var(--accent); color: var(--accent-contrast); }
 .tabpane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.editor { flex: 1; min-height: 0; background: var(--bg); border: 2px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: .8rem; padding: 10px; resize: none; }
+.editor { flex: 1; min-height: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: .8rem; padding: 10px; resize: none; }
 
-.rt-section { background: var(--surface-alt); border: 2px solid var(--border); border-radius: 8px; padding: clamp(0.5rem, 0.7vw, 0.7rem); margin-bottom: clamp(0.5rem, 0.7vw, 0.7rem); }
+.rt-section { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; padding: clamp(0.5rem, 0.7vw, 0.7rem); margin-bottom: clamp(0.5rem, 0.7vw, 0.7rem); }
 .rt-section h4 { font-size: clamp(0.62rem, 0.72vw, 0.72rem); text-transform: uppercase; color: var(--muted); letter-spacing: .6px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.rt-section h4 .cnt { margin-left: auto; font-family: var(--mono); color: var(--text); background: var(--bg); border: 2px solid var(--border); border-radius: 6px; padding: 0 7px; white-space: nowrap; }
+.rt-section h4 .cnt { margin-left: auto; font-family: var(--mono); color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 7px; white-space: nowrap; }
 
 /* expandable rows */
 .expandable > .ex-head { display: flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -773,7 +743,7 @@ button.mini.danger:hover { background: #c73a3a; }
 .ro-val { font-size: 0.7rem; font-family: var(--mono); color: var(--text); word-break: break-all; }
 
 /* segment switch (drafting/blueprint style) */
-.sw { width: 40px; height: 22px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); position: relative; cursor: pointer; flex: none; transition: .15s; }
+.sw { width: 40px; height: 22px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); position: relative; cursor: pointer; flex: none; transition: .15s; }
 .sw::after { content: ""; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; border-radius: 50%; background: var(--border); transition: .15s; }
 .sw.on { background: var(--accent); }
 .sw.on::after { left: 19px; background: var(--accent-contrast); }
@@ -782,7 +752,7 @@ button.mini.danger:hover { background: #c73a3a; }
 .sw.sm.on::after { left: 14px; }
 
 /* generic pill toggle */
-.tog { font-size: .68rem; border: 2px solid var(--border); border-radius: 20px; padding: 2px 9px; cursor: pointer; background: var(--bg); }
+.tog { font-size: .68rem; border: 1px solid var(--border); border-radius: 20px; padding: 2px 9px; cursor: pointer; background: var(--bg); }
 .tog.on { background: var(--accent); color: var(--accent-contrast); }
 
 /* ── Container query: sidebar narrows independently of the viewport ── */
@@ -1449,26 +1419,26 @@ button.mini.danger:hover { background: #c73a3a; }
 
 .field { margin-bottom: clamp(0.5rem, 0.8vw, 0.65rem); }
 .field label { display: block; font-size: clamp(0.62rem, 0.7vw, 0.7rem); text-transform: uppercase; color: var(--muted); margin-bottom: clamp(0.2rem, 0.3vw, 0.28rem); }
-.field .val { font-family: var(--mono); font-size: clamp(0.7rem, 0.8vw, 0.8rem); background: var(--bg); border: 2px solid var(--border); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.55rem); word-break: break-word; }
+.field .val { font-family: var(--mono); font-size: clamp(0.7rem, 0.8vw, 0.8rem); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.55rem); word-break: break-word; }
 
-.sub-sec { margin: clamp(0.65rem, 0.9vw, 0.75rem) 0; border: 2px solid var(--border); border-radius: 8px; padding: clamp(0.45rem, 0.6vw, 0.5rem) clamp(0.55rem, 0.7vw, 0.62rem); background: var(--surface-alt); }
+.sub-sec { margin: clamp(0.65rem, 0.9vw, 0.75rem) 0; border: 1px solid var(--border); border-radius: 8px; padding: clamp(0.45rem, 0.6vw, 0.5rem) clamp(0.55rem, 0.7vw, 0.62rem); background: var(--surface-alt); }
 .sub-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(0.3rem, 0.4vw, 0.38rem); gap: clamp(0.3rem, 0.4vw, 0.38rem); }
 .sub-head h4 { margin: 0; font-size: clamp(0.7rem, 0.82vw, 0.8rem); text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
-.sub-card { border: 2px solid var(--border); border-radius: 7px; padding: clamp(0.4rem, 0.5vw, 0.44rem) clamp(0.5rem, 0.6vw, 0.56rem); margin-bottom: clamp(0.4rem, 0.5vw, 0.5rem); background: var(--surface); }
+.sub-card { border: 1px solid var(--border); border-radius: 7px; padding: clamp(0.4rem, 0.5vw, 0.44rem) clamp(0.5rem, 0.6vw, 0.56rem); margin-bottom: clamp(0.4rem, 0.5vw, 0.5rem); background: var(--surface); }
 .sub-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: clamp(0.2rem, 0.3vw, 0.25rem); gap: clamp(0.3rem, 0.4vw, 0.38rem); }
 .sub-card-top b { font-family: var(--mono); font-size: clamp(0.68rem, 0.78vw, 0.78rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .sub-label { font-size: clamp(0.6rem, 0.68vw, 0.68rem); text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; }
 .hint-inline { font-size: clamp(0.6rem, 0.68vw, 0.68rem); color: var(--muted); font-weight: normal; }
 
-.x { background: none; border: 2px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; width: 22px; height: 20px; line-height: 1; flex-shrink: 0; }
+.x { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; width: 22px; height: 20px; line-height: 1; flex-shrink: 0; }
 .list-edit { display: flex; flex-direction: column; gap: clamp(0.3rem, 0.4vw, 0.35rem); margin-top: clamp(0.2rem, 0.3vw, 0.28rem); }
 .list-row { display: flex; gap: clamp(0.35rem, 0.45vw, 0.4rem); align-items: center; }
-.inp, .rw-input { width: 100%; font-family: var(--sans); font-size: clamp(0.72rem, 0.8vw, 0.85rem); background: var(--bg); border: 2px solid var(--border); border-radius: 6px; padding: clamp(0.35rem, 0.45vw, 0.45rem) clamp(0.45rem, 0.55vw, 0.55rem); color: var(--text); transition: all 0.15s ease; }
-.rw-textarea { width: 100%; font-family: var(--mono); font-size: clamp(0.68rem, 0.76vw, 0.78rem); background: var(--bg); border: 2px solid var(--border); border-radius: 6px; padding: clamp(0.35rem, 0.45vw, 0.45rem); color: var(--text); resize: vertical; transition: all 0.15s ease; }
-.rw-select { width: 100%; font-size: clamp(0.68rem, 0.76vw, 0.78rem); background: var(--bg); border: 2px solid var(--border); border-radius: 6px; padding: clamp(0.25rem, 0.35vw, 0.35rem); color: var(--text); transition: all 0.15s ease; cursor: pointer; }
+.inp, .rw-input { width: 100%; font-family: var(--sans); font-size: clamp(0.72rem, 0.8vw, 0.85rem); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: clamp(0.35rem, 0.45vw, 0.45rem) clamp(0.45rem, 0.55vw, 0.55rem); color: var(--text); transition: all 0.15s ease; }
+.rw-textarea { width: 100%; font-family: var(--mono); font-size: clamp(0.68rem, 0.76vw, 0.78rem); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: clamp(0.35rem, 0.45vw, 0.45rem); color: var(--text); resize: vertical; transition: all 0.15s ease; }
+.rw-select { width: 100%; font-size: clamp(0.68rem, 0.76vw, 0.78rem); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: clamp(0.25rem, 0.35vw, 0.35rem); color: var(--text); transition: all 0.15s ease; cursor: pointer; }
 .inp:focus, .rw-input:focus, .rw-textarea:focus, .rw-select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(242, 169, 59, 0.18); }
 .inp:disabled { background: var(--surface-alt); border-style: dashed; color: var(--muted); cursor: not-allowed; }
-.val.ro-val { font-family: var(--mono); font-size: clamp(0.65rem, 0.75vw, 0.75rem); background: var(--surface); color: var(--muted); border: 2px dashed var(--border-soft); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.55rem); }
+.val.ro-val { font-family: var(--mono); font-size: clamp(0.65rem, 0.75vw, 0.75rem); background: var(--surface); color: var(--muted); border: 1px dashed var(--border-soft); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.55rem); }
 
 .save-status { font-size: clamp(0.62rem, 0.7vw, 0.7rem); font-weight: 800; padding: clamp(0.12rem, 0.18vw, 0.16rem) clamp(0.4rem, 0.5vw, 0.45rem); border-radius: 6px; white-space: nowrap; }
 .save-status.saving  { background: color-mix(in srgb, var(--accent) 18%, var(--bg)); color: var(--muted); }
@@ -1476,13 +1446,13 @@ button.mini.danger:hover { background: #c73a3a; }
 .save-status.unsaved { background: #b8860b; color: #fff; }
 .save-status.error   { background: #a32424; color: #fff; }
 
-.fq-banner { font-size: clamp(0.64rem, 0.74vw, 0.72rem); font-weight: 700; color: #fff; background: #b34d00; border-top: 2px solid #ff7a18; border-bottom: 2px solid #ff7a18; padding: clamp(0.5rem, 0.65vw, 0.55rem) clamp(0.55rem, 0.7vw, 0.62rem); line-height: 1.4; }
+.fq-banner { font-size: clamp(0.64rem, 0.74vw, 0.72rem); font-weight: 700; color: #fff; background: #b34d00; border-top: 1px solid #ff7a18; border-bottom: 1px solid #ff7a18; padding: clamp(0.5rem, 0.65vw, 0.55rem) clamp(0.55rem, 0.7vw, 0.62rem); line-height: 1.4; }
 .fq-items { margin-top: clamp(0.4rem, 0.55vw, 0.5rem); display: flex; flex-direction: column; gap: clamp(0.2rem, 0.3vw, 0.28rem); max-height: 220px; overflow: auto; }
 .fq-row { display: flex; gap: clamp(0.4rem, 0.55vw, 0.5rem); align-items: baseline; font-size: clamp(0.64rem, 0.74vw, 0.72rem); line-height: 1.35; padding: clamp(0.2rem, 0.3vw, 0.28rem) clamp(0.3rem, 0.4vw, 0.38rem); border-left: 2px solid #ff7a18; background: color-mix(in srgb, var(--accent) 6%, var(--bg)); border-radius: 4px; }
 .fq-grp { font-family: var(--mono); font-size: clamp(0.56rem, 0.64vw, 0.62rem); color: var(--accent); white-space: nowrap; font-weight: 700; }
 .fq-txt { color: var(--text); word-break: break-word; }
 
-.hint { font-size: clamp(0.64rem, 0.74vw, 0.72rem); color: var(--muted); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); border: 2px dashed var(--border); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.56rem); margin-top: clamp(0.4rem, 0.5vw, 0.5rem); }
+.hint { font-size: clamp(0.64rem, 0.74vw, 0.72rem); color: var(--muted); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); border: 1px dashed var(--border); border-radius: 6px; padding: clamp(0.4rem, 0.5vw, 0.45rem) clamp(0.5rem, 0.6vw, 0.56rem); margin-top: clamp(0.4rem, 0.5vw, 0.5rem); }
 
 /* validated / suggestion / manager rows (Pillars & Evolution managers) */
 .validated-card, .suggestion-card {
