@@ -887,9 +887,14 @@ export default function Dashboard() {
   }, []);
   // Category Label helper
   const getCategoryLabel = (category: string) => {
+    const cat = String(category || '').toLowerCase();
     if (uiLang === 'AR') {
-      switch (category) {
+      switch (cat) {
         case 'standard': return 'قياسي';
+        case 'full_pipeline': return 'مسار كامل';
+        case 'quick_pipeline': return 'قفزة سريعة';
+        case 'custom_entry_pipeline': return 'إدخال مخصص';
+        case 'custom_selection_pipeline': return 'تحديد مخصص';
         case 'drafting': return 'صياغة';
         case 'planning': return 'تخطيط';
         case 'execution': return 'تنفيذ';
@@ -898,17 +903,16 @@ export default function Dashboard() {
         case 'deep_research': return 'بحث عميق';
         case 'analytics': return 'تحليلات';
         case 'system_build': return 'بناء نظام';
-        case 'system_build_from_data': return 'بناء نظام من البيانات';
-        case 'system_optimization': return 'تحسين نظام';
-        case 'system_optimization_from_data': return 'تحسين نظام من البيانات';
-        case 'system_test': return 'اختبار نظام';
-        case 'system_test_from_data': return 'اختبار نظام من البيانات';
         default: return category;
       }
     }
     if (uiLang === 'FR') {
-      switch (category) {
+      switch (cat) {
         case 'standard': return 'Standard';
+        case 'full_pipeline': return 'Pipeline Complet';
+        case 'quick_pipeline': return 'Saut Rapide';
+        case 'custom_entry_pipeline': return 'Entrée Personnalisée';
+        case 'custom_selection_pipeline': return 'Sélection Personnalisée';
         case 'drafting': return 'Rédaction';
         case 'planning': return 'Planification';
         case 'execution': return 'Exécution';
@@ -917,16 +921,15 @@ export default function Dashboard() {
         case 'deep_research': return 'Recherche Approfondie';
         case 'analytics': return 'Analytique';
         case 'system_build': return 'Construction Système';
-        case 'system_build_from_data': return 'Construction depuis Données';
-        case 'system_optimization': return 'Optimisation Système';
-        case 'system_optimization_from_data': return 'Optimisation depuis Données';
-        case 'system_test': return 'Test Système';
-        case 'system_test_from_data': return 'Test depuis Données';
         default: return category;
       }
     }
-    switch (category) {
+    switch (cat) {
       case 'standard': return 'Standard';
+      case 'full_pipeline': return 'Full Pipeline';
+      case 'quick_pipeline': return 'Quick Jump';
+      case 'custom_entry_pipeline': return 'Custom Entry';
+      case 'custom_selection_pipeline': return 'Custom Selection';
       case 'drafting': return 'Drafting';
       case 'planning': return 'Planning';
       case 'execution': return 'Execution';
@@ -935,17 +938,15 @@ export default function Dashboard() {
       case 'deep_research': return 'Deep Research';
       case 'analytics': return 'Analytics';
       case 'system_build': return 'System Build';
-      case 'system_build_from_data': return 'System Build From Data';
-      case 'system_optimization': return 'System Optimization';
-      case 'system_optimization_from_data': return 'System Optimization From Data';
-      case 'system_test': return 'System Test';
-      case 'system_test_from_data': return 'System Test From Data';
       default: return category;
     }
   };
 
   const getStepsForCategory = (category: string) => {
     const cat = String(category || '').toLowerCase();
+    if (cat === 'full_pipeline' || cat === 'quick_pipeline' || cat === 'custom_entry_pipeline' || cat === 'custom_selection_pipeline') {
+      return getStepsForCategory('system_build');
+    }
     if (cat === 'system_build') {
       return [
         { key: 'step_1_idea_analysis', label: '1. Idea Analysis', mode: 'Analytics', input: 'Concept Brief + Reference files', output: 'Functional Boundary Map' },
@@ -2735,9 +2736,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
 
   // Layout improvement states
   const [isToolsWindowOpen, setIsToolsWindowOpen] = useState<boolean>(false);
+  const [isAgentsMdWindowOpen, setIsAgentsMdWindowOpen] = useState<boolean>(false);
   const [isAutonomyHoverOpen, setIsAutonomyHoverOpen] = useState<boolean>(false);
   const [autonomyPos, setAutonomyPos] = useState<{ bottom: number; left: number } | null>(null);
-  const [chatInputHeight, setChatInputHeight] = useState<number>(36);
+  const [chatInputHeight, setChatInputHeight] = useState<number>(96);
   const [isDraggingChatInput, setIsDraggingChatInput] = useState<boolean>(false);
   const [isAccountWindowOpen, setIsAccountWindowOpen] = useState<boolean>(false);
   const [isLogsWindowOpen, setIsLogsWindowOpen] = useState<boolean>(false);
@@ -3322,7 +3324,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
             if (typeof l.minCenter === 'boolean') setMinCenter(l.minCenter);
             if (typeof l.minSide === 'boolean') setMinSide(l.minSide);
             if (l.leftTab) setLeftTab(l.leftTab);
-            if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(l.chatInputHeight);
+            if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(Math.max(96, l.chatInputHeight));
             if (typeof l.leftSideW === 'number' && !isNaN(l.leftSideW)) setLeftSideW(l.leftSideW);
             if (typeof l.sideW === 'number' && !isNaN(l.sideW)) setSideW(l.sideW);
             if (l.agentWin && typeof l.agentWin.w === 'number') setAgentWin(l.agentWin);
@@ -3394,7 +3396,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         if (typeof l.minCenter === 'boolean') setMinCenter(l.minCenter);
         if (typeof l.minSide === 'boolean') setMinSide(l.minSide);
         if (l.leftTab) setLeftTab(l.leftTab);
-        if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(l.chatInputHeight);
+        if (typeof l.chatInputHeight === 'number' && !isNaN(l.chatInputHeight)) setChatInputHeight(Math.max(96, l.chatInputHeight));
         if (typeof l.leftSideW === 'number' && !isNaN(l.leftSideW)) setLeftSideW(l.leftSideW);
         if (typeof l.sideW === 'number' && !isNaN(l.sideW)) setSideW(l.sideW);
         if (l.agentWin && typeof l.agentWin.w === 'number') setAgentWin(l.agentWin);
@@ -7794,189 +7796,60 @@ ${isDirector ? `
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px' }}>
                 {/* Line 1: Tabs on left, Model selector on right */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                    {/* Agent / Cache Switcher */}
-                    <div style={{ display: 'flex', gap: '1px', background: 'var(--surface-alt)', paddingTop: '1px', paddingBottom: '1px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
-                      <button
-                        onClick={() => setLeftTab('agent')}
-                        style={{
-                          paddingLeft: '0px',
-                          paddingRight: '7px',
-                          paddingTop: '1px',
-                          paddingBottom: '1px',
-                          fontSize: '7px',
-                          fontWeight: 800,
-                          borderRadius: '2px',
-                          border: 'none',
-                          background: leftTab === 'agent' ? 'var(--accent)' : 'transparent',
-                          color: leftTab === 'agent' ? '#fff' : 'var(--muted)',
-                          cursor: 'pointer',
-                          textTransform: 'uppercase',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        {dtxt.agentTab}
-                      </button>
-                      <button
-                        onClick={() => setLeftTab('context')}
-                        style={{
-                          padding: '1px 4px',
-                          fontSize: '7px',
-                          fontWeight: 800,
-                          borderRadius: '2px',
-                          border: 'none',
-                          background: leftTab === 'context' ? 'var(--accent)' : 'transparent',
-                          color: leftTab === 'context' ? '#fff' : 'var(--muted)',
-                          cursor: 'pointer',
-                          textTransform: 'uppercase',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        {dtxt.contextTab || '📄 Context'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    {/* Autonomy Switcher — compact chip in the header bar */}
-                    <div
-                      style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                      onMouseEnter={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setAutonomyPos({
-                          bottom: Math.max(10, window.innerHeight - rect.bottom + rect.height + 4),
-                          left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
-                        });
-                        setIsAutonomyHoverOpen(true);
-                      }}
-                      onMouseLeave={() => setIsAutonomyHoverOpen(false)}
-                    >
-                      <button
-                        onClick={() => {
-                          const nextState = !isAutonomyOn;
-                          setIsAutonomyOn(nextState);
-                          setToast({
-                            message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
-                            type: 'info',
-                            isOpen: true
-                          });
-                        }}
-                        title="Click to toggle Autonomy ON/OFF. Hover to select mode."
-                        style={{
-                          height: '18px',
-                          padding: '0 5px',
-                          fontSize: '7px',
-                          fontWeight: 900,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          background: !isAutonomyOn
-                            ? 'linear-gradient(135deg, #475569, #334155)'
-                            : autonomyLevel === 'autonomous'
-                            ? 'linear-gradient(135deg, #10b981, #059669)'
-                            : 'linear-gradient(135deg, #f59e0b, #d97706)',
-                          border: 'none',
-                          borderRadius: '3px',
-                          color: '#fff',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          transition: 'all 0.15s',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        <span style={{ fontSize: '8px' }}>🤖</span>
-                        <span style={{
-                          fontSize: '6.5px',
-                          padding: '1px 3px',
-                          borderRadius: '2px',
-                          background: 'rgba(0,0,0,0.25)',
-                          fontWeight: 900
-                        }}>
-                          {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
-                        </span>
-                      </button>
-
-                      {/* Hover Popover Dropdown for Autonomy Modes */}
-                      {isAutonomyHoverOpen && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                    {/* Real PI Agent Context Window Usage Meter Bar in Header */}
+                    {(() => {
+                      const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
+                      const approxContextTokens = piContext ? piContext.tokensUsed : fallbackTokens;
+                      const maxContextWindow = piContext ? piContext.maxTokens : (chatModel.includes('gemini') ? 1000000 : chatModel.includes('claude') ? 200000 : 128000);
+                      const contextPct = piContext ? piContext.percentUsed : Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
+                      return (
                         <div
+                          onClick={() => {
+                            const tenantKey = user?.id || activeEntity || 'default_user';
+                            refreshPiContext(tenantKey);
+                            fetchAgentsMd();
+                            setIsAgentsMdWindowOpen(true);
+                          }}
+                          title={`Real PI Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & open Workspace Context.`}
                           style={{
-                            position: 'fixed',
-                            top: `${autonomyPos ? (window.innerHeight - autonomyPos.bottom + 22) : 60}px`,
-                            left: `${autonomyPos ? autonomyPos.left : 20}px`,
-                            width: '210px',
-                            background: 'var(--surface)',
-                            border: '1.5px solid var(--border-soft)',
-                            borderRadius: '8px',
-                            boxShadow: '0 16px 40px rgba(0,0,0,0.75)',
-                            padding: '8px',
-                            zIndex: 999999,
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px'
+                            alignItems: 'center',
+                            justify: 'space-between',
+                            gap: '6px',
+                            background: 'var(--surface-alt)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '4px',
+                            padding: '2px 8px',
+                            height: '22px',
+                            fontSize: '8.5px',
+                            fontFamily: 'var(--mono)',
+                            fontWeight: 800,
+                            color: 'var(--text-bright)',
+                            cursor: 'pointer',
+                            flex: 1,
+                            minWidth: 0,
+                            transition: 'all 0.15s'
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
-                            <div style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase' }}>🤖 Autonomy System</div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const nextState = !isAutonomyOn;
-                                setIsAutonomyOn(nextState);
-                                setToast({
-                                  message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
-                                  type: 'info',
-                                  isOpen: true
-                                });
-                              }}
-                              style={{
-                                padding: '2px 6px', fontSize: '8px', fontWeight: 900, borderRadius: '8px',
-                                border: 'none', background: isAutonomyOn ? '#10b981' : '#ef4444',
-                                color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
-                              }}
-                            >
-                              <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
-                            </button>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden', flex: 1 }}>
+                            <span style={{ color: 'var(--accent-2)', fontSize: '9.5px', flexShrink: 0 }}>🧠</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              CTX: {(approxContextTokens / 1000).toFixed(1)}k / {maxContextWindow >= 1000000 ? `${(maxContextWindow / 1000000).toFixed(1)}M` : `${(maxContextWindow / 1000).toFixed(0)}k`}
+                            </span>
                           </div>
-
-                          <button
-                            onClick={() => handleAutonomyChange('autonomous')}
-                            style={{
-                              display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
-                              borderRadius: '4px',
-                              border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
-                              background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16,185,129,0.12)' : 'var(--surface-alt)',
-                              color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
-                              cursor: 'pointer', textAlign: 'left'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
-                              <span>👑 DIRECTOR Mode</span>
-                              {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, maxWidth: '120px', minWidth: '50px' }}>
+                            <div style={{ flex: 1, height: '5px', background: 'var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${contextPct}%`, height: '100%', background: contextPct > 80 ? 'var(--danger)' : 'var(--accent-2)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
                             </div>
-                            <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>Agent wakes up via Heartbeat and executes actions</div>
-                          </button>
-
-                          <button
-                            onClick={() => handleAutonomyChange('semi-autonomous')}
-                            style={{
-                              display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
-                              borderRadius: '4px',
-                              border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
-                              background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245,158,11,0.12)' : 'var(--surface-alt)',
-                              color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
-                              cursor: 'pointer', textAlign: 'left'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
-                              <span>🛠️ WORKER Mode</span>
-                              {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
-                            </div>
-                            <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
-                          </button>
+                            <span style={{ fontSize: '8px', opacity: 0.9, flexShrink: 0, fontFamily: 'var(--mono)' }}>{contextPct}%</span>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
+                  </div>
 
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                     {/* Model Selector */}
                     <select
                       value={chatModel}
@@ -7984,16 +7857,16 @@ ${isDirector ? `
                       style={{
                         background: 'var(--surface-alt)',
                         border: '1px solid var(--border-soft)',
-                        borderRadius: '3px',
+                        borderRadius: '4px',
                         color: 'var(--accent)',
-                        fontSize: '7px',
+                        fontSize: '8px',
                         fontFamily: 'var(--mono)',
                         fontWeight: 800,
                         outline: 'none',
                         cursor: 'pointer',
-                        padding: '1px 2px',
-                        maxWidth: '90px',
-                        height: '18px',
+                        padding: '1px 4px',
+                        maxWidth: '85px',
+                        height: '22px',
                         textTransform: 'uppercase',
                         textOverflow: 'ellipsis',
                         overflow: 'hidden'
@@ -8002,54 +7875,51 @@ ${isDirector ? `
                       {renderModelOptions()}
                     </select>
 
-                    {/* Minimized Active Session Badge */}
-                    <span style={{
-                      fontSize: '6.5px',
-                      fontWeight: 900,
-                      color: 'var(--accent)',
-                      fontFamily: 'var(--mono)',
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '3px',
-                      padding: '1px 4px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '2px',
-                      height: '18px'
-                    }}>
-                      ⚡ ONLINE
-                    </span>
-
-                    {/* Sessions Dropdown Trigger Button */}
+                    {/* Merged Active Session Button (Small compact badge style) */}
                     <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={() => setShowSessionDropdown(!showSessionDropdown)}
-                        style={{
-                          width: '17px',
-                          height: '17px',
-                          borderRadius: '3px',
-                          background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
-                          color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--text)',
-                          border: '1px solid var(--border-soft)',
-                          fontSize: '9px',
-                          fontWeight: 'bold',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                          padding: 0
-                        }}
-                        title="Manage Sessions"
-                      >
-                        +
-                      </button>
+                      {(() => {
+                        const activeSession = sessions.find((s) => s.id === activeSessionId);
+                        const currentSessionName = activeSession?.name || 'Main Session';
+
+                        return (
+                          <button
+                            onClick={() => setShowSessionDropdown(!showSessionDropdown)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              height: '22px',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
+                              color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--accent)',
+                              border: '1px solid var(--border-soft)',
+                              fontSize: '7.5px',
+                              fontFamily: 'var(--mono)',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                              maxWidth: '80px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title={`Active Session: ${currentSessionName}. Click to manage sessions.`}
+                          >
+                            <span style={{ color: showSessionDropdown ? 'var(--accent-contrast)' : '#10b981', fontSize: '7px', flexShrink: 0 }}>●</span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                              {currentSessionName}
+                            </span>
+                            <span style={{ fontSize: '6.5px', opacity: 0.8, flexShrink: 0 }}>▾</span>
+                          </button>
+                        );
+                      })()}
 
                       {showSessionDropdown && (
                         <div style={{
                           position: 'absolute',
                           right: 0,
-                          top: '22px',
+                          top: '26px',
                           width: '180px',
                           background: 'var(--surface)',
                           border: '1.5px solid var(--border-soft)',
@@ -8565,87 +8435,137 @@ ${isDirector ? `
 
 
 
-                    {/* 2 Agent Suggestion Cards - Line 1 */}
-                    <div style={{ marginBottom: '6px' }}>
-                      <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(2, 1fr)', 
-                        gap: '4px'
-                      }}>
-                        {(() => {
-                          const baseDefaults = pbSuggestions;
-                          let displayList: Array<{ title: string; icon: string; prompt: string; desc: string }> = [];
+                    {/* 3 Agent Suggestion Cards (1 Top Card + 2 Grid Cards) */}
+                    <div style={{ marginBottom: '6px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {(() => {
+                        const baseDefaults = pbSuggestions;
+                        let displayList: Array<{ title: string; icon: string; prompt: string; desc: string }> = [];
 
-                          if (agentSuggestions && agentSuggestions.length > 0) {
-                            displayList = agentSuggestions.map((s: any, idx: number) => {
-                              if (typeof s === 'object' && s !== null) {
-                                const promptVal = s.prompt || s.description || s.title || '';
-                                return {
-                                  title: s.title || s.name || `Option ${idx + 1}`,
-                                  icon: s.icon || '⚡',
-                                  prompt: promptVal,
-                                  desc: s.description || s.title || promptVal
-                                };
-                              }
-                              const strVal = String(s);
+                        if (agentSuggestions && agentSuggestions.length > 0) {
+                          displayList = agentSuggestions.map((s: any, idx: number) => {
+                            if (typeof s === 'object' && s !== null) {
+                              const promptVal = s.prompt || s.description || s.desc || s.title || '';
+                              const descVal = s.desc || s.description || (s.prompt && s.prompt !== s.title ? s.prompt : '') || s.title || promptVal;
                               return {
-                                title: `Option ${idx + 1}`,
-                                icon: '⚡',
-                                prompt: strVal,
-                                desc: strVal
+                                title: s.title || s.name || `Option ${idx + 1}`,
+                                icon: s.icon || '⚡',
+                                prompt: promptVal,
+                                desc: descVal
                               };
-                            });
-                          }
+                            }
+                            const strVal = String(s);
+                            return {
+                              title: `Option ${idx + 1}`,
+                              icon: '⚡',
+                              prompt: strVal,
+                              desc: strVal
+                            };
+                          });
+                        }
 
-                          // Always pad with base defaults to guarantee exactly 2 cards
-                          if (displayList.length < 2) {
-                            const missingCount = 2 - displayList.length;
-                            for (let i = 0; i < missingCount; i++) {
-                              if (baseDefaults[i]) {
-                                displayList.push(baseDefaults[i]);
-                              }
+                        // Always pad with base defaults to guarantee at least 3 cards
+                        if (displayList.length < 3) {
+                          const missingCount = 3 - displayList.length;
+                          for (let i = 0; i < missingCount; i++) {
+                            if (baseDefaults[i]) {
+                              displayList.push(baseDefaults[i]);
                             }
                           }
+                        }
 
-                          // Always slice to exactly 2 cards
-                          return displayList.slice(0, 2);
-                        })().map((s, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleSendChat(s.prompt)}
-                            title={`${s.title}: ${s.desc}`}
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'center',
-                              alignItems: 'flex-start',
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                              background: 'var(--surface-alt)',
-                              border: '1px solid var(--border-soft)',
-                              color: 'var(--text)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s',
-                              textAlign: 'left',
-                              gap: '1px',
-                              minWidth: 0,
-                              overflow: 'hidden'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%', minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                                <span style={{ fontSize: '8px', flexShrink: 0 }}>{s.icon || '🤖'}</span>
-                                <span style={{ fontWeight: 800, fontSize: '7.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)', flex: 1, minWidth: 0 }}>
-                                  {s.title}
-                                </span>
-                              </div>
+                        const items = displayList.slice(0, 3);
+                        const topCard = items[0];
+                        const bottomCards = items.slice(1, 3);
+
+                        return (
+                          <>
+                            {/* Top Suggestion Card (3rd card placed above - 2 lines layout) */}
+                            {topCard && (
+                              <button
+                                onClick={() => handleSendChat(topCard.prompt)}
+                                title={`${topCard.title}${topCard.desc ? ': ' + topCard.desc : ''}`}
+                                style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justify: 'center',
+                                  alignItems: 'flex-start',
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  background: 'var(--surface-alt)',
+                                  border: '1px solid var(--border-soft)',
+                                  color: 'var(--text)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s',
+                                  textAlign: 'left',
+                                  gap: '2px',
+                                  width: '100%',
+                                  minWidth: 0,
+                                  overflow: 'hidden'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '9px', flexShrink: 0 }}>{topCard.icon || '⚡'}</span>
+                                    <span style={{ fontWeight: 800, fontSize: '8.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)', flex: 1, minWidth: 0 }}>
+                                      {topCard.title}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '8px', color: 'var(--accent)', fontWeight: 800, flexShrink: 0, marginLeft: '4px' }}>⚡</span>
+                                </div>
+                                {topCard.desc && (
+                                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0, lineHeight: 1.2 }}>
+                                    {topCard.desc}
+                                  </span>
+                                )}
+                              </button>
+                            )}
+
+                            {/* 2 Cards Grid underneath */}
+                            <div style={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: 'repeat(2, 1fr)', 
+                              gap: '5px'
+                            }}>
+                              {bottomCards.map((s, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleSendChat(s.prompt)}
+                                  title={`${s.title}${s.desc ? ': ' + s.desc : ''}`}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justify: 'center',
+                                    alignItems: 'flex-start',
+                                    padding: '5px 7px',
+                                    borderRadius: '6px',
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    color: 'var(--text)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    textAlign: 'left',
+                                    gap: '2px',
+                                    minWidth: 0,
+                                    overflow: 'hidden'
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%', minWidth: 0 }}>
+                                    <span style={{ fontSize: '9px', flexShrink: 0 }}>{s.icon || '🤖'}</span>
+                                    <span style={{ fontWeight: 800, fontSize: '8.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--accent)', flex: 1, minWidth: 0 }}>
+                                      {s.title}
+                                    </span>
+                                  </div>
+                                  {s.desc && (
+                                    <span style={{ fontSize: '7.5px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0, lineHeight: 1.2 }}>
+                                      {s.desc}
+                                    </span>
+                                  )}
+                                </button>
+                              ))}
                             </div>
-                            <span style={{ fontSize: '6.5px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
-                              {s.desc}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Chat Input Top Border Divider */}
@@ -8683,20 +8603,20 @@ ${isDirector ? `
                         }}
                         style={{
                           width: '100%',
-                          minHeight: '28px',
-                          height: `${chatInputHeight}px`,
-                          maxHeight: '240px',
+                          minHeight: '96px',
+                          height: `${Math.max(96, chatInputHeight)}px`,
+                          maxHeight: '320px',
                           resize: 'vertical',
                           background: 'var(--surface-alt)',
                           border: '1.5px solid var(--border-soft)',
                           borderRadius: '6px',
                           color: 'var(--text)',
-                          fontSize: '9.5px',
-                          padding: '5px 8px',
+                          fontSize: '12px',
+                          padding: '10px 12px',
                           outline: 'none',
                           boxSizing: 'border-box',
                           fontFamily: 'inherit',
-                          lineHeight: '1.35',
+                          lineHeight: '1.45',
                           display: 'block'
                         }}
                       />
@@ -8707,7 +8627,7 @@ ${isDirector ? `
                       {/* Left: Commands Button, Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flexShrink: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
                         {/* Pi Agent CLI /commands Button */}
-                        <div style={{ flexShrink: 0 }}>
+                        <div style={{ flex: 1, minWidth: '95px', flexShrink: 0 }}>
                           <button
                             ref={commandsBtnRef}
                             onClick={(e) => toggleCommandsMenu(e)}
@@ -8715,13 +8635,15 @@ ${isDirector ? `
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              justify: 'center',
+                              gap: '6px',
                               background: showCommandsMenu ? 'rgba(99, 102, 241, 0.22)' : 'var(--surface-alt)',
                               border: `1px solid ${showCommandsMenu ? 'var(--accent)' : 'var(--border-soft)'}`,
-                              borderRadius: '4px',
-                              padding: '2px 7px',
-                              height: '22px',
-                              fontSize: '8.5px',
+                              borderRadius: '5px',
+                              padding: '3px 12px',
+                              height: '25px',
+                              width: '100%',
+                              fontSize: '10px',
                               fontFamily: 'var(--mono)',
                               fontWeight: 800,
                               color: showCommandsMenu ? 'var(--accent)' : 'var(--text-bright)',
@@ -8730,9 +8652,9 @@ ${isDirector ? `
                               boxShadow: showCommandsMenu ? '0 0 8px rgba(99, 102, 241, 0.3)' : 'none'
                             }}
                           >
-                            <span style={{ color: 'var(--accent)', fontSize: '9px' }}>⚡</span>
+                            <span style={{ color: 'var(--accent)', fontSize: '11px' }}>⚡</span>
                             <span>/commands</span>
-                            <span style={{ fontSize: '7px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
+                            <span style={{ fontSize: '8px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
                           </button>
 
                           {/* Dropdown Popup Menu */}
@@ -8865,72 +8787,69 @@ ${isDirector ? `
                           )}
                         </div>
 
-                        {/* Real PI Agent Context Window Usage Meter Bar */}
-                        {(() => {
-                          const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
-                          const approxContextTokens = piContext ? piContext.tokensUsed : fallbackTokens;
-                          const maxContextWindow = piContext ? piContext.maxTokens : (chatModel.includes('gemini') ? 1000000 : chatModel.includes('claude') ? 200000 : 128000);
-                          const contextPct = piContext ? piContext.percentUsed : Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
-                          return (
-                            <div
-                              onClick={() => {
-                                const tenantKey = user?.id || activeEntity || 'default_user';
-                                refreshPiContext(tenantKey);
-                                setLeftTab(leftTab === 'context' ? 'agent' : 'context');
-                              }}
-                              title={`Real PI Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & switch view.`}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                background: leftTab === 'context' ? 'rgba(99, 102, 241, 0.18)' : 'var(--surface-alt)',
-                                border: `1px solid ${leftTab === 'context' ? 'var(--accent)' : 'var(--border-soft)'}`,
-                                borderRadius: '4px',
-                                padding: '2px 6px',
-                                height: '22px',
-                                fontSize: '8px',
-                                fontFamily: 'var(--mono)',
-                                fontWeight: 800,
-                                color: leftTab === 'context' ? 'var(--accent)' : 'var(--text-bright)',
-                                cursor: 'pointer',
-                                flexShrink: 0,
-                                transition: 'all 0.15s'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-                                <span style={{ color: 'var(--accent-2)', fontSize: '8px' }}>🧠</span>
-                                <span>CTX: {(approxContextTokens / 1000).toFixed(1)}k / {maxContextWindow >= 1000000 ? `${(maxContextWindow/1000000).toFixed(1)}M` : `${(maxContextWindow/1000).toFixed(0)}k`} ({contextPct}%)</span>
-                              </div>
-                            <div style={{
-            flex: minCenter ? '0 0 auto' : (minBottomVertical ? '1 1 100%' : '1 1 50%'),
-            minHeight: minCenter ? '36px' : '200px',
-            maxHeight: minCenter ? '36px' : 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            borderBottom: '1px solid var(--border-soft)',
-            transition: 'all 0.2s ease'
-          }}>
-            <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* Mission bar switcher & controls in a single, split row */}
-            <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '6px', padding: '4px 10px', minHeight: '36px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
-              
-              {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto' }}>
-                {minCenter ? (
-                  <div
-                    onClick={() => toggleMissionsVertical(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                    title="Click to expand Missions HQ"
-                  >
-                    <span style={{ fontSize: '8.5px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                      AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
-                    </span>
-                  </div>
-                ) : (ion();
+                        {/* Agent Output Language Dropdown */}
+                        <div style={{ flex: 1, minWidth: '75px', flexShrink: 0 }}>
+                          <select
+                            value={agentLang}
+                            onChange={(e) => handleAgentLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
+                            title="Agent Output Language"
+                            style={{
+                              height: '25px',
+                              width: '100%',
+                              background: 'var(--surface-alt)',
+                              border: '1px solid var(--border-soft)',
+                              borderRadius: '5px',
+                              color: 'var(--text-bright)',
+                              fontSize: '10px',
+                              fontFamily: 'var(--mono)',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              cursor: 'pointer',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="EN">🗣️ ENGLISH (EN)</option>
+                            <option value="FR">🗣️ FRANÇAIS (FR)</option>
+                            <option value="AR">🗣️ ARABIC (AR)</option>
+                          </select>
+                        </div>
+
+                        {/* Internet / Web Search Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                          title={webSearchEnabled ? "Web Search Grounding (Internet Access) ENABLED" : "Web Search Grounding (Internet Access) DISABLED"}
+                          style={{
+                            height: '22px',
+                            padding: '0 6px',
+                            fontSize: '8px',
+                            fontWeight: 800,
+                            borderRadius: '4px',
+                            border: webSearchEnabled ? '1px solid #10b981' : '1px solid var(--border-soft)',
+                            background: webSearchEnabled ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface-alt)',
+                            color: webSearchEnabled ? '#10b981' : 'var(--text-bright)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            flexShrink: 0,
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <span style={{ fontSize: '9.5px' }}>🌐</span>
+                          <span>{webSearchEnabled ? 'WEB ON' : 'WEB OFF'}</span>
+                        </button>
+
+
+
+                        {isChatLoading ? (
+                          <button
+                            type="button"
+                            className="mini danger"
+                            style={{ padding: '0 12px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               handleStopChat();
                             }}
                             title="Stop agent turn & halt process"
@@ -9130,10 +9049,10 @@ ${isDirector ? `
                     >
                       <option value="ALL">{dtxt.allTypes || 'All Types'}</option>
                       <option value="standard">{getCategoryLabel('standard')}</option>
-                      <option value="drafting">{getCategoryLabel('drafting')}</option>
-                      <option value="planning">{getCategoryLabel('planning')}</option>
-                      <option value="execution">{getCategoryLabel('execution')}</option>
-                      <option value="delivery">{getCategoryLabel('delivery')}</option>
+                      <option value="full_pipeline">{getCategoryLabel('full_pipeline')}</option>
+                      <option value="quick_pipeline">{getCategoryLabel('quick_pipeline')}</option>
+                      <option value="custom_entry_pipeline">{getCategoryLabel('custom_entry_pipeline')}</option>
+                      <option value="custom_selection_pipeline">{getCategoryLabel('custom_selection_pipeline')}</option>
                     </select>
                   </>
                 )}
@@ -9189,7 +9108,7 @@ ${isDirector ? `
                   <option value="AR">🌐 AR</option>
                 </select>
 
-                {/* Logs Button */}
+                                {/* Logs Button */}
                 <button
                   onClick={() => setIsLogsWindowOpen(true)}
                   style={{
@@ -9309,6 +9228,122 @@ ${isDirector ? `
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* 4-BUTTON DIRECTIONAL CONTROL PAD IN TOP-BAR RIGHT */}
+                <div style={{
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '1px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-soft)',
+                  borderRadius: '4px',
+                  padding: '1px 2px',
+                  flexShrink: 0
+                }}>
+                  {/* TOP BUTTON: Pointing UP (▲) -> Top Section Vertical Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => toggleMissionsVertical()}
+                    title={minCenter ? "Expand Top Section (Restore Layout)" : "Collapse Top Section Upward (Maximize Bottom)"}
+                    style={{
+                      width: '40px',
+                      height: '10px',
+                      background: minCenter ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minCenter ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '8px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ▲
+                  </button>
+
+                  {/* BOTTOM ROW: 3 Buttons (◀ Left, ▼ Below, ▶ Right) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                    {/* LEFT BUTTON: Pointing LEFT (◀) -> Collapse Left Section (Artifact Workspace) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleArtifactHorizontal()}
+                      title={minArtifactSection ? "Expand Left Section (Artifact Workspace)" : "Collapse Left Section (Artifact Workspace)"}
+                      style={{
+                        width: '12px',
+                        height: '11px',
+                        background: minArtifactSection ? 'var(--accent)' : 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: minArtifactSection ? '#ffffff' : 'var(--text-bright)',
+                        borderRadius: '2px',
+                        fontSize: '7px',
+                        lineHeight: '8px',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                    >
+                      ◀
+                    </button>
+
+                    {/* MIDDLE BUTTON: Pointing DOWN (▼) -> Collapse Bottom Section Downward */}
+                    <button
+                      type="button"
+                      onClick={() => toggleBottomVertical()}
+                      title={minBottomVertical ? "Expand Bottom Workspace" : "Collapse Bottom Workspace Downward"}
+                      style={{
+                        width: '14px',
+                        height: '11px',
+                        background: minBottomVertical ? 'var(--accent)' : 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: minBottomVertical ? '#ffffff' : 'var(--text-bright)',
+                        borderRadius: '2px',
+                        fontSize: '7px',
+                        lineHeight: '8px',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                    >
+                      ▼
+                    </button>
+
+                    {/* RIGHT BUTTON: Pointing RIGHT (▶) -> Collapse Right Section (Data & Systems) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleProjectsHorizontal()}
+                      title={minSide ? "Expand Right Section (Data & Systems)" : "Collapse Right Section (Data & Systems)"}
+                      style={{
+                        width: '12px',
+                        height: '11px',
+                        background: minSide ? 'var(--accent)' : 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: minSide ? '#ffffff' : 'var(--text-bright)',
+                        borderRadius: '2px',
+                        fontSize: '7px',
+                        lineHeight: '8px',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0
+                      }}
+                    >
+                      ▶
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -9780,7 +9815,6 @@ ${isDirector ? `
             </div>
           </div>
         </section>
-      )}
     </div>
 
         {/* ================= BOTTOM WORKSPACE WRAPPER (ARTIFACT (LEFT) + PROJECTS (RIGHT)) ================= */}
@@ -9830,128 +9864,6 @@ ${isDirector ? `
             </div>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden', height: '100%', position: 'relative' }}>
-              
-              {/* FLOATING 4-BUTTON DIRECTIONAL CONTROL PAD CENTERED ABOVE SECTIONS */}
-              <div style={{
-                position: 'absolute',
-                top: '3px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 40,
-                display: 'inline-flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '1px',
-                background: 'var(--surface)',
-                border: '1px solid var(--border-soft)',
-                borderRadius: '5px',
-                padding: '2px 3px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                pointerEvents: 'auto'
-              }}>
-                {/* TOP BUTTON: Pointing UP (▲) -> Top Section Vertical Toggle */}
-                <button
-                  type="button"
-                  onClick={() => toggleMissionsVertical()}
-                  title={minCenter ? "Expand Top Section (Restore Layout)" : "Collapse Top Section Upward (Maximize Bottom)"}
-                  style={{
-                    width: '42px',
-                    height: '11px',
-                    background: minCenter ? 'var(--accent)' : 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    color: minCenter ? '#ffffff' : 'var(--text-bright)',
-                    borderRadius: '2px',
-                    fontSize: '7px',
-                    lineHeight: '9px',
-                    fontWeight: 900,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0
-                  }}
-                >
-                  ▲
-                </button>
-
-                {/* BOTTOM ROW: 3 Buttons (◀ Left, ▼ Below, ▶ Right) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                  {/* LEFT BUTTON: Pointing LEFT (◀) -> Collapse Left Section (Artifact Workspace) */}
-                  <button
-                    type="button"
-                    onClick={() => toggleArtifactHorizontal()}
-                    title={minArtifactSection ? "Expand Left Section (Artifact Workspace)" : "Collapse Left Section (Artifact Workspace)"}
-                    style={{
-                      width: '13px',
-                      height: '12px',
-                      background: minArtifactSection ? 'var(--accent)' : 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      color: minArtifactSection ? '#ffffff' : 'var(--text-bright)',
-                      borderRadius: '2px',
-                      fontSize: '7px',
-                      lineHeight: '9px',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
-                  >
-                    ◀
-                  </button>
-
-                  {/* MIDDLE BUTTON: Pointing DOWN (▼) -> Collapse Bottom Section Downward */}
-                  <button
-                    type="button"
-                    onClick={() => toggleBottomVertical()}
-                    title={minBottomVertical ? "Expand Bottom Workspace" : "Collapse Bottom Workspace Downward"}
-                    style={{
-                      width: '14px',
-                      height: '12px',
-                      background: minBottomVertical ? 'var(--accent)' : 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      color: minBottomVertical ? '#ffffff' : 'var(--text-bright)',
-                      borderRadius: '2px',
-                      fontSize: '7px',
-                      lineHeight: '9px',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
-                  >
-                    ▼
-                  </button>
-
-                  {/* RIGHT BUTTON: Pointing RIGHT (▶) -> Collapse Right Section (Data & Systems) */}
-                  <button
-                    type="button"
-                    onClick={() => toggleProjectsHorizontal()}
-                    title={minSide ? "Expand Right Section (Data & Systems)" : "Collapse Right Section (Data & Systems)"}
-                    style={{
-                      width: '13px',
-                      height: '12px',
-                      background: minSide ? 'var(--accent)' : 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      color: minSide ? '#ffffff' : 'var(--text-bright)',
-                      borderRadius: '2px',
-                      fontSize: '7px',
-                      lineHeight: '9px',
-                      fontWeight: 900,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
-                  >
-                    ▶
-                  </button>
-                </div>
-              </div>
               
               {/* ------------ BOTTOM-LEFT: SOURCES SECTION ------------ */}
               <div style={{
@@ -11061,7 +10973,233 @@ ${isDirector ? `
         </div>
       )}
 
-      {/* ================= ACCOUNT & API ENGINE WINDOW ================= */}
+            {/* ================= WORKSPACE CONTEXT (AGENTS.MD) WINDOW ================= */}
+      {isAgentsMdWindowOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(9, 13, 22, 0.75)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          zIndex: 900,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px'
+        }}>
+          <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
+            width: 'min(75rem, 95vw)',
+            height: 'min(45rem, 85vh)',
+            background: 'var(--surface)',
+            border: '2px solid var(--border)',
+            borderRadius: '12px',
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.4), var(--shadow)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'space-between',
+              padding: '12px 18px',
+              borderBottom: '2px solid var(--border)',
+              background: 'var(--surface-alt)',
+              flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem' }}>📄</span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>WORKSPACE CONTEXT (AGENTS.md)</b>
+                  <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
+                    System directives, project guidelines & context active for the AI agent
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAgentsMdWindowOpen(false)}
+                className="fw-close-btn"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '4px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body: AGENTS.md Editor / Viewer */}
+            <div style={{ flex: 1, padding: '16px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
+              {/* Controls & Mode Bar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                gap: '8px',
+                background: 'var(--surface-alt)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '6px',
+                padding: '6px 10px',
+                flexShrink: 0
+              }}>
+                {/* Mode Switcher */}
+                <div style={{ display: 'flex', gap: '4px', background: 'var(--surface)', padding: '2px', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
+                  <button
+                    onClick={() => setAgentsMdMode('edit')}
+                    style={{
+                      padding: '3px 10px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      borderRadius: '3px',
+                      border: 'none',
+                      background: agentsMdMode === 'edit' ? 'var(--accent)' : 'transparent',
+                      color: agentsMdMode === 'edit' ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    ✏️ Edit Directives
+                  </button>
+                  <button
+                    onClick={() => setAgentsMdMode('preview')}
+                    style={{
+                      padding: '3px 10px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      borderRadius: '3px',
+                      border: 'none',
+                      background: agentsMdMode === 'preview' ? 'var(--accent)' : 'transparent',
+                      color: agentsMdMode === 'preview' ? '#fff' : 'var(--muted)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    👁️ Formatted Preview
+                  </button>
+                </div>
+
+                {/* Stats & Path */}
+                <span style={{ fontSize: '9px', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>
+                  {agentsMdContent.split('\n').length} lines · {agentsMdContent.length.toLocaleString()} chars · path: <code style={{ color: 'var(--accent)' }}>{agentsMdPath || 'AGENTS.md'}</code>
+                </span>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    onClick={fetchAgentsMd}
+                    disabled={isLoadingAgentsMd}
+                    title="Reload AGENTS.md from disk"
+                    className="mini outline"
+                    style={{ height: '26px', padding: '0 8px', fontSize: '9px', fontWeight: 800 }}
+                  >
+                    {isLoadingAgentsMd ? '⌛ Loading...' : '↺ Reload'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(agentsMdContent);
+                      setToast({ message: 'Copied AGENTS.md to clipboard!', type: 'success', isOpen: true });
+                    }}
+                    title="Copy full AGENTS.md content to clipboard"
+                    className="mini outline"
+                    style={{ height: '26px', padding: '0 8px', fontSize: '9px', fontWeight: 800 }}
+                  >
+                    📋 Copy
+                  </button>
+                  <button
+                    onClick={handleSaveAgentsMd}
+                    disabled={isSavingAgentsMd}
+                    className="mini accent"
+                    style={{ height: '26px', padding: '0 12px', fontSize: '9px', fontWeight: 800 }}
+                  >
+                    {isSavingAgentsMd ? '⚙️ Saving...' : '💾 Save Changes'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '9px', color: 'var(--muted)', fontWeight: 800 }}>⚡ Quick Directives:</span>
+                <button
+                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Custom Directive\n- Always validate typescript types before writing file.')}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Type Validation
+                </button>
+                <button
+                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json.')}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Storage Protocol
+                </button>
+                <button
+                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Security Directive\n- Enforce strict RLS policies and never leak secret keys.')}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Security Policy
+                </button>
+              </div>
+
+              {/* Editor / Preview Container */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+                {agentsMdMode === 'edit' ? (
+                  <textarea
+                    value={agentsMdContent}
+                    onChange={(e) => setAgentsMdContent(e.target.value)}
+                    placeholder="# AGENTS.md - System Directives & Context..."
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      color: 'var(--text-bright)',
+                      fontFamily: 'var(--mono)',
+                      fontSize: '11px',
+                      lineHeight: '1.6',
+                      outline: 'none',
+                      resize: 'none'
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'var(--surface-alt)',
+                    border: '1px solid var(--border-soft)',
+                    borderRadius: '6px',
+                    padding: '14px',
+                    color: 'var(--text)',
+                    fontSize: '11px',
+                    lineHeight: '1.6',
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'var(--mono)'
+                  }}>
+                    {agentsMdContent}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+{/* ================= ACCOUNT & API ENGINE WINDOW ================= */}
       <AccountWorkspaceModal
         isOpen={isAccountWindowOpen}
         onClose={() => setIsAccountWindowOpen(false)}
@@ -11813,6 +11951,34 @@ ${isDirector ? `
       <footer className="bottombar" dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', gap: '16px', overflow: 'visible', zIndex: 1000, position: 'relative' }}>
         {/* Left: Skills & Extensions Button, Operations Ticker Banner & Agent Autonomy */}
         <div className="bottombar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', flex: 1, minWidth: 0 }}>
+          {/* Project Context (Workspace Context - AGENTS.md) Button */}
+          <button
+            onClick={() => {
+              fetchAgentsMd();
+              setIsAgentsMdWindowOpen(true);
+            }}
+            className="mini accent"
+            style={{
+              padding: '2px 7px',
+              fontSize: '8.5px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3.5px',
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+              border: 'none',
+              color: '#fff',
+              height: '20px',
+              flexShrink: 0,
+              cursor: 'pointer',
+              borderRadius: '3px',
+              transition: 'all 0.15s'
+            }}
+            title="Click to open Workspace Context (AGENTS.md) directives window"
+          >
+            <span>📄 Context</span>
+          </button>
+
           {/* Unified Capabilities Button (Skills & Extensions) */}
           <button
             onClick={() => {
@@ -11854,6 +12020,145 @@ ${isDirector ? `
               {toolsEnabled ? 'ON' : 'OFF'}
             </span>
           </button>
+
+          {/* Autonomy Switcher — compact chip to the right of Skills & Extensions */}
+          <div
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setAutonomyPos({
+                bottom: Math.max(10, window.innerHeight - rect.top + 6),
+                left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
+              });
+              setIsAutonomyHoverOpen(true);
+            }}
+            onMouseLeave={() => setIsAutonomyHoverOpen(false)}
+          >
+            <button
+              onClick={() => {
+                const nextState = !isAutonomyOn;
+                setIsAutonomyOn(nextState);
+                setToast({
+                  message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                  type: 'info',
+                  isOpen: true
+                });
+              }}
+              title="Click to toggle Autonomy ON/OFF. Hover to select mode."
+              style={{
+                height: '24px',
+                padding: '0 8px',
+                fontSize: '8.5px',
+                fontWeight: 900,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                background: !isAutonomyOn
+                  ? 'linear-gradient(135deg, #475569, #334155)'
+                  : autonomyLevel === 'autonomous'
+                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                  : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#fff',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span style={{ fontSize: '10px' }}>🤖</span>
+              <span style={{
+                fontSize: '8px',
+                padding: '1px 4px',
+                borderRadius: '2px',
+                background: 'rgba(0,0,0,0.25)',
+                fontWeight: 900
+              }}>
+                {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
+              </span>
+            </button>
+
+            {/* Hover Popover Dropdown for Autonomy Modes */}
+            {isAutonomyHoverOpen && (
+              <div
+                style={{
+                  position: 'fixed',
+                  bottom: '36px',
+                  left: `${autonomyPos ? autonomyPos.left : 20}px`,
+                  width: '210px',
+                  background: 'var(--surface)',
+                  border: '1.5px solid var(--border-soft)',
+                  borderRadius: '8px',
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.75)',
+                  padding: '8px',
+                  zIndex: 999999,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
+                  <div style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase' }}>🤖 Autonomy System</div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextState = !isAutonomyOn;
+                      setIsAutonomyOn(nextState);
+                      setToast({
+                        message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
+                        type: 'info',
+                        isOpen: true
+                      });
+                    }}
+                    style={{
+                      padding: '2px 6px', fontSize: '8px', fontWeight: 900, borderRadius: '8px',
+                      border: 'none', background: isAutonomyOn ? '#10b981' : '#ef4444',
+                      color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
+                    }}
+                  >
+                    <span>{isAutonomyOn ? '🟢 ON' : '🔴 OFF'}</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleAutonomyChange('autonomous')}
+                  style={{
+                    display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
+                    borderRadius: '4px',
+                    border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
+                    background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16,185,129,0.12)' : 'var(--surface-alt)',
+                    color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
+                    cursor: 'pointer', textAlign: 'left'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                    <span>👑 DIRECTOR Mode</span>
+                    {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                  </div>
+                  <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>Agent wakes up via Heartbeat and executes actions</div>
+                </button>
+
+                <button
+                  onClick={() => handleAutonomyChange('semi-autonomous')}
+                  style={{
+                    display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
+                    borderRadius: '4px',
+                    border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                    background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245,158,11,0.12)' : 'var(--surface-alt)',
+                    color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
+                    cursor: 'pointer', textAlign: 'left'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
+                    <span>🛠️ WORKER Mode</span>
+                    {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                  </div>
+                  <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Operations Ticker Banner */}
           <div className="bottombar-ticker" style={{
@@ -17031,15 +17336,10 @@ ${isDirector ? `
                       }}
                     >
                       <option value="standard">Standard</option>
-                      <option value="brainstorming">Brainstorming</option>
-                      <option value="deep_research">Deep Research</option>
-                      <option value="analytics">Analytics</option>
-                      <option value="system_build">System Build</option>
-                      <option value="system_build_from_data">System Build From Data</option>
-                      <option value="system_optimization">System Optimization</option>
-                      <option value="system_optimization_from_data">System Optimization From Data</option>
-                      <option value="system_test">System Test</option>
-                      <option value="system_test_from_data">System Test From Data</option>
+                      <option value="full_pipeline">Full Pipeline</option>
+                      <option value="quick_pipeline">Quick Jump</option>
+                      <option value="custom_entry_pipeline">Custom Entry</option>
+                      <option value="custom_selection_pipeline">Custom Selection</option>
                     </select>
                   </div>
 
