@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "schema-delivery-mission",
+  "type": "delivery",
+  "title": "Delivery & Execution Phase Schema",
+  "description": "Governs implementation, continuous execution logs, verification audits, and release sign-off.",
+  "protected": true,
+  "version": "3.0.0",
+  "phase": "delivery",
+  "phase_selection": "single",
+  "storage_paths": {
+    "scratchpad": "missions/{missionId}/execution/",
+    "sources": "workspace/Sources/Data Analysis & Pattern Extraction/",
+    "deliverables": "workspace/Deliverables/Executions/",
+    "state_index": "missions.json",
+    "workspace_index": "workspace.json",
+    "event_stream": "logs.json"
+  },
+  "sub_stages": [
+    {
+      "id": "execution",
+      "title": "Core Implementation",
+      "description": "Generated codebases, database schemas, workflow automations, and live code execution.",
+      "output_path": "workspace/Deliverables/Executions/"
+    },
+    {
+      "id": "review",
+      "title": "QA Verification & Audit",
+      "description": "Verified production deliverables waiting for human sign-off.",
+      "output_path": "workspace/Deliverables/Reviews/"
+    },
+    {
+      "id": "completed",
+      "title": "Final Artifact Release",
+      "description": "Accepted production deliverables & archived release artifacts.",
+      "output_path": "workspace/Deliverables/Completed/"
+    }
+  ],
+  "pipeline": {
+    "stages": ["execution", "review", "completed"],
+    "required_inputs": ["plan_json", "scaffolded_directories"],
+    "outputs": ["execution_json", "execution_history_md", "completed_deliverables"]
+  },
+  "rules": {
+    "require_qa": true,
+    "transaction_safe": true,
+    "memory_retention": "persistent"
+  }
+}

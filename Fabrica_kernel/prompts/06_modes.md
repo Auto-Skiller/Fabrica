@@ -12,7 +12,7 @@ Mission execution is the core operational state machine of the Fabrica kernel. W
 ### Step 1: Ingestion & Mission Setup
 1. **Parse Intent & Scope**: Ingest user prompt, raw data uploads, or mission card parameters.
 2. **Determine Target Mission & Pipeline Launcher Mode**: Map the task to a launcher mode (`standard`, `full_pipeline`, `quick_pipeline`, `custom_entry_pipeline`, `custom_selection_pipeline`).
-3. **Register/Update Mission State**: Create or update the mission row in `db/missions.json` and database tables with status `DRAFTING` or `PLANNING`.
+3. **Register/Update Mission State**: Create or update the mission record in `missions.json` with status `DRAFTING` or `PLANNING`.
 
 ### Step 2: Skill Discovery & Invocation (How & When to Use Skills)
 1. **When to Use Skills**: Whenever a mission phase or task requires domain-specific procedures, specialized coding frameworks, industry research protocols, or customized task rules, the agent MUST load and follow the corresponding **Skill**.
@@ -134,9 +134,9 @@ When running multi-round loops (EFFORT >= MEDIUM):
 ## 4. MULTI-TURN PERSISTENCE & REAL-TIME SYNCHRONIZATION
 
 During every turn of mission execution, the agent MUST maintain strict state synchronization:
-1. **Database Mirroring**: Update `db/missions.json`, `db/sources.json`, `db/deliverables.json`, and database tables (`missions`, `sources`, `deliverables`) immediately upon completing task steps.
-2. **Disk Mirroring**: Store scoping, research, analytics, and plans in `Sources/` and generated code, assets, and reviews in `Deliverables/`. Maintain active execution scratchpads under `missions/<mission_type>/<mission_id>/`.
-3. **Real-time Event Logging**: Append progress logs with standardized status verbs (`[*]`, `[OK]`, `[+]`, `[WARN]`, `[ERR]`) to `runtime_state.recent_events`.
+1. **State Indexing**: Update `missions.json`, `workspace.json`, and event stream `logs.json` immediately upon completing task steps.
+2. **Disk Storage**: Store scoping, research, analytics, and plans in `workspace/Sources/` and generated code, assets, and reviews in `workspace/Deliverables/`. Maintain active execution scratchpads under `missions/{missionId}/`.
+3. **Real-time Event Logging**: Append progress events to `logs.json` and `runtime.json`.
 
 
 

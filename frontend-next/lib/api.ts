@@ -330,4 +330,16 @@ export const api = {
     request<{ ok: boolean; tenantId: string; settings: any }>(
       `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/settings`
     ),
+  getWorkspaceLogs: (tenantId?: string) =>
+    request<{ ok: boolean; tenantId: string; logs: any }>(
+      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/logs`
+    ),
+  saveWorkspaceLogs: (updates: any, tenantId?: string) =>
+    request<{ ok: boolean; tenantId: string; logs: any }>(
+      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/logs`,
+      {
+        method: 'POST',
+        body: JSON.stringify(updates),
+      }
+    ),
 };

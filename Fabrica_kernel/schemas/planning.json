@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "schema-planning-mission",
+  "type": "planning",
+  "title": "Planning & Architecture Phase Schema",
+  "description": "Governs blueprint design, task decomposition, metric definition, and scaffold preparation.",
+  "protected": true,
+  "version": "3.0.0",
+  "phase": "planning",
+  "phase_selection": "single",
+  "storage_paths": {
+    "scratchpad": "missions/{missionId}/planning/",
+    "sources": "workspace/Sources/Strategic Synthesis & Decision Support/",
+    "deliverables": "workspace/Deliverables/Reviews/",
+    "state_index": "missions.json",
+    "workspace_index": "workspace.json",
+    "event_stream": "logs.json"
+  },
+  "sub_stages": [
+    {
+      "id": "blueprint",
+      "title": "Architecture Blueprinting",
+      "description": "Technical system spec, structural flow modeling, and architectural guidelines.",
+      "output_path": "missions/{missionId}/planning/blueprint.md"
+    },
+    {
+      "id": "task_roadmapping",
+      "title": "Task Roadmapping & Estimation",
+      "description": "Structured task steps, cost/benefit trade-offs, and QA gate rules.",
+      "output_path": "missions/{missionId}/planning/plan.json"
+    },
+    {
+      "id": "strategic_synthesis",
+      "title": "Strategic Synthesis & Decision Support",
+      "description": "Executive strategic plans, risk audits, roadmaps, and decision matrices.",
+      "output_path": "workspace/Sources/Strategic Synthesis & Decision Support/"
+    }
+  ],
+  "pipeline": {
+    "stages": ["blueprint", "task_roadmapping", "strategic_synthesis"],
+    "required_inputs": ["scoping_document", "system_specs"],
+    "outputs": ["blueprint_md", "plan_json"]
+  },
+  "rules": {
+    "require_qa": true,
+    "transaction_safe": true,
+    "memory_retention": "persistent"
+  }
+}

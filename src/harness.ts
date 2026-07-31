@@ -48,20 +48,63 @@ function copyDirSync(src: string, dest: string) {
 }
 
 /**
+ * Dynamically loads a mission schema into memory from Fabrica_kernel/schemas/{type}.json.
+ * Prevents dropping or copying raw prompt schema or system instruction files into the user's workspace.
+ */
+export function getMissionSchema(missionType: string): any {
+  const normType = (missionType || 'standard').replace(/^system_/, '').toLowerCase();
+  let schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'schemas', `${normType}.json`);
+  if (!fs.existsSync(schemaPath)) {
+    schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'schemas', 'standard.json');
+  }
+  if (fs.existsSync(schemaPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    } catch (err) {
+      console.warn(`[SchemaLoader] Error parsing schema file for ${normType}:`, err);
+    }
+  }
+  return {
+    type: normType,
+    title: `${normType.toUpperCase()} Mission Schema`,
+    protected: true,
+    version: "3.0.0",
+    supported_phases: ["discovery", "blueprint", "scaffold", "execute", "review"],
+    phase_selection: "multi_or_single",
+    storage_paths: {
+      scratchpad: "missions/{missionId}/",
+      sources: "workspace/Sources/",
+      deliverables: "workspace/Deliverables/",
+      state_index: "missions.json",
+      workspace_index: "workspace.json",
+      event_stream: "logs.json"
+    },
+    pipeline: {
+      stages: ["discovery", "blueprint", "scaffold", "execute", "review"]
+    }
+  };
+}
+
+/**
  * Ensures the target workspace directory hierarchy exists for a user/tenant:
  * workspaces/<tenant_id>/
- * ├── .pi/
- * │   ├── agent/ (auth.json, models-store.json managed automatically by pi)
- * │   ├── skills/
- * │   └── extensions/
- * ├── AGENTS.md
+ * ├── AGENTS.md (user business context - kept empty by default)
+ * ├── logs.json (event / audit stream)
+ * ├── missions.json (single missions state file)
+ * ├── workspace.json (single index map for Sources and Deliverables)
  * ├── settings.json
  * ├── runtime.json
- * ├── db/
- * │   └── missions.json
- * └── missions/
- *     ├── standard/ (planning/, execution/)
- *     └── [9 other mission types]/ (planning/, execution/)
+ * ├── missions/{missionId}/ (ephemeral working scratchpad for active missions)
+ * └── workspace/
+ *     ├── Sources/
+ *     │   ├── Discovery & Scoping/
+ *     │   ├── Deep Research & Intelligence Gathering/
+ *     │   ├── Data Analysis & Pattern Extraction/
+ *     │   └── Strategic Synthesis & Decision Support/
+ *     └── Deliverables/
+ *         ├── Executions/
+ *         ├── Reviews/
+ *         └── Completed/
  */
 export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnessInfo {
   const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
@@ -76,7 +119,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   fs.mkdirSync(piSkillsDir, { recursive: true });
   fs.mkdirSync(piExtensionsDir, { recursive: true });
 
-  // 2. Structured States and Mappings
+  // 2. Structured States and Single Files
   const settingsPath = path.join(userRoot, 'settings.json');
   if (!fs.existsSync(settingsPath)) {
     fs.writeFileSync(settingsPath, JSON.stringify({
@@ -105,34 +148,85 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
     }, null, 2), 'utf8');
   }
 
-  const dbDir = path.join(userRoot, 'db');
-  fs.mkdirSync(dbDir, { recursive: true });
-
-  const missionsPath = path.join(dbDir, 'missions.json');
-  if (!fs.existsSync(missionsPath)) {
-    fs.writeFileSync(missionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
+  // Single missions.json file (workspaces/<tenant_id>/missions.json)
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  const legacyDbMissionsPath = path.join(userRoot, 'db', 'missions.json');
+  if (!fs.existsSync(singleMissionsPath)) {
+    if (fs.existsSync(legacyDbMissionsPath)) {
+      try {
+        const legacyData = fs.readFileSync(legacyDbMissionsPath, 'utf8');
+        fs.writeFileSync(singleMissionsPath, legacyData, 'utf8');
+        fs.unlinkSync(legacyDbMissionsPath);
+      } catch (_) {
+        fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
+      }
+    } else {
+      fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
+    }
   }
 
-  // 4. Mission Planning Artifacts & Execution Space (missions/)
-  const missionTypes = [
-    'standard', 'analytics', 'deep_research', 'brainstorming', 'build',
-    'build_from_data', 'optimization', 'optimization_from_data', 'test', 'test_from_data'
+  // 3. User Root Context (AGENTS.md), Audit Event Stream (logs.json), & Single Workspace Map (workspace.json)
+  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+  if (!fs.existsSync(agentsMdPath)) {
+    fs.writeFileSync(agentsMdPath, '', 'utf8');
+  }
+
+  const logsJsonPath = path.join(userRoot, 'logs.json');
+  if (!fs.existsSync(logsJsonPath)) {
+    fs.writeFileSync(logsJsonPath, JSON.stringify({
+      events: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: nowIso(),
+          type: "system",
+          event: "Workspace Initialized",
+          details: "Unified audit event stream initialized."
+        }
+      ],
+      last_event_at: nowIso()
+    }, null, 2), 'utf8');
+  }
+
+  // 4. Workspace storage folders (workspace/Sources/ & workspace/Deliverables/)
+  const workspaceDir = path.join(userRoot, 'workspace');
+  const sourcesDir = path.join(workspaceDir, 'Sources');
+  const deliverablesDir = path.join(workspaceDir, 'Deliverables');
+
+  const sourceDirs = [
+    'Discovery & Scoping',
+    'Deep Research & Intelligence Gathering',
+    'Data Analysis & Pattern Extraction',
+    'Strategic Synthesis & Decision Support'
   ];
-  const missionsDir = path.join(userRoot, 'missions');
-  for (const mType of missionTypes) {
-    const typeDir = path.join(missionsDir, mType);
-    fs.mkdirSync(path.join(typeDir, 'planning'), { recursive: true });
-    fs.mkdirSync(path.join(typeDir, 'execution'), { recursive: true });
+  const deliverableDirs = [
+    'Executions',
+    'Reviews',
+    'Completed'
+  ];
+
+  for (const sd of sourceDirs) {
+    fs.mkdirSync(path.join(sourcesDir, sd), { recursive: true });
+  }
+  for (const dd of deliverableDirs) {
+    fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
   }
 
-  // Clean up legacy harness or entities directories if they exist
+  // 5. Ephemeral Missions Scratchpad Directory
+  const missionsDir = path.join(userRoot, 'missions');
+  fs.mkdirSync(missionsDir, { recursive: true });
+
+  // Clean up legacy harness, entities, or db directories if they exist
   const harnessDir = path.join(userRoot, 'harness');
   const entitiesDir = path.join(userRoot, 'entities');
+  const legacyDbDir = path.join(userRoot, 'db');
   if (fs.existsSync(harnessDir)) {
     try { fs.rmSync(harnessDir, { recursive: true, force: true }); } catch {}
   }
   if (fs.existsSync(entitiesDir)) {
     try { fs.rmSync(entitiesDir, { recursive: true, force: true }); } catch {}
+  }
+  if (fs.existsSync(legacyDbDir)) {
+    try { fs.rmSync(legacyDbDir, { recursive: true, force: true }); } catch {}
   }
 
   const config: HarnessConfig = {
@@ -156,6 +250,8 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       }
     }
   };
+
+  syncWorkspaceJson(tenantId);
 
   return {
     tenantId,
@@ -229,14 +325,14 @@ export function getPiExecutionOptions(
 
 /**
  * Creates mission workspace folder structure matching:
- * missions/<mission_type>/<mission_id>/
+ * missions/<mission_id>/
  * ├── planning/
  * └── execution/
  */
 export function ensureMissionWorkspaceDirs(tenantId: string, missionType: string, missionId: string) {
   ensureUserHarness(tenantId);
   const normType = (missionType || 'standard').replace(/^system_/, '');
-  const baseDir = path.join(process.cwd(), 'workspaces', tenantId, 'missions', normType, missionId);
+  const baseDir = path.join(process.cwd(), 'workspaces', tenantId, 'missions', missionId);
   const planningDir = path.join(baseDir, 'planning');
   const executionDir = path.join(baseDir, 'execution');
   
@@ -331,114 +427,114 @@ ${historyLines || 'No execution events logged yet.'}
 }
 
 /**
- * Syncs the missions/ directory structure with db/missions.json in real time
+ * Syncs the single workspaces/<tenant_id>/missions.json file in real time
  */
-export function syncMissionsDb(tenantId: string = 'default_user') {
+export function syncMissionsJson(tenantId: string = 'default_user') {
   const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
   const missionsDir = path.join(userRoot, 'missions');
-  const dbMissionsPath = path.join(userRoot, 'db', 'missions.json');
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  const legacyDbMissionsPath = path.join(userRoot, 'db', 'missions.json');
 
   if (!fs.existsSync(missionsDir)) {
     fs.mkdirSync(missionsDir, { recursive: true });
   }
 
-  // Load existing missions from db/missions.json to avoid losing records
+  // Load existing missions from single missions.json (or migrate legacy db/missions.json)
   let existingMissions: any[] = [];
-  if (fs.existsSync(dbMissionsPath)) {
+  if (fs.existsSync(singleMissionsPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(dbMissionsPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
       existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+    } catch (_) {}
+  } else if (fs.existsSync(legacyDbMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(legacyDbMissionsPath, 'utf8'));
+      existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: existingMissions }, null, 2), 'utf8');
+      try { fs.unlinkSync(legacyDbMissionsPath); } catch (_) {}
     } catch (_) {}
   }
 
   const diskMissions: any[] = [];
 
-  const mTypes = fs.readdirSync(missionsDir).filter(f => {
-    return fs.statSync(path.join(missionsDir, f)).isDirectory();
-  });
+  const scanMissionFolder = (mPath: string, mId: string, mType: string) => {
+    const planJsonPath = path.join(mPath, 'planning', 'plan.json');
+    const planMdPath = path.join(mPath, 'planning', 'blueprint.md');
+    const execJsonPath = path.join(mPath, 'execution', 'execution.json');
+    const execMdPath = path.join(mPath, 'execution', 'execution_history.md');
 
-  for (const mType of mTypes) {
-    const typeDir = path.join(missionsDir, mType);
-    const mDirs = fs.readdirSync(typeDir).filter(f => {
-      return fs.statSync(path.join(typeDir, f)).isDirectory() && f !== 'planning' && f !== 'execution';
-    });
+    let planData: any = {};
+    let execData: any = {};
 
-    for (const mId of mDirs) {
-      const mPath = path.join(typeDir, mId);
-      const planJsonPath = path.join(mPath, 'planning', 'plan.json');
-      const planMdPath = path.join(mPath, 'planning', 'blueprint.md');
-      const execJsonPath = path.join(mPath, 'execution', 'execution.json');
-      const execMdPath = path.join(mPath, 'execution', 'execution_history.md');
+    if (fs.existsSync(planJsonPath)) {
+      try { planData = JSON.parse(fs.readFileSync(planJsonPath, 'utf8')); } catch (_) {}
+    }
+    if (fs.existsSync(execJsonPath)) {
+      try { execData = JSON.parse(fs.readFileSync(execJsonPath, 'utf8')); } catch (_) {}
+    }
 
-      let planData: any = {};
-      let execData: any = {};
+    if (!fs.existsSync(planJsonPath) && !fs.existsSync(execJsonPath) && !planData.title && !planData.objective) {
+      return;
+    }
 
-      if (fs.existsSync(planJsonPath)) {
-        try {
-          planData = JSON.parse(fs.readFileSync(planJsonPath, 'utf8'));
-        } catch (_) {}
-      }
-
-      if (fs.existsSync(execJsonPath)) {
-        try {
-          execData = JSON.parse(fs.readFileSync(execJsonPath, 'utf8'));
-        } catch (_) {}
-      }
-
-      // Skip dummy/empty folders without plan, execution or title/objective
-      if (!fs.existsSync(planJsonPath) && !fs.existsSync(execJsonPath) && !planData.title && !planData.objective) {
-        continue;
-      }
-
-      const collectFiles = (dir: string): any[] => {
-        if (!fs.existsSync(dir)) return [];
-        let list: any[] = [];
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const full = path.join(dir, entry.name);
-          const rel = path.relative(userRoot, full);
-          if (entry.isDirectory()) {
-            list = list.concat(collectFiles(full));
-          } else if (!entry.name.startsWith('.')) {
-            list.push({
-              name: entry.name,
-              path: rel
-            });
-          }
+    const collectFiles = (dir: string): any[] => {
+      if (!fs.existsSync(dir)) return [];
+      let list: any[] = [];
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name);
+        const rel = path.relative(userRoot, full);
+        if (entry.isDirectory()) {
+          list = list.concat(collectFiles(full));
+        } else if (!entry.name.startsWith('.')) {
+          list.push({ name: entry.name, path: rel });
         }
-        return list;
-      };
+      }
+      return list;
+    };
 
-      const workspaceFiles = collectFiles(mPath);
+    const workspaceFiles = collectFiles(mPath);
 
-      diskMissions.push({
-        id: mId,
-        title: planData.title || mId,
-        objective: planData.objective || planData.title || mId,
-        type: mType,
-        user_id: tenantId,
-        status: planData.status || execData.status || 'drafting',
-        phase: planData.phase || execData.phase || 'planning',
-        planning_artifacts: {
-          plan_json: fs.existsSync(planJsonPath) ? `missions/${mType}/${mId}/planning/plan.json` : null,
-          blueprint_md: fs.existsSync(planMdPath) ? `missions/${mType}/${mId}/planning/blueprint.md` : null
-        },
-        execution_artifacts: {
-          execution_json: fs.existsSync(execJsonPath) ? `missions/${mType}/${mId}/execution/execution.json` : null,
-          execution_history_md: fs.existsSync(execMdPath) ? `missions/${mType}/${mId}/execution/execution_history.md` : null
-        },
-        workspace_files: workspaceFiles,
-        metadata: {
-          tasks: planData.tasks || [],
-          metrics: execData.metrics || {}
-        },
-        workflow_history: execData.workflow_history || [],
-        updated_at: new Date().toISOString()
-      });
+    diskMissions.push({
+      id: mId,
+      title: planData.title || mId,
+      objective: planData.objective || planData.title || mId,
+      type: mType || planData.type || 'standard',
+      user_id: tenantId,
+      status: planData.status || execData.status || 'drafting',
+      phase: planData.phase || execData.phase || 'planning',
+      scratchpad: `missions/${mId}/`,
+      planning_artifacts: {
+        plan_json: fs.existsSync(planJsonPath) ? path.relative(userRoot, planJsonPath) : null,
+        blueprint_md: fs.existsSync(planMdPath) ? path.relative(userRoot, planMdPath) : null
+      },
+      execution_artifacts: {
+        execution_json: fs.existsSync(execJsonPath) ? path.relative(userRoot, execJsonPath) : null,
+        execution_history_md: fs.existsSync(execMdPath) ? path.relative(userRoot, execMdPath) : null
+      },
+      workspace_files: workspaceFiles,
+      metadata: {
+        tasks: planData.tasks || [],
+        metrics: execData.metrics || {}
+      },
+      workflow_history: execData.workflow_history || [],
+      updated_at: new Date().toISOString()
+    });
+  };
+
+  const topEntries = fs.readdirSync(missionsDir).filter(f => fs.statSync(path.join(missionsDir, f)).isDirectory());
+  for (const entryName of topEntries) {
+    const entryPath = path.join(missionsDir, entryName);
+    if (fs.existsSync(path.join(entryPath, 'planning')) || fs.existsSync(path.join(entryPath, 'execution'))) {
+      scanMissionFolder(entryPath, entryName, 'standard');
+    } else {
+      const subEntries = fs.readdirSync(entryPath).filter(f => fs.statSync(path.join(entryPath, f)).isDirectory());
+      for (const subId of subEntries) {
+        scanMissionFolder(path.join(entryPath, subId), subId, entryName);
+      }
     }
   }
 
-  // Combine existing DB missions with disk missions, avoiding duplicate IDs/titles
   const combinedMap = new Map<string, any>();
   for (const m of existingMissions) {
     if (m && m.id && m.id !== 'planning' && m.id !== 'execution') {
@@ -450,10 +546,213 @@ export function syncMissionsDb(tenantId: string = 'default_user') {
   }
 
   const finalMissions = Array.from(combinedMap.values());
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: finalMissions }, null, 2), 'utf8');
 
-  fs.mkdirSync(path.join(userRoot, 'db'), { recursive: true });
-  fs.writeFileSync(dbMissionsPath, JSON.stringify({ missions: finalMissions }, null, 2), 'utf8');
+  syncWorkspaceJson(tenantId);
   return finalMissions;
+}
+
+export const syncMissionsDb = syncMissionsJson;
+
+/**
+ * Single workspace.json index mapping for Sources/ and Deliverables/ storage in workspaces/<tenant_id>/workspace.json
+ */
+export function syncWorkspaceJson(tenantId: string = 'default_user') {
+  const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
+  if (!fs.existsSync(userRoot)) return null;
+
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  const workspaceDir = path.join(userRoot, 'workspace');
+
+  const sourcesDir = path.join(workspaceDir, 'Sources');
+  const deliverablesDir = path.join(workspaceDir, 'Deliverables');
+
+  const sourceDirs = [
+    'Discovery & Scoping',
+    'Deep Research & Intelligence Gathering',
+    'Data Analysis & Pattern Extraction',
+    'Strategic Synthesis & Decision Support'
+  ];
+  const deliverableDirs = [
+    'Executions',
+    'Reviews',
+    'Completed'
+  ];
+
+  for (const sd of sourceDirs) {
+    fs.mkdirSync(path.join(sourcesDir, sd), { recursive: true });
+  }
+  for (const dd of deliverableDirs) {
+    fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
+  }
+
+  // Legacy Migration: move old root-level Sources/ or Deliverables/ into workspace/
+  const legacySources = path.join(userRoot, 'Sources');
+  if (fs.existsSync(legacySources) && legacySources !== sourcesDir) {
+    try {
+      const entries = fs.readdirSync(legacySources);
+      for (const entry of entries) {
+        const srcPath = path.join(legacySources, entry);
+        const destPath = path.join(sourcesDir, entry);
+        if (!fs.existsSync(destPath)) {
+          fs.renameSync(srcPath, destPath);
+        }
+      }
+      fs.rmSync(legacySources, { recursive: true, force: true });
+    } catch (_) {}
+  }
+
+  const legacyDeliverables = path.join(userRoot, 'Deliverables');
+  if (fs.existsSync(legacyDeliverables) && legacyDeliverables !== deliverablesDir) {
+    try {
+      const entries = fs.readdirSync(legacyDeliverables);
+      for (const entry of entries) {
+        const srcPath = path.join(legacyDeliverables, entry);
+        const destPath = path.join(deliverablesDir, entry);
+        if (!fs.existsSync(destPath)) {
+          fs.renameSync(srcPath, destPath);
+        }
+      }
+      fs.rmSync(legacyDeliverables, { recursive: true, force: true });
+    } catch (_) {}
+  }
+
+  const scanDir = (dir: string): any[] => {
+    if (!fs.existsSync(dir)) return [];
+    const results: any[] = [];
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue;
+        const fullPath = path.join(dir, entry.name);
+        const relPath = path.relative(userRoot, fullPath);
+        if (entry.isDirectory()) {
+          results.push(...scanDir(fullPath));
+        } else {
+          let size = 0;
+          let modifiedAt = nowIso();
+          try {
+            const st = fs.statSync(fullPath);
+            size = st.size;
+            modifiedAt = st.mtime.toISOString();
+          } catch (_) {}
+          results.push({
+            name: entry.name,
+            path: relPath,
+            size,
+            modified_at: modifiedAt
+          });
+        }
+      }
+    } catch (_) {}
+    return results;
+  };
+
+  const workspaceMap = {
+    sources: {
+      discovery_and_scoping: scanDir(path.join(sourcesDir, 'Discovery & Scoping')),
+      deep_research: scanDir(path.join(sourcesDir, 'Deep Research & Intelligence Gathering')),
+      data_analysis: scanDir(path.join(sourcesDir, 'Data Analysis & Pattern Extraction')),
+      strategic_synthesis: scanDir(path.join(sourcesDir, 'Strategic Synthesis & Decision Support')),
+      all: scanDir(sourcesDir)
+    },
+    deliverables: {
+      executions: scanDir(path.join(deliverablesDir, 'Executions')),
+      reviews: scanDir(path.join(deliverablesDir, 'Reviews')),
+      completed: scanDir(path.join(deliverablesDir, 'Completed')),
+      all: scanDir(deliverablesDir)
+    },
+    updated_at: nowIso()
+  };
+
+  try {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify(workspaceMap, null, 2), 'utf8');
+  } catch (err) {
+    console.warn(`[Harness] Failed writing workspace.json for ${tenantId}:`, err);
+  }
+
+  return workspaceMap;
+}
+
+/**
+ * Appends an event strictly to the audit event log stream in workspaces/<tenant_id>/logs.json
+ */
+export function logStreamEvent(tenantId: string = 'default_user', eventData: {
+  type: 'system' | 'mission' | 'audit' | 'source' | 'deliverable';
+  event: string;
+  mission_id?: string;
+  details?: any;
+}) {
+  const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
+  if (!fs.existsSync(userRoot)) return null;
+
+  const logsJsonPath = path.join(userRoot, 'logs.json');
+  let logData: any = { events: [], last_event_at: nowIso() };
+
+  if (fs.existsSync(logsJsonPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(logsJsonPath, 'utf8'));
+      if (Array.isArray(parsed.events)) {
+        logData = parsed;
+      }
+    } catch (_) {}
+  }
+
+  const eventEntry = {
+    id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: nowIso(),
+    type: eventData.type,
+    event: eventData.event,
+    mission_id: eventData.mission_id || null,
+    details: eventData.details || null
+  };
+
+  logData.events.unshift(eventEntry);
+  if (logData.events.length > 1000) {
+    logData.events = logData.events.slice(0, 1000);
+  }
+  logData.last_event_at = eventEntry.timestamp;
+
+  try {
+    fs.writeFileSync(logsJsonPath, JSON.stringify(logData, null, 2), 'utf8');
+  } catch (err) {
+    console.warn(`[Harness] Failed to write event log for ${tenantId}:`, err);
+  }
+
+  return eventEntry;
+}
+
+/**
+ * Returns audit stream logs from workspaces/<tenant_id>/logs.json
+ */
+export function syncLogsJson(tenantId: string = 'default_user') {
+  const userRoot = path.join(process.cwd(), 'workspaces', tenantId);
+  if (!fs.existsSync(userRoot)) return null;
+
+  const logsJsonPath = path.join(userRoot, 'logs.json');
+  if (!fs.existsSync(logsJsonPath)) {
+    const initialLogs = {
+      events: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: nowIso(),
+          type: "system",
+          event: "Log Stream Initialized",
+          details: "Unified audit event log stream initialized."
+        }
+      ],
+      last_event_at: nowIso()
+    };
+    try {
+      fs.writeFileSync(logsJsonPath, JSON.stringify(initialLogs, null, 2), 'utf8');
+    } catch (_) {}
+    return initialLogs;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(logsJsonPath, 'utf8'));
+  } catch (_) {
+    return { events: [], last_event_at: nowIso() };
+  }
 }
 
 /**
@@ -464,15 +763,16 @@ export function syncProjectsDb(tenantId: string = 'default_user') {
 }
 
 /**
- * Ensures workspace storage directories exist
+ * Ensures workspace storage directories exist under workspace/
  */
 export function ensureProjectDirs(tenantId: string, projectName?: string, artifactName?: string) {
   ensureUserHarness(tenantId);
   const safeProjectName = (projectName || 'default').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const sourcesDir = path.join(process.cwd(), 'workspaces', tenantId, 'Sources', 'Data Analysis & Pattern Extraction');
-  const deliverablesDir = path.join(process.cwd(), 'workspaces', tenantId, 'Deliverables', 'Executions');
+  const sourcesDir = path.join(process.cwd(), 'workspaces', tenantId, 'workspace', 'Sources', 'Data Analysis & Pattern Extraction');
+  const deliverablesDir = path.join(process.cwd(), 'workspaces', tenantId, 'workspace', 'Deliverables', 'Executions');
   fs.mkdirSync(sourcesDir, { recursive: true });
   fs.mkdirSync(deliverablesDir, { recursive: true });
+  syncWorkspaceJson(tenantId);
   return { projectDir: deliverablesDir, dataDir: sourcesDir, artifactDir: deliverablesDir, systemDir: deliverablesDir, projectName: safeProjectName };
 }
 
@@ -734,8 +1034,9 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
   const normPath = path.relative(userRoot, targetPath);
 
   // Trigger real-time DB synchronization
-  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
+  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/') || normPath.startsWith('Sources/') || normPath.startsWith('Deliverables/')) {
     syncMissionsDb(tenantId);
+    syncLogsJson(tenantId);
   }
 
   recordUserHarnessActivity(tenantId);
@@ -768,8 +1069,9 @@ export function moveUserFile(tenantId: string, srcRelativePath: string, destRela
   const normDest = path.relative(userRoot, destPath);
 
   // Trigger real-time DB updates for affected storage regions
-  if (normSrc.startsWith('missions/') || normDest.startsWith('missions/') || normSrc.startsWith('workspace/') || normDest.startsWith('workspace/')) {
+  if (normSrc.startsWith('missions/') || normDest.startsWith('missions/') || normSrc.startsWith('workspace/') || normDest.startsWith('workspace/') || normSrc.startsWith('Sources/') || normDest.startsWith('Sources/') || normSrc.startsWith('Deliverables/') || normDest.startsWith('Deliverables/')) {
     syncMissionsDb(tenantId);
+    syncLogsJson(tenantId);
   }
 
   recordUserHarnessActivity(tenantId);
@@ -800,8 +1102,9 @@ export function deleteUserFile(tenantId: string, relativePath: string): boolean 
     fs.unlinkSync(targetPath);
   }
 
-  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/')) {
+  if (normPath.startsWith('missions/') || normPath.startsWith('workspace/') || normPath.startsWith('Sources/') || normPath.startsWith('Deliverables/')) {
     syncMissionsDb(tenantId);
+    syncLogsJson(tenantId);
   }
 
   recordUserHarnessActivity(tenantId);

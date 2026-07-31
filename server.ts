@@ -21,6 +21,10 @@ import {
   ensureUserHarness,
   ensureProjectDirs,
   syncMissionsDb,
+  syncMissionsJson,
+  syncWorkspaceJson,
+  getMissionSchema,
+  logStreamEvent,
   syncMissionWorkspaceArtifacts,
   getEntityDir,
   updateHarnessConfig,
@@ -30,7 +34,8 @@ import {
   moveUserFile,
   deleteUserFile,
   getUserRoot,
-  recordUserHarnessActivity
+  recordUserHarnessActivity,
+  syncLogsJson
 } from './src/harness.js';
 import { syncCycle } from './src/sync.js';
 import { db } from './src/db/db_engine.js';
@@ -3582,6 +3587,66 @@ app.post(["/api/user/:tenantId/db/runtime", "/api/workspace/:tenantId/db/runtime
   }
 });
 
+// GET /api/user/:tenantId/db/workspace - Read single workspace.json index mapping for Sources & Deliverables
+app.get(["/api/user/:tenantId/db/workspace", "/api/workspace/:tenantId/db/workspace"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const workspaceMap = syncWorkspaceJson(tenantId);
+    res.json({ ok: true, tenantId, workspace: workspaceMap });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/user/:tenantId/db/workspace - Sync workspace.json
+app.post(["/api/user/:tenantId/db/workspace", "/api/workspace/:tenantId/db/workspace"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const workspaceMap = syncWorkspaceJson(tenantId);
+    res.json({ ok: true, tenantId, workspace: workspaceMap });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/user/:tenantId/db/missions - Read single missions.json (workspaces/<tenantId>/missions.json)
+app.get(["/api/user/:tenantId/db/missions", "/api/workspace/:tenantId/db/missions"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const missions = syncMissionsJson(tenantId);
+    res.json({ ok: true, tenantId, missions });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/user/:tenantId/db/missions - Write/Update single missions.json
+app.post(["/api/user/:tenantId/db/missions", "/api/workspace/:tenantId/db/missions"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const missionsPath = path.join(process.cwd(), 'workspaces', tenantId, 'missions.json');
+    const { missions } = req.body || {};
+    if (Array.isArray(missions)) {
+      fs.writeFileSync(missionsPath, JSON.stringify({ missions }, null, 2), 'utf8');
+    }
+    const synced = syncMissionsJson(tenantId);
+    res.json({ ok: true, tenantId, missions: synced });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/missions/schemas/:type - Dynamically load protected mission schema into memory
+app.get(["/api/missions/schemas/:type", "/api/user/:tenantId/missions/schemas/:type"], (req, res) => {
+  try {
+    const type = req.params.type || 'standard';
+    const schema = getMissionSchema(type);
+    res.json({ ok: true, type, schema });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // GET /api/user/:tenantId/db/settings - Read workspace settings.json (read-only agent config)
 app.get(["/api/user/:tenantId/db/settings", "/api/workspace/:tenantId/db/settings"], (req, res) => {
   try {
@@ -3592,6 +3657,36 @@ app.get(["/api/user/:tenantId/db/settings", "/api/workspace/:tenantId/db/setting
     }
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
     res.json({ ok: true, tenantId, settings });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/user/:tenantId/db/logs - Read workspace logs.json (missions logs, Sources logs, Deliverables logs)
+app.get(["/api/user/:tenantId/db/logs", "/api/workspace/:tenantId/db/logs"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const logs = syncLogsJson(tenantId);
+    res.json({ ok: true, tenantId, logs });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/user/:tenantId/db/logs - Write/update workspace logs.json
+app.post(["/api/user/:tenantId/db/logs", "/api/workspace/:tenantId/db/logs"], (req, res) => {
+  try {
+    const tenantId = req.params.tenantId || 'default_user';
+    const logsJsonPath = path.join(process.cwd(), 'workspaces', tenantId, 'logs.json');
+    const updates = req.body || {};
+    let existing: any = { missions: [], sources: [], deliverables: [], updated_at: nowIso() };
+    if (fs.existsSync(logsJsonPath)) {
+      try { existing = JSON.parse(fs.readFileSync(logsJsonPath, 'utf8')); } catch {}
+    }
+    const merged = { ...existing, ...updates, updated_at: nowIso() };
+    fs.mkdirSync(path.dirname(logsJsonPath), { recursive: true });
+    fs.writeFileSync(logsJsonPath, JSON.stringify(merged, null, 2), 'utf8');
+    res.json({ ok: true, tenantId, logs: merged });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message });
   }

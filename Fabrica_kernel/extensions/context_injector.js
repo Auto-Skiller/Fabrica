@@ -100,8 +100,27 @@ export default function contextInjectorExtension(pi) {
       console.warn('[context_injector] Failed loading workspace context:', err.message);
     }
 
-    // ── 3. Append to system prompt ───────────────────────────────────────
-    const injected = [kernelPrompts, workspaceContext].filter(Boolean).join('\n\n---\n\n');
+    // ── 3. Load User Business Context from AGENTS.md (if non-empty) ─────────
+    const candidateAgentsMdPaths = [
+      path.join(cwd, 'AGENTS.md'),
+      path.join(process.cwd(), 'AGENTS.md'),
+      path.join(process.cwd(), 'workspaces', 'default_user', 'AGENTS.md')
+    ];
+    const agentsMdPath = candidateAgentsMdPaths.find(p => fs.existsSync(p));
+    let userContext = '';
+    try {
+      if (agentsMdPath) {
+        const rawAgentsMd = fs.readFileSync(agentsMdPath, 'utf8').trim();
+        if (rawAgentsMd) {
+          userContext = `# User Context (Business & Domain Context)\n\n${rawAgentsMd}`;
+        }
+      }
+    } catch (err) {
+      console.warn('[context_injector] Failed loading AGENTS.md user context:', err.message);
+    }
+
+    // ── 4. Append to system prompt ───────────────────────────────────────
+    const injected = [kernelPrompts, userContext, workspaceContext].filter(Boolean).join('\n\n---\n\n');
     if (!injected) return;
 
     const basePrompt = event.systemPrompt || '';

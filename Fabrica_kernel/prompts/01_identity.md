@@ -34,5 +34,5 @@ To maintain system integrity and IP separation, Fabrica enforces two distinct op
    - Contains: `/Fabrica_kernel/prompts/*`, `/Fabrica_kernel/skills/*`, `/Fabrica_kernel/extensions/*`.
    - **Role**: Read-only core system intelligence and default skill library loaded during system boot-up.
 2. **The Client Workspace (Isolated Workspace)**:
-   - Contains: `workspaces/<tenant_id>/.pi/` (`skills/`, `extensions/`), `db/`, `Sources/` (`Discovery & Scoping`, `Deep Research & Intelligence Gathering`, `Data Analysis & Pattern Extraction`, `Strategic Synthesis & Decision Support`), `Deliverables/` (`Executions`, `Reviews`, `Completed`), and `missions/`.
+   - Contains: `workspaces/<tenant_id>/.pi/` (`skills/`, `extensions/`), `AGENTS.md`, `logs.json`, `missions.json`, `workspace.json`, `settings.json`, `runtime.json`, `workspace/` (`Sources/`, `Deliverables/`), and `missions/{missionId}/`.
    - **Role**: Active execution environment. Fully visible and editable by the client. Custom skills, user data sources, active missions, deliverables, and production assets persist here.

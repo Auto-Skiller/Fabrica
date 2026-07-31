@@ -219,6 +219,7 @@ const DASHBOARD_TEXT = {
     searchPlaceholder: 'Search…',
     btnNewMission: '+ New',
     allCategories: 'All Categories',
+    allTypes: 'All Types',
     allStates: 'All States',
     allPriorities: 'All Priorities',
     colNew: '📝 NEW',
@@ -443,6 +444,7 @@ const DASHBOARD_TEXT = {
     searchPlaceholder: 'Chercher…',
     btnNewMission: '+ Nouveau',
     allCategories: 'Toutes Catégories',
+    allTypes: 'Tous Types',
     allStates: 'Tous Statuts',
     allPriorities: 'Toutes Priorités',
     colNew: '📝 NOUVEAU',
@@ -667,6 +669,7 @@ const DASHBOARD_TEXT = {
     searchPlaceholder: 'بحث…',
     btnNewMission: '+ جديد',
     allCategories: 'جميع الفئات',
+    allTypes: 'جميع الأنواع',
     allStates: 'جميع الحالات',
     allPriorities: 'جميع الأولويات',
     colNew: '📝 جديد',
@@ -887,6 +890,10 @@ export default function Dashboard() {
     if (uiLang === 'AR') {
       switch (category) {
         case 'standard': return 'قياسي';
+        case 'drafting': return 'صياغة';
+        case 'planning': return 'تخطيط';
+        case 'execution': return 'تنفيذ';
+        case 'delivery': return 'تسليم';
         case 'brainstorming': return 'عصف ذهني';
         case 'deep_research': return 'بحث عميق';
         case 'analytics': return 'تحليلات';
@@ -902,6 +909,10 @@ export default function Dashboard() {
     if (uiLang === 'FR') {
       switch (category) {
         case 'standard': return 'Standard';
+        case 'drafting': return 'Rédaction';
+        case 'planning': return 'Planification';
+        case 'execution': return 'Exécution';
+        case 'delivery': return 'Livraison';
         case 'brainstorming': return 'Brainstorming';
         case 'deep_research': return 'Recherche Approfondie';
         case 'analytics': return 'Analytique';
@@ -916,6 +927,10 @@ export default function Dashboard() {
     }
     switch (category) {
       case 'standard': return 'Standard';
+      case 'drafting': return 'Drafting';
+      case 'planning': return 'Planning';
+      case 'execution': return 'Execution';
+      case 'delivery': return 'Delivery';
       case 'brainstorming': return 'Brainstorming';
       case 'deep_research': return 'Deep Research';
       case 'analytics': return 'Analytics';
@@ -1524,6 +1539,13 @@ export default function Dashboard() {
   const [isEffortModalOpen, setIsEffortModalOpen] = useState<boolean>(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState<boolean>(false);
   const [selectedMissionLogs, setSelectedMissionLogs] = useState<{ missionId: string; logs: string[] } | null>(null);
+
+  // Phase Filters for each section (Drafting to Delivery)
+  const [draftingPhaseFilter, setDraftingPhaseFilter] = useState<string>('ALL');
+  const [planningPhaseFilter, setPlanningPhaseFilter] = useState<string>('ALL');
+  const [executionPhaseFilter, setExecutionPhaseFilter] = useState<string>('ALL');
+  const [deliveryPhaseFilter, setDeliveryPhaseFilter] = useState<string>('ALL');
+  const [pipelineConfigActiveTab, setPipelineConfigActiveTab] = useState<'gates' | 'efforts' | 'verification'>('gates');
 
   // Approval Gates toggles across loops and non-loops
   const [approvalGates, setApprovalGates] = useState<Record<string, boolean>>({
@@ -2719,7 +2741,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [isDraggingChatInput, setIsDraggingChatInput] = useState<boolean>(false);
   const [isAccountWindowOpen, setIsAccountWindowOpen] = useState<boolean>(false);
   const [isLogsWindowOpen, setIsLogsWindowOpen] = useState<boolean>(false);
-  const [activeLogTab, setActiveLogTab] = useState<'system' | 'cli'>('system');
+  const [activeLogTab, setActiveLogTab] = useState<'user_logs' | 'system' | 'cli'>('user_logs');
+  const [userLogsData, setUserLogsData] = useState<any>(null);
+  const [isFetchingUserLogs, setIsFetchingUserLogs] = useState<boolean>(false);
+  const [userLogsViewMode, setUserLogsViewMode] = useState<'stream' | 'json'>('stream');
   const [cliLogs, setCliLogs] = useState<any[]>([]);
   const [isFetchingCliLogs, setIsFetchingCliLogs] = useState<boolean>(false);
   const [selectedCliLog, setSelectedCliLog] = useState<any>(null);
@@ -4729,11 +4754,32 @@ AGENT DIRECTIVES:
     }
   };
 
+  const fetchUserLogs = async () => {
+    setIsFetchingUserLogs(true);
+    try {
+      const res = await api.getWorkspaceLogs(activeEntity || 'default_user');
+      if (res && res.ok && res.logs) {
+        setUserLogsData(res.logs);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch user logs.json:', err);
+    } finally {
+      setIsFetchingUserLogs(false);
+    }
+  };
+
   useEffect(() => {
-    if (isLogsWindowOpen && activeLogTab === 'cli') {
-      fetchCliLogs();
-      const interval = setInterval(fetchCliLogs, 3000);
-      return () => clearInterval(interval);
+    if (isLogsWindowOpen) {
+      if (activeLogTab === 'user_logs') {
+        fetchUserLogs();
+        const interval = setInterval(fetchUserLogs, 4000);
+        return () => clearInterval(interval);
+      }
+      if (activeLogTab === 'cli') {
+        fetchCliLogs();
+        const interval = setInterval(fetchCliLogs, 3000);
+        return () => clearInterval(interval);
+      }
     }
   }, [isLogsWindowOpen, activeLogTab, activeEntity]);
 
@@ -6392,18 +6438,12 @@ ${isDirector ? `
     const textToSearch = `${m.id} ${m.objective}`.toLowerCase();
     const matchesSearch = textToSearch.includes(searchQuery.toLowerCase());
     const matchesPrio = prioFilter === 'ALL' || m.priority === prioFilter;
-    const matchesStatus = statusFilter === 'ALL' || (
-      statusFilter === 'DRAFT' && getMissionStatus(m) === 'drafting' ||
-      statusFilter === 'PLANNING' && getMissionStatus(m) === 'planning' ||
-      statusFilter === 'EXECUTION' && getMissionStatus(m) === 'execution' ||
-      statusFilter === 'DONE' && getMissionStatus(m) === 'archive'
-    );
     
     const tVal = String(m.type || m.category || 'standard').toLowerCase();
     const filterVal = typeFilter.toLowerCase();
     
     const matchesType = typeFilter === 'ALL' || tVal === filterVal;
-    return matchesSearch && matchesPrio && matchesStatus && matchesType;
+    return matchesSearch && matchesPrio && matchesType;
   }).sort((a, b) => {
     if (sortOption === 'name') {
       return a.id.localeCompare(b.id);
@@ -6415,10 +6455,16 @@ ${isDirector ? `
     return 0; // Default sorting
   });
 
-  const mDraft = filteredMissions.filter(m => getMissionStatus(m) === 'drafting');
-  const mPlan = filteredMissions.filter(m => getMissionStatus(m) === 'planning');
-  const mExec = filteredMissions.filter(m => getMissionStatus(m) === 'execution');
-  const mArchive = filteredMissions.filter(m => getMissionStatus(m) === 'archive');
+  const matchesPhase = (m: any, filterVal: string) => {
+    if (filterVal === 'ALL') return true;
+    const p = String(m.phase || m.stage || '').toLowerCase();
+    return p.includes(filterVal.toLowerCase());
+  };
+
+  const mDraft = filteredMissions.filter(m => getMissionStatus(m) === 'drafting' && matchesPhase(m, draftingPhaseFilter));
+  const mPlan = filteredMissions.filter(m => getMissionStatus(m) === 'planning' && matchesPhase(m, planningPhaseFilter));
+  const mExec = filteredMissions.filter(m => getMissionStatus(m) === 'execution' && matchesPhase(m, executionPhaseFilter));
+  const mArchive = filteredMissions.filter(m => getMissionStatus(m) === 'archive' && matchesPhase(m, deliveryPhaseFilter));
 
   const getPriorityClass = (priority: string) => {
     switch (priority) {
@@ -8855,84 +8901,36 @@ ${isDirector ? `
                                 <span style={{ color: 'var(--accent-2)', fontSize: '8px' }}>🧠</span>
                                 <span>CTX: {(approxContextTokens / 1000).toFixed(1)}k / {maxContextWindow >= 1000000 ? `${(maxContextWindow/1000000).toFixed(1)}M` : `${(maxContextWindow/1000).toFixed(0)}k`} ({contextPct}%)</span>
                               </div>
-                              <div style={{ width: '38px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', flexShrink: 0 }}>
-                                <div style={{ width: `${contextPct}%`, height: '100%', background: contextPct > 80 ? '#ef4444' : '#10b981', transition: 'width 0.3s ease' }} />
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-
-                        {/* Agent Output Language Switcher */}
-                        <select
-                          value={agentLang}
-                          onChange={(e) => setAgentLang(e.target.value as 'EN' | 'FR' | 'AR')}
-                          title="Agent Communication & Prompt Language (EN / FR / AR)"
-                          style={{
-                            height: '22px',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '4px',
-                            color: 'var(--accent-2)',
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            padding: '0 3px',
-                            cursor: 'pointer',
-                            outline: 'none',
-                            flexShrink: 0
-                          }}
-                        >
-                          <option value="EN">🗣️ EN</option>
-                          <option value="FR">🗣️ FR</option>
-                          <option value="AR">🗣️ AR</option>
-                        </select>
-                      </div>
-
-                      {/* Right: Internet Icon & Send Button */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                        <button
-                          onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-                          style={{
-                            background: webSearchEnabled ? 'rgba(59, 130, 246, 0.15)' : 'var(--surface-alt)',
-                            color: webSearchEnabled ? '#3b82f6' : 'var(--text)',
-                            border: `1px solid ${webSearchEnabled ? '#3b82f6' : 'var(--border-soft)'}`,
-                            borderRadius: '4px',
-                            width: '28px',
-                            height: '28px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            fontSize: '13px',
-                            padding: 0
-                          }}
-                          title={webSearchEnabled ? "Google Search Grounding Enabled" : "Enable Google Search Grounding"}
-                        >
-                          🌐
-                        </button>
-                        {isChatLoading ? (
-                          <button
-                            type="button"
-                            className="mini danger"
-                            style={{
-                              padding: '0 12px',
-                              height: '28px',
-                              fontWeight: 800,
-                              fontSize: '10px',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              background: '#ef4444',
-                              color: '#ffffff',
-                              border: 'none',
-                              cursor: 'pointer'
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
+                            <div style={{
+            flex: minCenter ? '0 0 auto' : (minBottomVertical ? '1 1 100%' : '1 1 50%'),
+            minHeight: minCenter ? '36px' : '200px',
+            maxHeight: minCenter ? '36px' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            borderBottom: '1px solid var(--border-soft)',
+            transition: 'all 0.2s ease'
+          }}>
+            <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            
+            {/* Mission bar switcher & controls in a single, split row */}
+            <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '6px', padding: '4px 10px', minHeight: '36px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
+              
+              {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto' }}>
+                {minCenter ? (
+                  <div
+                    onClick={() => toggleMissionsVertical(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                    title="Click to expand Missions HQ"
+                  >
+                    <span style={{ fontSize: '8.5px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                      AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
+                    </span>
+                  </div>
+                ) : (ion();
                               handleStopChat();
                             }}
                             title="Stop agent turn & halt process"
@@ -8976,286 +8974,362 @@ ${isDirector ? `
             borderBottom: '1px solid var(--border-soft)',
             transition: 'all 0.2s ease'
           }}>
-            {minCenter ? (
-              <div
-                onClick={() => toggleMissionsVertical(false)}
-                style={{
-                  background: 'var(--surface-alt)',
-                  padding: '6px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  height: '36px',
-                  borderBottom: '1px solid var(--border-soft)',
-                  gap: '12px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
-                  <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                    AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
-                  </span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleMissionsVertical(false); }}
+            <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            
+            {/* Mission bar switcher & controls in a single, split row */}
+            <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '6px', padding: '4px 10px', minHeight: '36px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
+              
+              {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto' }}>
+                {minCenter ? (
+                  <div
+                    onClick={() => toggleMissionsVertical(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                    title="Click to expand Missions HQ"
+                  >
+                    <span style={{ fontSize: '8.5px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
+                    <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                      AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. New */}
+                    <button
+                      onClick={() => setIsAddMissionOpen(true)}
+                      title="Register New Mission"
+                      style={{
+                        height: '22px',
+                        padding: '0 8px',
+                        fontSize: '9px',
+                        fontWeight: 900,
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        border: '1px solid #10b981',
+                        color: '#ffffff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        lineHeight: '1',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+                      }}
+                    >
+                      <span style={{ fontSize: '10px' }}>✨</span>
+                      <span>{dtxt.btnNewMission}</span>
+                    </button>
+
+                    {/* 2. Pipeline Config */}
+                    <button
+                      onClick={() => setIsGatesModalOpen(true)}
+                      title="Configure Approval Gates & Loop EFFORT Parameters"
+                      style={{
+                        height: '22px',
+                        padding: '0 8px',
+                        fontSize: '8.5px',
+                        fontWeight: 800,
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                        color: '#3b82f6',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        lineHeight: '1',
+                        flexShrink: 0
+                      }}
+                    >
+                      <span>⚙️</span>
+                      <span>Pipeline Config</span>
+                    </button>
+
+                    {/* 3. Sort */}
+                    <select
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '8px',
+                        fontWeight: 700,
+                        padding: '1px 4px',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        height: '22px',
+                        maxWidth: '90px',
+                        flexShrink: 0
+                      }}
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value)}
+                    >
+                      <option value="default">Sort: Default</option>
+                      <option value="name">Sort: Name</option>
+                      <option value="priority">Sort: Priority</option>
+                    </select>
+
+                    {/* 4. Search */}
+                    <div className="mhq-search" style={{ height: '22px', padding: '0 6px', gap: '4px', background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', display: 'flex', alignItems: 'center', flexShrink: 1, minWidth: '70px', maxWidth: '140px' }}>
+                      <span style={{ fontSize: '8px', color: 'var(--muted)', flexShrink: 0 }}>⌕</span>
+                      <input 
+                        type="text" 
+                        placeholder={dtxt.searchPlaceholder} 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        style={{ fontSize: '8px', width: '100%', minWidth: 0, background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
+                      />
+                    </div>
+
+                    {/* 5. Priorities */}
+                    <select
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '8px',
+                        fontWeight: 700,
+                        padding: '1px 4px',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        height: '22px',
+                        maxWidth: '90px',
+                        flexShrink: 0
+                      }}
+                      value={prioFilter}
+                      onChange={(e) => setPrioFilter(e.target.value)}
+                    >
+                      <option value="ALL">{dtxt.allPriorities}</option>
+                      <option value="CRITICAL">CRITICAL</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="MEDIUM">MEDIUM</option>
+                      <option value="LOW">LOW</option>
+                    </select>
+
+                    {/* 6. Types */}
+                    <select
+                      style={{
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        color: 'var(--text-secondary)',
+                        fontSize: '8px',
+                        fontWeight: 700,
+                        padding: '1px 4px',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        height: '22px',
+                        maxWidth: '110px',
+                        flexShrink: 0
+                      }}
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                    >
+                      <option value="ALL">{dtxt.allTypes || 'All Types'}</option>
+                      <option value="standard">{getCategoryLabel('standard')}</option>
+                      <option value="drafting">{getCategoryLabel('drafting')}</option>
+                      <option value="planning">{getCategoryLabel('planning')}</option>
+                      <option value="execution">{getCategoryLabel('execution')}</option>
+                      <option value="delivery">{getCategoryLabel('delivery')}</option>
+                    </select>
+                  </>
+                )}
+              </div>
+
+              {/* Right Group: Persistent Actions (Theme, Language, Logs, Account & API) + Minimize Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                {/* Theme Icon */}
+                <button 
+                  className="theme-toggle" 
+                  onClick={toggleTheme} 
+                  title={dtxt.themeTitle} 
+                  style={{ 
+                    height: '22px', 
+                    width: '22px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border-soft)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: 'var(--text)',
+                    fontSize: '9px',
+                    padding: '0',
+                    flexShrink: 0
+                  }}
+                >
+                  {theme === 'dark' ? '☀' : '☾'}
+                </button>
+
+                {/* UI Language Dropdown */}
+                <select
+                  value={uiLang}
+                  onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
+                  title={dtxt.langTitle}
                   style={{
+                    height: '22px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border-soft)',
+                    borderRadius: '4px',
+                    color: 'var(--text)',
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    padding: '0 4px',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    flexShrink: 0
+                  }}
+                >
+                  <option value="EN">🌐 EN</option>
+                  <option value="FR">🌐 FR</option>
+                  <option value="AR">🌐 AR</option>
+                </select>
+
+                {/* Logs Button */}
+                <button
+                  onClick={() => setIsLogsWindowOpen(true)}
+                  style={{
+                    padding: '0 6px',
+                    fontSize: '8.5px',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
                     background: 'var(--surface)',
                     border: '1px solid var(--border-soft)',
                     color: 'var(--text-bright)',
+                    height: '22px',
+                    cursor: 'pointer',
                     borderRadius: '4px',
-                    padding: '2px 10px',
-                    fontSize: '8.5px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    fontFamily: 'var(--sans)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  ▲ Expand Missions HQ
-                </button>
-              </div>
-            ) : (
-              <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* Mission bar switcher & controls in a single, compact row */}
-            <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '4px', padding: '4px 8px', minHeight: 'auto', flexWrap: 'nowrap', overflowX: 'hidden' }}>
-              
-              {/* Left Group: View Toggles & Compact Search */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 1, minWidth: 0 }}>
-                <div className="mhq-mode-toggle" style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                  <button className={`mhq-mode-btn ${centerMode === 'board' ? 'active' : ''}`} onClick={() => setCenterMode('board')} style={{ padding: '2px 5px', fontSize: '7.5px', lineHeight: '1' }}>Board</button>
-                  <button className={`mhq-mode-btn ${centerMode === 'graph' ? 'active' : ''}`} onClick={() => setCenterMode('graph')} style={{ padding: '2px 5px', fontSize: '7.5px', lineHeight: '1' }}>Graph</button>
-                </div>
-
-                <div style={{ width: '1px', height: '10px', background: 'var(--border-soft)', flexShrink: 0 }}></div>
-
-                <div className="mhq-search" style={{ height: '16px', padding: '0 3px', gap: '2px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', flexShrink: 1, minWidth: '30px' }}>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', flexShrink: 0 }}>⌕</span>
-                  <input 
-                    type="text" 
-                    placeholder={dtxt.searchPlaceholder} 
-                    value={searchQuery} 
-                    onChange={(e) => setSearchQuery(e.target.value)} 
-                    style={{ fontSize: '7.5px', width: '100%', minWidth: 0, background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
-                  />
-                </div>
-
-                <button
-                  onClick={() => setIsAddMissionOpen(true)}
-                  title="Register New Mission"
-                  style={{
-                    height: '22px',
-                    padding: '0 5px 0 2px',
-                    fontSize: '9px',
-                    fontWeight: 900,
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    border: '1px solid #10b981',
-                    color: '#ffffff',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    lineHeight: '1',
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
-                    letterSpacing: '0.03em',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '11px', fontWeight: '900' }}>✨</span>
-                  <span className="btn-text-label">{dtxt.btnNewMission}</span>
-                </button>
-
-                <button
-                  onClick={() => setIsGatesModalOpen(true)}
-                  title="Configure User Approval Gates"
-                  style={{
-                    height: '22px',
-                    padding: '0 6px',
-                    fontSize: '8.5px',
-                    fontWeight: 800,
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    border: '1px solid rgba(59, 130, 246, 0.4)',
-                    color: '#3b82f6',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    lineHeight: '1',
                     flexShrink: 0
                   }}
+                  title="Open System & Realtime Execution Logs"
                 >
-                  <span>🛡️</span>
-                  <span>Gates</span>
+                  <span>📟</span>
+                  <span>Logs</span>
                 </button>
 
-                <button
-                  onClick={() => setIsEffortModalOpen(true)}
-                  title="Adjust Loop EFFORT Parameters"
-                  style={{
-                    height: '22px',
-                    padding: '0 6px',
-                    fontSize: '8.5px',
-                    fontWeight: 800,
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    border: '1px solid rgba(245, 158, 11, 0.4)',
-                    color: '#f59e0b',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    lineHeight: '1',
-                    flexShrink: 0
-                  }}
+                {/* Account & API Button */}
+                <div
+                  style={{ position: 'relative' }}
+                  onMouseEnter={() => setIsAccountHoverOpen(true)}
+                  onMouseLeave={() => setIsAccountHoverOpen(false)}
                 >
-                  <span>⚡</span>
-                  <span>EFFORT</span>
-                </button>
-
-
-              </div>
-
-              {/* Right Group: Filters and Sorting Minimized in 1 Single Line */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'nowrap', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}>
-                
-                {/* Category Dropdown */}
-                <select
-                  style={{
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '3px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '7.5px',
-                    padding: '1px 2px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    height: '16px',
-                    maxWidth: '85px',
-                    textOverflow: 'ellipsis',
-                    flexShrink: 1
-                  }}
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                >
-                  <option value="ALL">{dtxt.allCategories}</option>
-                  <option value="standard">{getCategoryLabel('standard')}</option>
-                  <option value="brainstorming">{getCategoryLabel('brainstorming')}</option>
-                  <option value="deep_research">{getCategoryLabel('deep_research')}</option>
-                  <option value="analytics">{getCategoryLabel('analytics')}</option>
-                  <option value="system_build">{getCategoryLabel('system_build')}</option>
-                  <option value="system_build_from_data">{getCategoryLabel('system_build_from_data')}</option>
-                  <option value="system_optimization">{getCategoryLabel('system_optimization')}</option>
-                  <option value="system_optimization_from_data">{getCategoryLabel('system_optimization_from_data')}</option>
-                  <option value="system_test">{getCategoryLabel('system_test')}</option>
-                  <option value="system_test_from_data">{getCategoryLabel('system_test_from_data')}</option>
-                </select>
-
-                {/* Status/State Filter dropdown */}
-                <select
-                  style={{
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '3px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '7.5px',
-                    padding: '1px 2px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    height: '16px',
-                    maxWidth: '65px',
-                    textOverflow: 'ellipsis',
-                    flexShrink: 1
-                  }}
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="ALL">{dtxt.allStates}</option>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="PLANNING">PLANNING</option>
-                  <option value="EXECUTION">EXECUTION</option>
-                  <option value="DONE">DONE</option>
-                </select>
-
-                {/* Priority Filter dropdown */}
-                <select
-                  style={{
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '3px',
-                    color: 'var(--text-secondary)',
-                    fontSize: '7.5px',
-                    padding: '1px 2px',
-                    outline: 'none',
-                    cursor: 'pointer',
-                    height: '16px',
-                    maxWidth: '65px',
-                    textOverflow: 'ellipsis',
-                    flexShrink: 1
-                  }}
-                  value={prioFilter}
-                  onChange={(e) => setPrioFilter(e.target.value)}
-                >
-                  <option value="ALL">{dtxt.allPriorities}</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="LOW">LOW</option>
-                </select>
-
-                {/* Sorting option (Board/Kanban mode only) */}
-                {centerMode === 'board' && (
-                  <select
+                  <button
+                    onClick={() => setIsAccountWindowOpen(true)}
                     style={{
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '3px',
-                      color: 'var(--muted)',
-                      fontSize: '7.5px',
-                      padding: '1px 2px',
-                      outline: 'none',
+                      padding: '0 8px',
+                      fontSize: '8.5px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                      border: 'none',
+                      color: '#fff',
+                      height: '22px',
                       cursor: 'pointer',
-                      height: '16px',
-                      maxWidth: '65px',
-                      textOverflow: 'ellipsis',
-                      flexShrink: 1
+                      borderRadius: '4px',
+                      flexShrink: 0
                     }}
-                    value={sortOption}
-                    onChange={(e) => setSortOption(e.target.value)}
+                    title="Manage Account, Workspace & API Keys"
                   >
-                    <option value="default">Default Sort</option>
-                    <option value="name">Sort: Name</option>
-                    <option value="priority">Sort: Priority</option>
-                  </select>
-                )}
+                    <span>🔑</span>
+                    <span>Account & API</span>
+                  </button>
+
+                  {/* Hover Small Window for Current Plan, Usage Quota, Token Alerts & Token Billing/Routing Method */}
+                  {isAccountHoverOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: '6px',
+                        width: '290px',
+                        background: 'var(--surface)',
+                        border: '1.5px solid #3b82f6',
+                        borderRadius: '8px',
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                        padding: '12px',
+                        zIndex: 10001,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        pointerEvents: 'auto'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                          👤 Plan & Usage Quota
+                        </span>
+                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.15)', padding: '1px 6px', borderRadius: '3px' }}>
+                          {selectedPlan ? `${selectedPlan.toUpperCase()} PLAN` : 'FREE SHARED TIER'}
+                        </span>
+                      </div>
+
+                      {/* Quota & Token Alerts Preview */}
+                      {(() => {
+                        const q = getQuotaMetrics(userTierData);
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
+                              <span style={{ color: 'var(--muted)', fontWeight: 700 }}>USAGE QUOTA:</span>
+                              <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
+                            </div>
+                            <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                              <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>TOKEN ALERTS:</span>
+                              <span style={{ fontSize: '7.5px', fontWeight: 800, color: q.statusColor }}>
+                                {q.percentUsed > 90 ? '🚨 CRITICAL ALERT (<10% REMAINING)' : q.percentUsed > 75 ? '⚠️ QUOTA WARNING' : '✓ HEALTHY ALLOCATION'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Active TOKEN BILLING & ROUTING METHOD */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 8px', borderRadius: '5px' }}>
+                        <div style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                          ⚡ Active Token Billing & Routing Method
+                        </div>
+                        <div style={{ fontSize: '8.5px', fontWeight: 800, color: customApiKey ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{customApiKey ? '🔑 Direct BYOK (Custom Gemini Key)' : '🌐 Fabrica Shared API Credit Proxy'}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '7.5px', color: 'var(--muted)', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
+                        💡 Click button to manage Account, Workspace & BYOK Credentials.
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Main content viewport */}
             <div className="mhq-body" style={{ flex: 1, padding: '12px', overflow: 'hidden' }}>
-              {centerMode === 'graph' ? (
-                missions ? (
-                  <MissionGraph
-                    missions={missions}
-                    filteredMissions={filteredMissions}
-                  />
-                ) : (
-                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>No missions registered to generate graph.</div>
-                )
-              ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', height: '100%', minHeight: 0 }}>
                   
                   {/* Drafting Column */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>Drafting ({mDraft.length})</span>
+                      <select
+                        value={draftingPhaseFilter}
+                        onChange={(e) => setDraftingPhaseFilter(e.target.value)}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        title="Filter Drafting Phase"
+                      >
+                        <option value="ALL">Phase: All</option>
+                        <option value="discovery_scoping">Discovery & Scoping</option>
+                      </select>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mDraft.map(m => (
@@ -9374,6 +9448,17 @@ ${isDirector ? `
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--sans)' }}>{dtxt.colPlanning} ({mPlan.length})</span>
+                      <select
+                        value={planningPhaseFilter}
+                        onChange={(e) => setPlanningPhaseFilter(e.target.value)}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        title="Filter Planning Phase"
+                      >
+                        <option value="ALL">Phase: All</option>
+                        <option value="deep_research">Deep Research</option>
+                        <option value="data_analysis">Data Analysis</option>
+                        <option value="strategic_synthesis">Strategic Synthesis</option>
+                      </select>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mPlan.map(m => (
@@ -9474,6 +9559,16 @@ ${isDirector ? `
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--sans)' }}>{dtxt.colExecution} ({mExec.length})</span>
+                      <select
+                        value={executionPhaseFilter}
+                        onChange={(e) => setExecutionPhaseFilter(e.target.value)}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        title="Filter Execution Phase"
+                      >
+                        <option value="ALL">Phase: All</option>
+                        <option value="generation">Generation</option>
+                        <option value="verification">Verification</option>
+                      </select>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mExec.map(m => (
@@ -9603,6 +9698,15 @@ ${isDirector ? `
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
                       <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>Delivery ({mArchive.length})</span>
+                      <select
+                        value={deliveryPhaseFilter}
+                        onChange={(e) => setDeliveryPhaseFilter(e.target.value)}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        title="Filter Delivery Phase"
+                      >
+                        <option value="ALL">Phase: All</option>
+                        <option value="review_handover">Review & Handover</option>
+                      </select>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
                       {mArchive.map(m => (
@@ -9673,7 +9777,6 @@ ${isDirector ? `
                   </div>
 
                 </div>
-              )}
             </div>
           </div>
         </section>
@@ -11084,44 +11187,10 @@ ${isDirector ? `
                 </div>
               </div>
 
-              {/* Tab Switcher */}
-              <div style={{ display: 'flex', gap: '6px', background: 'var(--surface)', padding: '3px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
-                <button
-                  onClick={() => setActiveLogTab('system')}
-                  style={{
-                    padding: '4px 10px',
-                    fontSize: '9px',
-                    fontWeight: 800,
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: activeLogTab === 'system' ? 'var(--text)' : 'transparent',
-                    color: activeLogTab === 'system' ? 'var(--surface)' : 'var(--muted)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <span>📋</span> Audit Stream
-                </button>
-                <button
-                  onClick={() => { setActiveLogTab('cli'); fetchCliLogs(); }}
-                  style={{
-                    padding: '4px 10px',
-                    fontSize: '9px',
-                    fontWeight: 800,
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: activeLogTab === 'cli' ? '#3b82f6' : 'transparent',
-                    color: activeLogTab === 'cli' ? '#ffffff' : 'var(--muted)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <span>💻</span> Pi CLI Child Process & Terminal
-                </button>
+              {/* Clean Single Title Badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--surface)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
+                <span style={{ fontSize: '10px' }}>📄</span>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', fontFamily: 'var(--mono)' }}>workspaces/{activeEntity || 'default_user'}/logs.json</span>
               </div>
 
               <button
@@ -11148,338 +11217,186 @@ ${isDirector ? `
 
             {/* Body */}
             <div style={{ flex: 1, padding: '18px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              {/* ================= SYSTEM LOGS WORKFLOW ================= */}
-              {activeLogTab === 'system' && (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-                  {/* Search and filter controls bar */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center', flexShrink: 0 }}>
-                    <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                      <input
-                        type="text"
-                        placeholder={dtxt.filterLogsPlaceholder}
-                        value={logSearchQuery}
-                        onChange={(e) => setLogSearchQuery(e.target.value)}
-                        style={{
-                          flex: 1,
-                          background: 'var(--surface-alt)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '4px',
-                          color: 'var(--text)',
-                          fontSize: '9.5px',
-                          padding: '5px 8px',
-                          outline: 'none'
-                        }}
-                      />
-                      {logSearchQuery && (
-                        <button
-                          onClick={() => setLogSearchQuery('')}
-                          style={{
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '4px',
-                            color: 'var(--muted)',
-                            fontSize: '8.5px',
-                            padding: '0 8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {dtxt.clearBtn}
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                      {(['all', 'system', 'mission'] as const).map(type => (
-                        <button
-                          key={type}
-                          onClick={() => setLogFilterType(type)}
-                          style={{
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--border-soft)',
-                            background: logFilterType === type ? 'var(--text)' : 'var(--surface-alt)',
-                            color: logFilterType === type ? 'var(--surface)' : 'var(--muted)',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase'
-                          }}
-                        >
-                          {type === 'all' ? dtxt.filterAll : type === 'system' ? dtxt.filterSystem : dtxt.filterMission}
-                        </button>
-                      ))}
+              {/* ================= USER LOGS.JSON WORKFLOW ================= */}
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+                  {/* File Metadata & Top Toolbar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '8px 12px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '6px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-bright)', fontFamily: 'var(--mono)' }}>
+                        📁 workspaces/{activeEntity || 'default_user'}/logs.json
+                      </span>
+                      <span style={{ fontSize: '8px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: '#10b98122', color: '#10b981', border: '1px solid #10b98144' }}>
+                        ACTIVE EVENT STREAM
+                      </span>
                     </div>
 
-                    <div style={{ width: '1px', height: '16px', background: 'var(--border-soft)' }}></div>
-
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <button
-                        onClick={() => setEvents([])}
+                        onClick={fetchUserLogs}
+                        disabled={isFetchingUserLogs}
                         style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--status-error)',
-                          cursor: 'pointer',
+                          padding: '3px 8px',
                           fontSize: '8.5px',
-                          fontWeight: 800
-                        }}
-                        title="Clear history"
-                      >
-                        🧹 {dtxt.clearLogsBtn}
-                      </button>
-                      <button
-                        onClick={downloadLogs}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--accent-2)',
-                          cursor: 'pointer',
-                          fontSize: '8.5px',
-                          fontWeight: 800
-                        }}
-                        title="Export log stream as text file"
-                        disabled={events.length === 0}
-                      >
-                        📥 EXPORT
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Log Event Stream Container */}
-                  <div style={{
-                    flex: 1,
-                    background: '#090d16',
-                    border: '1.5px solid var(--border)',
-                    borderRadius: '8px',
-                    padding: '12px',
-                    fontFamily: 'var(--mono)',
-                    fontSize: '9.5px',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    minHeight: 0
-                  }}>
-                    {events.filter(evt => {
-                      // Search query filter
-                      if (logSearchQuery && !evt.toLowerCase().includes(logSearchQuery.toLowerCase())) {
-                        return false;
-                      }
-                      // Filter tag
-                      if (logFilterType === 'system') {
-                        return evt.includes('[System]') || evt.toLowerCase().includes('sse') || evt.toLowerCase().includes('daemon') || evt.toLowerCase().includes('connected') || evt.toLowerCase().includes('boot');
-                      }
-                      if (logFilterType === 'mission') {
-                        return evt.toLowerCase().includes('mission') || evt.toLowerCase().includes('planning') || evt.toLowerCase().includes('roadmap') || evt.toLowerCase().includes('objective');
-                      }
-                      return true;
-                    }).map((evt, idx) => {
-                      // Compute content-aware text coloring
-                      const getLogColor = (text: string) => {
-                        const lower = text.toLowerCase();
-                        if (lower.includes('error') || lower.includes('fail')) return '#f43f5e';
-                        if (lower.includes('success') || lower.includes('done') || lower.includes('applied')) return '#10b981';
-                        if (lower.includes('warn') || lower.includes('alert')) return '#f59e0b';
-                        if (lower.includes('[system]') || lower.includes('sse')) return '#38bdf8';
-                        return '#f8fafc';
-                      };
-
-                      return (
-                        <div key={idx} style={{ 
-                          color: getLogColor(evt), 
-                          borderBottom: '1px solid rgba(255,255,255,0.03)', 
-                          paddingBottom: '3px',
-                          lineHeight: 1.4,
-                          wordBreak: 'break-all'
-                        }}>
-                          <span style={{ color: 'rgba(255,255,255,0.2)', marginRight: '6px' }}>{events.length - idx}</span>
-                          <span style={{ color: '#10b981', marginRight: '4px' }}>➔</span> 
-                          {evt}
-                        </div>
-                      );
-                    })}
-                    
-                    {events.length === 0 && (
-                      <span style={{ color: '#64748b' }}>Awaiting live events channel stream...</span>
-                    )}
-                    {events.length > 0 && events.filter(evt => {
-                      if (logSearchQuery && !evt.toLowerCase().includes(logSearchQuery.toLowerCase())) return false;
-                      if (logFilterType === 'system') return evt.includes('[System]') || evt.toLowerCase().includes('sse') || evt.toLowerCase().includes('daemon') || evt.toLowerCase().includes('connected') || evt.toLowerCase().includes('boot');
-                      if (logFilterType === 'mission') return evt.toLowerCase().includes('mission') || evt.toLowerCase().includes('planning') || evt.toLowerCase().includes('roadmap') || evt.toLowerCase().includes('objective');
-                      return true;
-                    }).length === 0 && (
-                      <span style={{ color: '#64748b', textAlign: 'center', marginTop: '12px' }}>No logs match active filters.</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ================= PI CLI CHILD PROCESS WORKFLOW ================= */}
-              {activeLogTab === 'cli' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '12px', height: '100%', minHeight: 0 }}>
-                  {/* Left Column: Process History */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderRight: '1px solid var(--border-soft)', paddingRight: '12px', minHeight: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                      <b style={{ fontSize: '10px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        🚀 Executed Child Processes ({cliLogs.length})
-                      </b>
-                      <button
-                        onClick={fetchCliLogs}
-                        disabled={isFetchingCliLogs}
-                        style={{
-                          fontSize: '8px',
-                          padding: '2px 6px',
+                          fontWeight: 700,
                           borderRadius: '4px',
                           border: '1px solid var(--border-soft)',
-                          background: 'var(--surface-alt)',
+                          background: 'var(--surface)',
                           color: 'var(--text)',
                           cursor: 'pointer'
                         }}
                       >
-                        {isFetchingCliLogs ? '⏳ Refreshing...' : '🔄 Refresh'}
+                        {isFetchingUserLogs ? '⏳ Syncing...' : '🔄 Refresh Sync'}
+                      </button>
+
+                      <button
+                        onClick={() => setUserLogsViewMode(userLogsViewMode === 'stream' ? 'json' : 'stream')}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '8.5px',
+                          fontWeight: 700,
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-soft)',
+                          background: userLogsViewMode === 'json' ? 'var(--text)' : 'var(--surface)',
+                          color: userLogsViewMode === 'json' ? 'var(--surface)' : 'var(--text)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {userLogsViewMode === 'stream' ? '🔍 Raw JSON' : '📜 Event Cards'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          const blob = new Blob([JSON.stringify(userLogsData || {}, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `logs_${activeEntity || 'user'}.json`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '8.5px',
+                          fontWeight: 700,
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-soft)',
+                          background: 'var(--surface)',
+                          color: 'var(--text)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📥 Export
                       </button>
                     </div>
+                  </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
-                      {cliLogs.length === 0 ? (
-                        <div style={{ fontSize: '9px', color: 'var(--muted)', padding: '12px', textAlign: 'center', border: '1px dashed var(--border-soft)', borderRadius: '6px' }}>
-                          No child processes spawned yet.<br />Send a chat message or run a command below!
-                        </div>
-                      ) : (
-                        cliLogs.map((proc, idx) => {
-                          const isSelected = selectedCliLog?.id === proc.id;
+                  {/* Filter bar */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center', flexShrink: 0 }}>
+                    <input
+                      type="text"
+                      placeholder="Search events, IDs, timestamps or details in logs.json..."
+                      value={logSearchQuery}
+                      onChange={(e) => setLogSearchQuery(e.target.value)}
+                      style={{
+                        flex: 1,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        color: 'var(--text)',
+                        fontSize: '9.5px',
+                        padding: '5px 8px',
+                        outline: 'none'
+                      }}
+                    />
+                    {logSearchQuery && (
+                      <button
+                        onClick={() => setLogSearchQuery('')}
+                        style={{
+                          background: 'var(--surface-alt)',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: '4px',
+                          color: 'var(--muted)',
+                          fontSize: '8.5px',
+                          padding: '4px 8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Content View */}
+                  {userLogsViewMode === 'json' ? (
+                    <div style={{ flex: 1, background: '#0d1117', borderRadius: '6px', border: '1px solid var(--border-soft)', padding: '12px', overflowY: 'auto', fontFamily: 'var(--mono)', fontSize: '10px', color: '#e6edf3', minHeight: 0 }}>
+                      <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {JSON.stringify(userLogsData || { events: [], note: 'No logs initialized yet' }, null, 2)}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', paddingRight: '4px', minHeight: 0 }}>
+                      {(() => {
+                        const events: any[] = userLogsData?.events || userLogsData?.logs || [];
+                        const q = logSearchQuery.toLowerCase().trim();
+                        const filtered = events.filter((evt: any) => {
+                          if (!q) return true;
+                          const str = JSON.stringify(evt).toLowerCase();
+                          return str.includes(q);
+                        });
+
+                        if (filtered.length === 0) {
                           return (
-                            <div
-                              key={proc.id || idx}
-                              onClick={() => setSelectedCliLog(proc)}
-                              style={{
-                                padding: '8px',
-                                borderRadius: '6px',
-                                border: isSelected ? '1.5px solid #3b82f6' : '1px solid var(--border-soft)',
-                                background: isSelected ? 'rgba(59, 130, 246, 0.12)' : 'var(--surface-alt)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '4px',
-                                fontSize: '9px',
-                                transition: 'all 0.15s'
-                              }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontWeight: 800, color: proc.ok ? '#10b981' : '#f43f5e', fontFamily: 'var(--mono)' }}>
-                                  {proc.ok ? '✓ OK' : '✕ ERR'} • {proc.executionTimeMs}ms
-                                </span>
-                                <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
-                                  {new Date(proc.timestamp).toLocaleTimeString()}
+                            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '11px', background: 'var(--surface-alt)', borderRadius: '6px', border: '1px border-soft' }}>
+                              {events.length === 0 ? 'No event records logged in logs.json yet.' : 'No events match your current search query.'}
+                            </div>
+                          );
+                        }
+
+                        return filtered.slice().reverse().map((evt: any, idx: number) => {
+                          const type = String(evt.type || evt.category || 'system').toLowerCase();
+                          let badgeBg = '#3b82f622';
+                          let badgeColor = '#3b82f6';
+                          if (type.includes('mission') || type.includes('execution')) { badgeBg = '#10b98122'; badgeColor = '#10b981'; }
+                          else if (type.includes('source')) { badgeBg = '#8b5cf622'; badgeColor = '#8b5cf6'; }
+                          else if (type.includes('deliverable') || type.includes('archive')) { badgeBg = '#f59e0b22'; badgeColor = '#f59e0b'; }
+
+                          return (
+                            <div key={evt.id || idx} style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '7.5px', fontWeight: 800, padding: '1px 5px', borderRadius: '3px', background: badgeBg, color: badgeColor, textTransform: 'uppercase' }}>
+                                    {evt.type || 'EVENT'}
+                                  </span>
+                                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-bright)' }}>
+                                    {evt.event || evt.title || evt.action || 'Workspace Event'}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                                  {evt.timestamp ? new Date(evt.timestamp).toLocaleString() : 'N/A'}
                                 </span>
                               </div>
-                              <div style={{ fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                &quot;{proc.prompt}&quot;
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '8px', color: 'var(--muted)' }}>
-                                <span style={{ background: 'rgba(255,255,255,0.06)', padding: '1px 4px', borderRadius: '3px' }}>
-                                  {proc.model}
-                                </span>
-                                <span>• {proc.apiKeyStrategy}</span>
+
+                              {evt.details && (
+                                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', fontFamily: 'var(--mono)', wordBreak: 'break-word' }}>
+                                  {typeof evt.details === 'string' ? evt.details : JSON.stringify(evt.details)}
+                                </div>
+                              )}
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                <span style={{ fontSize: '7.5px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>ID: {evt.id || `evt-${idx}`}</span>
+                                {evt.mission_id && (
+                                  <span style={{ fontSize: '7.5px', color: 'var(--accent)', fontWeight: 700 }}>
+                                    🎯 Mission: {evt.mission_id}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
-                        })
-                      )}
+                        });
+                      })()}
                     </div>
-                  </div>
-
-                  {/* Right Column: Process Inspector & Terminal */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', minHeight: 0 }}>
-                    {/* Selected Process Command Bar */}
-                    {selectedCliLog ? (
-                      <div style={{ background: '#090d16', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '10px', fontSize: '9px', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', color: '#38bdf8', fontWeight: 800 }}>
-                          <span>💻 CHILD PROCESS: execFile(&apos;pi&apos;, [{selectedCliLog.args?.map((a: string) => `&quot;${a}&quot;`).join(', ')}])</span>
-                          <button onClick={() => setSelectedCliLog(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '8px' }}>[Clear Inspector]</button>
-                        </div>
-                        <div style={{ color: '#94a3b8', display: 'flex', gap: '12px', fontSize: '8.5px' }}>
-                          <span>ID: {selectedCliLog.id}</span>
-                          <span>Session: {selectedCliLog.sessionId}</span>
-                          <span>Key Strategy: {selectedCliLog.apiKeyStrategy}</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ background: '#090d16', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px', fontSize: '9px', fontFamily: 'var(--mono)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                        <span>⚡ LIVE PI CLI CHILD PROCESS TERMINAL</span>
-                        <span style={{ fontSize: '8px', color: '#64748b' }}>Connected to /api/pi/cli-exec</span>
-                      </div>
-                    )}
-
-                    {/* Output STDOUT / STDERR Display */}
-                    <div style={{ flex: 1, background: '#090d16', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '12px', fontFamily: 'var(--mono)', fontSize: '9.5px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
-                      {selectedCliLog ? (
-                        <>
-                          <div style={{ color: '#10b981', fontWeight: 800, borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
-                            === RAW STDOUT FROM @paiml/pi-coding-agent ===
-                          </div>
-                          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#f8fafc', fontSize: '9px', lineHeight: 1.4 }}>
-                            {selectedCliLog.stdout || '[No STDOUT emitted]'}
-                          </pre>
-                          {selectedCliLog.stderr && (
-                            <>
-                              <div style={{ color: '#f43f5e', fontWeight: 800, borderBottom: '1px dashed rgba(255,255,255,0.1)', paddingBottom: '4px', marginTop: '8px' }}>
-                                === STDERR EMITTED ===
-                              </div>
-                              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#fca5a5', fontSize: '9px' }}>
-                                {selectedCliLog.stderr}
-                              </pre>
-                            </>
-                          )}
-                        </>
-                      ) : (
-                        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0, color: '#38bdf8', fontSize: '9px', lineHeight: 1.5 }}>
-                          {cliTerminalOutput}
-                        </pre>
-                      )}
-                    </div>
-
-                    {/* Direct Terminal Command Form */}
-                    <form onSubmit={handleRunCliCommand} style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <span style={{ color: '#38bdf8', fontFamily: 'var(--mono)', fontSize: '11px', display: 'flex', alignItems: 'center', paddingLeft: '4px' }}>$</span>
-                      <input
-                        type="text"
-                        placeholder="Type prompt or command e.g. 'hello pi agent'..."
-                        value={cliTerminalInput}
-                        onChange={(e) => setCliTerminalInput(e.target.value)}
-                        disabled={isCliRunning}
-                        style={{
-                          flex: 1,
-                          background: '#090d16',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '6px',
-                          color: '#f8fafc',
-                          fontFamily: 'var(--mono)',
-                          fontSize: '10px',
-                          padding: '6px 10px',
-                          outline: 'none'
-                        }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={isCliRunning || !cliTerminalInput.trim()}
-                        style={{
-                          background: isCliRunning ? 'var(--muted)' : '#3b82f6',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '9px',
-                          fontWeight: 800,
-                          padding: '0 14px',
-                          cursor: isCliRunning ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        {isCliRunning ? '⏳ Executing...' : '🚀 Execute Child Process'}
-                      </button>
-                    </form>
-                  </div>
+                  )}
                 </div>
-              )}
               {false && (
                 <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '16px', height: '100%', minHeight: 0 }}>
                   
@@ -11894,8 +11811,50 @@ ${isDirector ? `
 
       {/* ================= CUSTOM FOOTER / BOTTOMBAR ================= */}
       <footer className="bottombar" dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', gap: '16px', overflow: 'visible', zIndex: 1000, position: 'relative' }}>
-        {/* Left: Operations Ticker Banner & Agent Autonomy */}
+        {/* Left: Skills & Extensions Button, Operations Ticker Banner & Agent Autonomy */}
         <div className="bottombar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', flex: 1, minWidth: 0 }}>
+          {/* Unified Capabilities Button (Skills & Extensions) */}
+          <button
+            onClick={() => {
+              setToolsEnabled(!toolsEnabled);
+              setIsToolsWindowOpen(true);
+            }}
+            onMouseEnter={() => setIsToolsWindowOpen(true)}
+            className="mini accent"
+            style={{
+              padding: '4px 10px',
+              fontSize: '9.5px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: toolsEnabled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+              border: 'none',
+              color: '#fff',
+              height: '24px',
+              marginLeft: '0',
+              flexShrink: 0,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'all 0.15s'
+            }}
+            title="Hover or click to open Skills & Extensions explorer."
+          >
+            <span>{dtxt.toolsBtn}</span>
+            <span
+              style={{
+                fontSize: '8px',
+                padding: '1px 5px',
+                borderRadius: '3px',
+                background: toolsEnabled ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.3)',
+                color: '#fff',
+                fontWeight: 900
+              }}
+            >
+              {toolsEnabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+
           {/* Operations Ticker Banner */}
           <div className="bottombar-ticker" style={{
             flex: 1,
@@ -12160,294 +12119,6 @@ ${isDirector ? `
             </div>
           </div>
 
-        </div>
-
-        {/* Right: Controls & Toggles */}
-        <div className="bottombar-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
-
-          {/* Unified Capabilities Button (Hover opens window, Click toggles ON/OFF) */}
-          <button
-            onClick={() => {
-              setToolsEnabled(!toolsEnabled);
-              setIsToolsWindowOpen(true);
-            }}
-            onMouseEnter={() => setIsToolsWindowOpen(true)}
-            className="mini accent"
-            style={{
-              padding: '4px 10px',
-              fontSize: '9.5px',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: toolsEnabled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
-              border: 'none',
-              color: '#fff',
-              height: '24px',
-              marginLeft: '0',
-              flexShrink: 0,
-              cursor: 'pointer',
-              borderRadius: '4px',
-              transition: 'all 0.15s'
-            }}
-            title="Hover or click to open Skills & Extensions explorer."
-          >
-            <span>{dtxt.toolsBtn}</span>
-            <span
-              style={{
-                fontSize: '8px',
-                padding: '1px 5px',
-                borderRadius: '3px',
-                background: toolsEnabled ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.3)',
-                color: '#fff',
-                fontWeight: 900
-              }}
-            >
-              {toolsEnabled ? 'ON' : 'OFF'}
-            </span>
-          </button>
-
-          {/* UI Language Dropdown - Placed right next to Skills & Extensions */}
-          <select
-            value={uiLang}
-            onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
-            title="UI Interface Language (EN / FR / AR)"
-            style={{
-              height: '24px',
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: '4px',
-              color: 'var(--text)',
-              fontSize: '8.5px',
-              fontWeight: 800,
-              padding: '0 4px',
-              cursor: 'pointer',
-              outline: 'none',
-              flexShrink: 0
-            }}
-          >
-            <option value="EN">🌐 UI: EN</option>
-            <option value="FR">🌐 UI: FR</option>
-            <option value="AR">🌐 UI: AR</option>
-          </select>
-
-          {/* Theme Toggle Button - Placed right next to UI Language Dropdown */}
-          <button 
-            className="theme-toggle" 
-            onClick={toggleTheme} 
-            title={dtxt.themeTitle} 
-            style={{ 
-              height: '24px', 
-              width: '24px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border-soft)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              color: 'var(--text)',
-              fontSize: '10px',
-              padding: '0',
-              marginLeft: '0',
-              flexShrink: 0
-            }}
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
-
-          <div
-            style={{ position: 'relative' }}
-            onMouseEnter={() => setIsAccountHoverOpen(true)}
-            onMouseLeave={() => setIsAccountHoverOpen(false)}
-          >
-            {/* Hint hinter banner above account & api button ONLY when NO KEY / CREDIT (Visible automatically without needing hover) */}
-            {(heartbeatStatus === 'no_key' || !customApiKey) && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  marginBottom: '6px',
-                  background: 'rgba(239, 68, 68, 0.95)',
-                  border: '1px solid #ef4444',
-                  color: '#ffffff',
-                  fontSize: '8.5px',
-                  fontWeight: 900,
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                  zIndex: 10000,
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  animation: 'pulse 1.8s infinite'
-                }}
-              >
-                <span>⚠️</span>
-                <span>NO KEY / CREDIT</span>
-              </div>
-            )}
-
-            <button
-              onClick={() => setIsAccountWindowOpen(true)}
-              className="mini accent"
-              style={{
-                padding: '4px 10px',
-                fontSize: '9.5px',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                border: 'none',
-                color: '#fff',
-                height: '24px',
-                marginLeft: '0',
-                flexShrink: 0,
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              {dtxt.accountBtn}
-            </button>
-
-            {/* Hover Small Window for Current Plan, Usage Quota, Token Alerts & Token Billing/Routing Method */}
-            {isAccountHoverOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  right: 0,
-                  marginBottom: heartbeatStatus === 'no_key' || !customApiKey ? '34px' : '8px',
-                  width: '290px',
-                  background: 'var(--surface)',
-                  border: '1.5px solid #3b82f6',
-                  borderRadius: '8px',
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-                  padding: '12px',
-                  zIndex: 10001,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                  pointerEvents: 'auto'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                    👤 Plan & Usage Quota
-                  </span>
-                  <span style={{ fontSize: '8px', fontWeight: 800, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.15)', padding: '1px 6px', borderRadius: '3px' }}>
-                    {selectedPlan ? `${selectedPlan.toUpperCase()} PLAN` : 'FREE SHARED TIER'}
-                  </span>
-                </div>
-
-                {/* Quota & Token Alerts Preview */}
-                {(() => {
-                  const q = getQuotaMetrics(userTierData);
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
-                        <span style={{ color: 'var(--muted)', fontWeight: 700 }}>USAGE QUOTA:</span>
-                        <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
-                      </div>
-                      <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                        <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>TOKEN ALERTS:</span>
-                        <span style={{ fontSize: '7.5px', fontWeight: 800, color: q.statusColor }}>
-                          {q.percentUsed > 90 ? '🚨 CRITICAL ALERT (<10% REMAINING)' : q.percentUsed > 75 ? '⚠️ QUOTA WARNING' : '✓ HEALTHY ALLOCATION'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Active TOKEN BILLING & ROUTING METHOD */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 8px', borderRadius: '5px' }}>
-                  <div style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                    ⚡ Active Token Billing & Routing Method
-                  </div>
-                  <div style={{ fontSize: '8.5px', fontWeight: 800, color: customApiKey ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>{customApiKey ? '🔑 Direct BYOK (Custom Gemini Key)' : '🌐 Fabrica Shared API Credit Proxy'}</span>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '7.5px', color: 'var(--muted)', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
-                  💡 Click button to manage Account, Workspace & BYOK Credentials.
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={() => setIsLogsWindowOpen(true)}
-            className="mini accent"
-            style={{
-              padding: '4px 10px',
-              fontSize: '9.5px',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'linear-gradient(135deg, #2a2e3d, #151922)',
-              border: isRealtimeActive && supabase ? '1px solid #10b981' : '1px solid var(--border)',
-              color: '#fff',
-              height: '24px',
-              marginLeft: '0',
-              flexShrink: 0,
-              cursor: 'pointer',
-              borderRadius: '4px',
-              boxShadow: isRealtimeActive && supabase ? '0 0 8px rgba(16, 185, 129, 0.25)' : 'none',
-              transition: 'all 0.2s'
-            }}
-            title={isRealtimeActive && supabase ? 'Postgres Realtime Channel: Active & Online' : supabase ? 'Postgres Realtime Channel: Paused' : 'Postgres Realtime Channel: Offline'}
-          >
-            <span style={{ position: 'relative', display: 'flex', height: '6px', width: '6px' }}>
-              {isRealtimeActive && supabase ? (
-                <>
-                  <span className="animate-ping" style={{
-                    position: 'absolute',
-                    display: 'inline-flex',
-                    height: '100%',
-                    width: '100%',
-                    borderRadius: '50%',
-                    backgroundColor: '#10b981',
-                    opacity: 0.75
-                  }}></span>
-                  <span style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    borderRadius: '50%',
-                    height: '6px',
-                    width: '6px',
-                    backgroundColor: '#10b981'
-                  }}></span>
-                </>
-              ) : supabase ? (
-                <span style={{
-                  display: 'inline-flex',
-                  borderRadius: '50%',
-                  height: '6px',
-                  width: '6px',
-                  backgroundColor: '#f59e0b'
-                }}></span>
-              ) : (
-                <span style={{
-                  display: 'inline-flex',
-                  borderRadius: '50%',
-                  height: '6px',
-                  width: '6px',
-                  backgroundColor: '#64748b'
-                }}></span>
-              )}
-            </span>
-            <span>{dtxt.logsBtn} ({events.length + realtimeEvents.length})</span>
-          </button>
         </div>
       </footer>
 
@@ -13570,8 +13241,8 @@ ${isDirector ? `
         </div>
       )}
 
-      {/* ================= USER APPROVAL GATES CONTROL MODAL ================= */}
-      {isGatesModalOpen && (
+      {/* ================= PIPELINE CONFIGURATION MODAL (MERGED GATES & EFFORTS) ================= */}
+      {(isGatesModalOpen || isEffortModalOpen) && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -13591,7 +13262,7 @@ ${isDirector ? `
             border: '1px solid var(--border-soft)',
             borderRadius: '12px',
             width: '100%',
-            maxWidth: '560px',
+            maxWidth: '580px',
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
             display: 'flex',
             flexDirection: 'column',
@@ -13607,175 +13278,21 @@ ${isDirector ? `
               justifyContent: 'space-between'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>🛡️</span>
+                <span style={{ fontSize: '18px' }}>🎛️</span>
                 <div>
                   <b style={{ fontSize: '12px', color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    User Approval Gates Control
+                    Pipeline Configuration
                   </b>
                   <span style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'block' }}>
-                    Enable or disable approval gates across pipeline loops & non-loops
+                    Unified controls for approval gates & loop effort compute parameters
                   </span>
                 </div>
               </div>
               <button
-                onClick={() => setIsGatesModalOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  color: 'var(--muted)',
-                  padding: '4px 8px'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
-                ℹ️ <b>Gate Logic:</b> When an approval gate is <b>ON</b>, the autonomous agent will pause execution at that specific phase step and await your explicit confirmation before advancing.
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { key: 'discovery_scoping', phase: '1. Drafting', name: 'Discovery & Scoping', type: 'loop', desc: 'Interactive Q&A & trade-off debate (loop)' },
-                  { key: 'deep_research', phase: '2. Planning', name: 'Deep Research & Intelligence Gathering', type: 'loop', desc: 'Web searches, PDFs & competitor extraction (loop)' },
-                  { key: 'data_analysis', phase: '2. Planning', name: 'Data Analysis & Pattern Extraction', type: 'non-loop', desc: 'Anomaly detection & metric computation (non-loop)' },
-                  { key: 'strategic_synthesis', phase: '2. Planning', name: 'Strategic Synthesis & Decision Support', type: 'non-loop', desc: 'Actionable plan & decision matrix (non-loop)' },
-                  { key: 'generation', phase: '3. Execution', name: 'Generation', type: 'non-loop', desc: 'Code & asset generation into Deliverables (non-loop)' },
-                  { key: 'verification', phase: '3. Execution', name: 'Verification', type: 'non-loop', desc: 'Gap analysis vs Strategic Synthesis (non-loop)' },
-                  { key: 'review', phase: '4. Delivering', name: 'Review', type: 'non-loop', desc: 'Final production deliverable review (non-loop)' }
-                ].map(gate => {
-                  const isEnabled = approvalGates[gate.key] !== false;
-                  return (
-                    <div
-                      key={gate.key}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        background: 'var(--surface-alt)',
-                        border: isEnabled ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--border-soft)',
-                        borderRadius: '6px',
-                        padding: '8px 12px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px', color: 'var(--accent)' }}>
-                            {gate.phase}
-                          </span>
-                          <b style={{ fontSize: '9.5px', color: 'var(--text-bright)' }}>{gate.name}</b>
-                          <span style={{ fontSize: '7px', fontWeight: 800, background: gate.type === 'loop' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: gate.type === 'loop' ? '#f59e0b' : 'var(--accent)', padding: '1px 4px', borderRadius: '3px' }}>
-                            {gate.type === 'loop' ? '🔄 LOOP' : '📄 NON-LOOP'}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '8px', color: 'var(--muted)' }}>{gate.desc}</span>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setApprovalGates(prev => ({ ...prev, [gate.key]: !isEnabled }));
-                        }}
-                        style={{
-                          background: isEnabled ? '#3b82f6' : 'var(--surface)',
-                          border: isEnabled ? 'none' : '1px solid var(--border-soft)',
-                          color: isEnabled ? '#ffffff' : 'var(--muted)',
-                          fontSize: '8.5px',
-                          fontWeight: 800,
-                          padding: '4px 10px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        {isEnabled ? '🛡️ GATE ON' : '⚪ GATE OFF'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              padding: '12px 18px',
-              borderTop: '1px solid var(--border-soft)',
-              background: 'var(--surface-alt)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
-                Gates apply dynamically to all active mission runs.
-              </span>
-              <button
                 onClick={() => {
-                  setToast({ message: 'User Approval Gates updated successfully!', type: 'success', isOpen: true });
                   setIsGatesModalOpen(false);
+                  setIsEffortModalOpen(false);
                 }}
-                className="mini accent"
-                style={{ padding: '6px 14px', fontSize: '9.5px', fontWeight: 800 }}
-              >
-                Save Configuration ✓
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= EFFORT PARAMETER CONTROL MODAL ================= */}
-      {isEffortModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border-soft)',
-            borderRadius: '12px',
-            width: '100%',
-            maxWidth: '540px',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Header */}
-            <div style={{
-              padding: '14px 18px',
-              borderBottom: '1px solid var(--border-soft)',
-              background: 'var(--surface-alt)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>⚡</span>
-                <div>
-                  <b style={{ fontSize: '12px', color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Effort Parameter Control (Loops Only)
-                  </b>
-                  <span style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'block' }}>
-                    Adjust computing intensity & iteration depth for loop-based pipeline stages
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsEffortModalOpen(false)}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -13789,81 +13306,197 @@ ${isDirector ? `
               </button>
             </div>
 
+            {/* Tab Navigation Bar */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid var(--border-soft)',
+              background: 'rgba(0,0,0,0.15)',
+              padding: '0 12px'
+            }}>
+              <button
+                onClick={() => setPipelineConfigActiveTab('gates')}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '9.5px',
+                  fontWeight: 800,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: pipelineConfigActiveTab === 'gates' ? '2px solid #3b82f6' : '2px solid transparent',
+                  color: pipelineConfigActiveTab === 'gates' ? '#3b82f6' : 'var(--muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <span>🛡️ Approval Gates</span>
+              </button>
+              <button
+                onClick={() => setPipelineConfigActiveTab('efforts')}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '9.5px',
+                  fontWeight: 800,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: pipelineConfigActiveTab === 'efforts' ? '2px solid #f59e0b' : '2px solid transparent',
+                  color: pipelineConfigActiveTab === 'efforts' ? '#f59e0b' : 'var(--muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <span>⚡ Loop Effort Levels</span>
+              </button>
+            </div>
+
             {/* Body */}
-            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '70vh', overflowY: 'auto' }}>
-              <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
-                ⚡ <b>EFFORT Scaling:</b> EFFORT parameters control iteration caps, search depth, and LLM reasoning cycles exclusively for <b>LOOP</b> components. Non-loops run deterministically.
-              </div>
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '65vh', overflowY: 'auto' }}>
+              {pipelineConfigActiveTab === 'gates' ? (
+                <>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
+                    ℹ️ <b>Gate Logic:</b> When an approval gate is <b>ON</b>, the autonomous agent will pause execution at that specific phase step and await your explicit confirmation before advancing.
+                  </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { key: 'discovery_scoping', phase: 'Drafting Phase', name: 'Discovery & Scoping Loop', desc: 'Controls Q&A trade-off depth & option synthesis' },
-                  { key: 'deep_research', phase: 'Planning Phase', name: 'Deep Research & Intelligence Loop', desc: 'Controls web crawl depth, PDF extractions & paper audits' },
-                  { key: 'execution_loop', phase: 'Execution Phase', name: 'Verification & Regeneration Loop', desc: 'Controls automated gap-fixing retry attempts' }
-                ].map(item => {
-                  const currentEffort = loopEfforts[item.key] || 'Medium';
-                  return (
-                    <div
-                      key={item.key}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '8px',
-                        padding: '10px 12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '1px 5px', borderRadius: '3px' }}>
-                            🔄 {item.phase}
-                          </span>
-                          <b style={{ fontSize: '10px', color: 'var(--text-bright)' }}>{item.name}</b>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { key: 'discovery_scoping', phase: '1. Drafting', name: 'Discovery & Scoping', type: 'loop', desc: 'Interactive Q&A & trade-off debate (loop)' },
+                      { key: 'deep_research', phase: '2. Planning', name: 'Deep Research & Intelligence Gathering', type: 'loop', desc: 'Web searches, PDFs & competitor extraction (loop)' },
+                      { key: 'data_analysis', phase: '2. Planning', name: 'Data Analysis & Pattern Extraction', type: 'non-loop', desc: 'Anomaly detection & metric computation (non-loop)' },
+                      { key: 'strategic_synthesis', phase: '2. Planning', name: 'Strategic Synthesis & Decision Support', type: 'non-loop', desc: 'Actionable plan & decision matrix (non-loop)' },
+                      { key: 'generation', phase: '3. Execution', name: 'Generation', type: 'non-loop', desc: 'Code & asset generation into Deliverables (non-loop)' },
+                      { key: 'verification', phase: '3. Execution', name: 'Verification', type: 'non-loop', desc: 'Gap analysis vs Strategic Synthesis (non-loop)' },
+                      { key: 'review', phase: '4. Delivering', name: 'Review', type: 'non-loop', desc: 'Final production deliverable review (non-loop)' }
+                    ].map(gate => {
+                      const isEnabled = approvalGates[gate.key] !== false;
+                      return (
+                        <div
+                          key={gate.key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'var(--surface-alt)',
+                            border: isEnabled ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--border-soft)',
+                            borderRadius: '6px',
+                            padding: '8px 12px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px', color: 'var(--accent)' }}>
+                                {gate.phase}
+                              </span>
+                              <b style={{ fontSize: '9.5px', color: 'var(--text-bright)' }}>{gate.name}</b>
+                              <span style={{ fontSize: '7px', fontWeight: 800, background: gate.type === 'loop' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: gate.type === 'loop' ? '#f59e0b' : 'var(--accent)', padding: '1px 4px', borderRadius: '3px' }}>
+                                {gate.type === 'loop' ? '🔄 LOOP' : '📄 NON-LOOP'}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '8px', color: 'var(--muted)' }}>{gate.desc}</span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setApprovalGates(prev => ({ ...prev, [gate.key]: !isEnabled }));
+                            }}
+                            style={{
+                              background: isEnabled ? '#3b82f6' : 'var(--surface)',
+                              border: isEnabled ? 'none' : '1px solid var(--border-soft)',
+                              color: isEnabled ? '#ffffff' : 'var(--muted)',
+                              fontSize: '8.5px',
+                              fontWeight: 800,
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {isEnabled ? '🛡️ GATE ON' : '⚪ GATE OFF'}
+                          </button>
                         </div>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#f59e0b' }}>
-                          Current: {currentEffort}
-                        </span>
-                      </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
+                    ⚡ <b>EFFORT Scaling:</b> EFFORT parameters control iteration caps, search depth, and LLM reasoning cycles exclusively for <b>LOOP</b> components. Non-loops run deterministically.
+                  </div>
 
-                      <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)' }}>{item.desc}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { key: 'discovery_scoping', phase: 'Drafting Phase', name: 'Discovery & Scoping Loop', desc: 'Controls Q&A trade-off depth & option synthesis' },
+                      { key: 'deep_research', phase: 'Planning Phase', name: 'Deep Research & Intelligence Loop', desc: 'Controls web crawl depth, PDF extractions & paper audits' },
+                      { key: 'execution_loop', phase: 'Execution Phase', name: 'Verification & Regeneration Loop', desc: 'Controls automated gap-fixing retry attempts' }
+                    ].map(item => {
+                      const currentEffort = loopEfforts[item.key] || 'Medium';
+                      return (
+                        <div
+                          key={item.key}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                            background: 'var(--surface-alt)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '8px',
+                            padding: '10px 12px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '1px 5px', borderRadius: '3px' }}>
+                                🔄 {item.phase}
+                              </span>
+                              <b style={{ fontSize: '10px', color: 'var(--text-bright)' }}>{item.name}</b>
+                            </div>
+                            <span style={{ fontSize: '8px', fontWeight: 800, color: '#f59e0b' }}>
+                              Current: {currentEffort}
+                            </span>
+                          </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-                        {[
-                          { val: 'Low', label: 'Low (1x)', desc: 'Fast turnaround' },
-                          { val: 'Medium', label: 'Medium (2x)', desc: 'Balanced reasoning' },
-                          { val: 'High', label: 'High (3x)', desc: 'Thorough analysis' },
-                          { val: 'Deep', label: 'Deep (5x)', desc: 'Exhaustive search' }
-                        ].map(eff => {
-                          const isSel = currentEffort === eff.val;
-                          return (
-                            <button
-                              key={eff.val}
-                              onClick={() => setLoopEfforts(prev => ({ ...prev, [item.key]: eff.val as any }))}
-                              style={{
-                                background: isSel ? 'rgba(245, 158, 11, 0.2)' : 'var(--surface)',
-                                border: isSel ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
-                                borderRadius: '5px',
-                                padding: '6px 4px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '2px'
-                              }}
-                            >
-                              <b style={{ fontSize: '8.5px', color: isSel ? '#f59e0b' : 'var(--text)' }}>{eff.label}</b>
-                              <span style={{ fontSize: '6.5px', color: 'var(--muted)' }}>{eff.desc}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)' }}>{item.desc}</p>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                            {[
+                              { val: 'Low', label: 'Low (1x)', desc: 'Fast turnaround' },
+                              { val: 'Medium', label: 'Medium (2x)', desc: 'Balanced reasoning' },
+                              { val: 'High', label: 'High (3x)', desc: 'Thorough analysis' },
+                              { val: 'Deep', label: 'Deep (5x)', desc: 'Exhaustive search' }
+                            ].map(eff => {
+                              const isSel = currentEffort === eff.val;
+                              return (
+                                <button
+                                  key={eff.val}
+                                  onClick={() => setLoopEfforts(prev => ({ ...prev, [item.key]: eff.val as any }))}
+                                  style={{
+                                    background: isSel ? 'rgba(245, 158, 11, 0.2)' : 'var(--surface)',
+                                    border: isSel ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                                    borderRadius: '5px',
+                                    padding: '6px 4px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}
+                                >
+                                  <b style={{ fontSize: '8.5px', color: isSel ? '#f59e0b' : 'var(--text)' }}>{eff.label}</b>
+                                  <span style={{ fontSize: '6.5px', color: 'var(--muted)' }}>{eff.desc}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Footer */}
@@ -13876,17 +13509,18 @@ ${isDirector ? `
               justifyContent: 'space-between'
             }}>
               <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
-                EFFORT parameters apply to active and future loop executions.
+                Pipeline configurations apply dynamically to all mission executions.
               </span>
               <button
                 onClick={() => {
-                  setToast({ message: 'EFFORT parameters updated successfully!', type: 'success', isOpen: true });
+                  setToast({ message: 'Pipeline configuration updated successfully!', type: 'success', isOpen: true });
+                  setIsGatesModalOpen(false);
                   setIsEffortModalOpen(false);
                 }}
                 className="mini accent"
-                style={{ padding: '6px 14px', fontSize: '9.5px', fontWeight: 800, background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none' }}
+                style={{ padding: '6px 14px', fontSize: '9.5px', fontWeight: 800, background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none' }}
               >
-                Apply EFFORT ✓
+                Save Configuration ✓
               </button>
             </div>
           </div>

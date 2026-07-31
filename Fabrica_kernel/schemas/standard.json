@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "id": "schema-standard-mission",
+  "type": "standard",
+  "title": "Standard Full-Lifecycle Mission Schema",
+  "description": "Master schema governing complete end-to-end software development, system design, and execution pipelines.",
+  "protected": true,
+  "version": "3.0.0",
+  "phases": ["drafting", "planning", "delivery"],
+  "phase_selection": "multi_or_single",
+  "storage_paths": {
+    "scratchpad": "missions/{missionId}/",
+    "sources": "workspace/Sources/",
+    "deliverables": "workspace/Deliverables/",
+    "state_index": "missions.json",
+    "workspace_index": "workspace.json",
+    "event_stream": "logs.json"
+  },
+  "sub_schemas": {
+    "drafting": {
+      "id": "schema-drafting-mission",
+      "description": "Scope discovery, requirements definition, and interactive brief formulation.",
+      "stages": ["discovery", "deep_research"]
+    },
+    "planning": {
+      "id": "schema-planning-mission",
+      "description": "Architecture blueprinting, task breakdown, and strategic synthesis.",
+      "stages": ["blueprint", "task_roadmapping"]
+    },
+    "delivery": {
+      "id": "schema-delivery-mission",
+      "description": "Core implementation, execution logging, QA verification, and completion sign-off.",
+      "stages": ["execution", "review", "completed"]
+    }
+  },
+  "pipeline": {
+    "stages": ["drafting", "planning", "delivery"],
+    "required_inputs": ["objective", "task_specs"],
+    "outputs": ["verified_source_code", "build_artifacts", "review_documentation"]
+  },
+  "rules": {
+    "require_qa": true,
+    "transaction_safe": true,
+    "memory_retention": "persistent"
+  }
+}
