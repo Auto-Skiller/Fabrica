@@ -231,18 +231,19 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(9, 13, 22, 0.75)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      zIndex: 900,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px'
-    }}>
+    <div
+      className="dashboard-modal-overlay"
+      style={{
+        background: 'rgba(9, 13, 22, 0.75)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        zIndex: 900,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px'
+      }}
+    >
       <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
         width: 'min(58rem, 95vw)',
         height: 'min(38rem, 88vh)',
@@ -477,6 +478,12 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                     <span style={{ fontWeight: 800, color: '#8b5cf6', textTransform: 'uppercase' }}>
                       {selectedPlan ? `${selectedPlan.toUpperCase()} TIER` : 'FREE SHARED TIER'}
                     </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--muted)' }}>Contact Support:</span>
+                    <a href="mailto:fabrica.studio.contact@gmail.com" style={{ fontWeight: 700, color: '#06b6d4', textDecoration: 'none', fontFamily: 'var(--mono)' }}>
+                      fabrica.studio.contact@gmail.com
+                    </a>
                   </div>
                 </div>
 

@@ -1,22 +1,34 @@
-# Fabrica — The Autonomous Business Partner
+# Fabrica — The Business-First Autonomous Operating System
 
-> ### **AI knows HOW to build. Fabrica shows it WHAT.**
+> ### **AI knows HOW to analyze & draft. Fabrica gives it a BUSINESS-FIRST PIPELINE.**
 
-Fabrica is a persistent context-operating system engineered for business owners, project managers, and enterprise leaders who want to leverage autonomous AI agents to run and scale complex operations. While standard AI assistants execute transient single-turn queries and quickly lose context, Fabrica maintains structured memory, secure databases, sandboxed execution channels, and dedicated workflows to steer autonomous business partners reliably over long horizons.
+Fabrica is a Business-First autonomous operating system engineered for **non-technical solopreneurs, independent consultants, small marketing/creative agencies, and small startup ops & growth teams**. While standard AI chat interfaces execute transient single-turn queries and quickly lose context, Fabrica provides full control over a structured, repeatable 4-stage autonomous pipeline (**Drafting ➔ Planning ➔ Execution ➔ Delivery**), entirely from the UI, with **zero technical setup**.
 
 ---
 
 ## 🌟 The Core Value Proposition
 
 ### The Problem
-Traditional AI tools suffer from severe context loss. Every new conversation forces you to re-explain your company background, re-upload spreadsheets, and manually re-specify your business rules. Critical technical progress evaporates between chat sessions.
+Traditional AI chat interfaces suffer from severe context loss and lack business structure. Every new chat session forces non-technical founders, consultants, and agency teams to re-explain client context, re-upload background materials, and manually copy-paste AI responses into proposals, decks, or spreadsheets.
 
 ### The Fabrica Solution
-Fabrica organizes all your operational files, datasets, workflows, and code components into a single **persistent business brain**:
-* **Zero Context Drift**: Your strategic plans, business rules, task histories, and database schemas are stored in a multi-tenant relational database engine. You can resume any session with perfect context.
-* **Processes Real Enterprise Data**: Ingest raw spreadsheets, chat logs, email dumps, or legacy database schemas. Fabrica normalizes unstructured inputs and compiles functional systems to run on them.
-* **Outcome-First Leadership**: Decisions are presented through clean visual options and ROI-scored task lists (Cost, Benefit, Worth-It scores). No code or complex pipelines required for decision makers.
-* **Enterprise Security & Isolation**: Features tenant-isolated storage buckets with Customer-Managed Encryption Keys (CMEK), Row-Level Security (RLS) data partitioning, and sandboxed code execution environments.
+Fabrica organizes all your research sources, client briefs, strategic plans, and execution deliverables into a single **persistent business operating system**:
+* **Zero Technical Setup**: 100% UI-controlled workspace. Select your preferred model brain (Google Gemini, Anthropic Claude, or OpenRouter), click to execute, and monitor progress without writing code or managing developer environments.
+* **Structured 4-Stage Mission Pipeline**: Every mission flows through **Drafting ➔ Planning ➔ Execution ➔ Delivery** with dedicated sub-phases, automated QA gates, and 3-choice strategic option trade-offs before final delivery.
+* **Persistent Business Memory**: Your strategic briefs, research sources, audit trails, and client deliverables reside in a secure, multi-tenant relational database engine. Resume any project with zero context drift.
+* **24/7 Autonomy Mode**: Set your autonomy preferences (Full Auto, Semi-Auto, Supervised) and let Fabrica run background research rounds, market tracking, and pipeline tasks even after you close the browser tab.
+* **Structured Workspace & Storage Layer**: Separate dedicated folders per phase (`Sources/` for scoping, research, and synthesis inputs; `Deliverables/` for execution outputs and client reviews) with full audit capabilities.
+
+---
+
+## 🎯 Target Audience & Core Use Cases
+
+Fabrica is built specifically for operators who need repeatable research ➔ analysis ➔ deliverable pipelines without hiring analysts or writing prompts every time:
+
+1. **Independent Consultants**: Automate market research, competitor audits, and client strategy briefs so you sell high-value judgment, not billable research hours.
+2. **Small Marketing & Creative Agencies**: Standardize output quality across all accounts with repeatable autonomous pipelines and custom agency skills.
+3. **Solopreneurs & DTC Founders**: Run an autonomous research, market intelligence, and operations team without hiring staff or needing technical dev skills.
+4. **Startup Ops & Growth Teams**: Generate data-backed growth playbooks, competitive tracking matrices, and strategic proposals fast without waiting on engineering capacity.
 
 ---
 
@@ -24,23 +36,23 @@ Fabrica organizes all your operational files, datasets, workflows, and code comp
 
 ### 1. Modern 3-Panel Workspace
 * **Global Header Controls**:
-  * **Model Selector**: Switch seamlessly between AI providers (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic API key routing.
-  * **Active Session Switcher**: Minimized session badge (`Session 1`) with a dropdown switcher to manage, create, rename, or delete chat sessions. Full conversation histories persist to backend `app_config` and local storage per tenant, surviving logouts and session switches.
-  * **Live Voice Trigger (🎙️)**: Adjacent streaming voice channel button providing real-time audio interaction.
+  * **Model Selector**: Switch seamlessly between AI model brains (`gemini-2.5-flash`, `claude-3-5-sonnet`, `openrouter/`, etc.) with automatic API key routing.
+  * **Active Session Switcher**: Minimized session badge (`Session 1`) with a dropdown switcher to manage, create, rename, or delete chat sessions. Full conversation histories persist to backend `app_config` and local storage per tenant.
+  * **Live Voice Trigger (🎙️)**: Streaming voice channel button providing real-time audio interaction.
 * **Consolidated 2-Section Account & API Modal**:
-  * **Section 1 (👤 Account & Workspace)**: Workspace Identity, Token Usage Quota Meters, Stripe Subscription Plans (Starter/Pro/Enterprise), and 256-bit Encrypted Card Payment Link.
-  * **Section 2 (🔑 Tokens & API Credentials)**: BYOK Multi-Provider Keys (Google AI Studio, OpenRouter, Anthropic Claude) with live status verification badges (`✓ VERIFIED`), User Harness Engine & Model Intelligence, Free Tokens Pool & Key Load Balancer, and Managed LLM Credits with PAUG Refills.
-  * **Workspace Directives & Context Manager (`AGENTS.md`)**: Custom workspace directive editor (`GET/POST /api/context/agents-md`) and Gemini Context Caching API manager (`GET/POST /api/cache/status`, `/api/cache/refresh`).
+  * **Section 1 (👤 Account & Workspace)**: Workspace Identity, Token Usage Quota Meters, Subscription Plans, and Support Email (`fabrica.studio.contact@gmail.com`).
+  * **Section 2 (🔑 Tokens & API Credentials)**: BYOK Multi-Provider Keys (Google AI Studio, OpenRouter, Anthropic Claude) with live status verification badges (`✓ VERIFIED`), User Harness Engine, and Managed LLM Credits.
+* **Unified Skills & Integrations Modal (`🛠️ Integrations`)**:
+  * **Preset Integrations Grid**: Platform-native SVG icons across 6 categories (*Storage & Project Management*, *Messaging & Team Control*, *Customer Interactions*, *Automations & Workflows*, *Business & Commerce*, *Creative Generation & Voice*).
+  * **Workspace Skills Editor**: Full tree viewer and editor for custom workspace skills (`.pi/skills/`) with structured YAML frontmatter parsing (`What`, `When`, `Why`, `Triggers`, `Inputs`, `Outputs`).
 * **Panel A (System Maps & Configs)**:
-  * **3-Level Autonomy Selector**: Switch between **FULL AUTO** (auto-synthesizes new contextual missions, resolves agent QA gates, executes code tasks, and hot-swaps compiled components), **SEMI-AUTO** (auto-executes planned tasks while holding user missions at QA gates), and **SUPERVISED** (manual approval at every gate).
-  * **Real-time 5s Polling**: Automatically streams background mission creation, task completions, and component deployments to the screen.
-  * Micro-event timeline and interactive Cytoscape sources & dependency flow graph linking Inbox → Gateway → OS Prompts/Data.
+  * **3-Level Autonomy Selector**: Switch between **FULL AUTO** (auto-synthesizes contextual missions and executes pipeline tasks), **SEMI-AUTO** (auto-executes planned tasks while holding at QA gates), and **SUPERVISED** (manual approval at every gate).
+  * **Real-time 5s Polling**: Automatically streams background mission creation and deliverable progress to the screen.
 * **Panel B (Missions Board & Chat)**:
-  * Horizontal project board managing work across 4 status stages (*Drafting*, *Planning*, *Execution*, *Archive*).
-  * High-density **Quick Injections Panel**: 2-card prompt suggestions grid directly under chat controls, featuring title, icon, and truncated description text with zero horizontal overflow.
-* **Panel C (50/50 Split Data & Artifacts View)**:
-  * Expanded dual-column layout providing equal 50% width columns for **Your Data** (`raw_data`) and **Your Artifacts** (`system_components`).
-  * **Vertical Dividing Line**: A crisp `1.5px solid var(--border-soft)` separator line spans continuously down the center across both the top sub-section header controls and the list body container.
+  * Horizontal project board managing work across 4 status stages (**Drafting**, **Planning**, **Execution**, **Delivery**).
+  * High-density **Quick Injections Panel**: 2-card prompt suggestions grid directly under chat controls.
+* **Panel C (50/50 Split Storage & Artifacts View)**:
+  * Expanded dual-column layout providing equal 50% width columns for **Sources** (`raw_data`) and **Deliverables** (`system_components`).
   * Sub-section search filters, import/export triggers, and D3 force-directed dependency visualization toggles.
 
 ### 2. Enterprise Hybrid Backend Engine & 24/7 Autonomous Simulator
@@ -130,6 +142,12 @@ npm run start
 ```
 
 ---
+
+## 📬 Contact & Support
+
+For inquiries, enterprise deployments, and feedback, contact the team at:
+* **Official Email**: `fabrica.studio.contact@gmail.com`
+
 
 ## 🛡️ License & Copyright
 

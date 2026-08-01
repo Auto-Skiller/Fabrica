@@ -246,7 +246,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ SUPERVISED",
     toolsOn: "TOOLS ON",
     toolsOff: "TOOLS OFF",
-    toolsBtn: "⚡ Skills & Extensions",
+    toolsBtn: "⚡ Skills & Integrations",
     accountBtn: "🔑 Account & API",
     logsBtn: "📟 Logs & DB",
     langTitle: "UI Language (EN/FR/AR)",
@@ -471,7 +471,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ SUPERVISÉ",
     toolsOn: "OUTILS ACTIFS",
     toolsOff: "OUTILS INACTIFS",
-    toolsBtn: "⚡ Compétences & Extensions",
+    toolsBtn: "⚡ Compétences & Intégrations",
     accountBtn: "🔑 Compte & API",
     logsBtn: "📟 Journaux & BDD",
     langTitle: "Langue de l'interface (EN/FR/AR)",
@@ -696,7 +696,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ تحت الإشراف",
     toolsOn: "الأدوات مفعّلة",
     toolsOff: "الأدوات معطّلة",
-    toolsBtn: "⚡ المهارات والامتدادات",
+    toolsBtn: "⚡ المهارات والتكاملات",
     accountBtn: "🔑 الحساب و API",
     logsBtn: "📟 السجلات والبيانات",
     langTitle: "لغة الواجهة (EN/FR/AR)",
@@ -8724,9 +8724,9 @@ ${isDirector ? `
                                     { cmd: '/models', icon: '🤖', desc: 'List available LLM models & key pool providers' },
                                     { cmd: '/model gemini-2.5-flash', icon: '🎯', desc: 'Switch active model (e.g. /model gemini-2.5-flash)' },
                                     { cmd: '/skills', icon: '🧠', desc: 'List active Fabrica kernel skills & behavioral rules' },
-                                    { cmd: '/extensions', icon: '🔌', desc: 'View registered system prompt extensions & hooks' },
+                                    { cmd: '/extensions', icon: '🔌', desc: 'View registered system prompt integrations & hooks' },
                                     { cmd: '/system', icon: '📜', desc: 'Inspect active AGENTS.md system directives & context' },
-                                    { cmd: '/reload', icon: '🔄', desc: 'Reload skills, extensions & AGENTS.md directives' },
+                                    { cmd: '/reload', icon: '🔄', desc: 'Reload skills, integrations & AGENTS.md directives' },
                                     { cmd: '/sessions', icon: '🗂️', desc: 'List active Pi Agent CLI workspace sessions' },
                                     { cmd: '/web', icon: '🌐', desc: 'Toggle real-time web search grounding mode' },
                                     { cmd: '/export', icon: '📥', desc: 'Export full execution session transcript & logs' },
@@ -10760,18 +10760,19 @@ ${isDirector ? `
     </main>
                        {/* Realtime Event Payload Modal */}
       {selectedRealtimeEvent && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.85)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999,
-          padding: '20px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.85)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999,
+            padding: '20px'
+          }}
+        >
           <div
             dir={uiLang === 'AR' ? 'rtl' : 'ltr'}
             style={{
@@ -10890,18 +10891,19 @@ ${isDirector ? `
       )}
       {/* ================= TOOLS EXPLORER WINDOW ================= */}
       {isToolsWindowOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.75)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 900,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             width: 'min(75rem, 95vw)',
             height: 'min(45rem, 85vh)',
@@ -10926,9 +10928,9 @@ ${isDirector ? `
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.25rem' }}>⚡</span>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SKILLS & EXTENSIONS EXPLORER</b>
+                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SKILLS & INTEGRATIONS EXPLORER</b>
                   <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
-                    Registered kernel system capabilities & custom workspace extensions
+                    Registered kernel system capabilities & workspace integrations
                   </span>
                 </div>
               </div>
@@ -10975,18 +10977,19 @@ ${isDirector ? `
 
             {/* ================= WORKSPACE CONTEXT (AGENTS.MD) WINDOW ================= */}
       {isAgentsMdWindowOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.75)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 900,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             width: 'min(75rem, 95vw)',
             height: 'min(45rem, 85vh)',
@@ -11280,18 +11283,19 @@ ${isDirector ? `
 
       {/* ================= TELEMETRY & DATABASE REALTIME EVENT LOGS WINDOW ================= */}
       {isLogsWindowOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.75)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 900,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             width: 'min(68rem, 95vw)',
             height: 'min(44rem, 85vh)',
@@ -11948,9 +11952,31 @@ ${isDirector ? `
       )}
 
       {/* ================= CUSTOM FOOTER / BOTTOMBAR ================= */}
-      <footer className="bottombar" dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', gap: '16px', overflow: 'visible', zIndex: 1000, position: 'relative' }}>
-        {/* Left: Skills & Extensions Button, Operations Ticker Banner & Agent Autonomy */}
-        <div className="bottombar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-start', flex: 1, minWidth: 0 }}>
+      <footer className="bottombar" dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
+        display: 'flex',
+        alignItems: 'center',
+        padding: '0px',
+        gap: '0px',
+        overflow: 'visible',
+        zIndex: 1000,
+        position: 'relative',
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border-soft)'
+      }}>
+        {/* Left Controls: Project Context, Skills & Extensions, Autonomy Switcher (340px width aligned with Left Agent Column) */}
+        <div className="bottombar-left-actions" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          width: '340px',
+          minWidth: '340px',
+          maxWidth: '340px',
+          height: '38px',
+          padding: '4px 12px 4px 16px',
+          boxSizing: 'border-box',
+          flexShrink: 0,
+          borderRight: '1px solid var(--border-soft)'
+        }}>
           {/* Project Context (Workspace Context - AGENTS.md) Button */}
           <button
             onClick={() => {
@@ -11979,13 +12005,11 @@ ${isDirector ? `
             <span>📄 Context</span>
           </button>
 
-          {/* Unified Capabilities Button (Skills & Extensions) */}
+          {/* Unified Capabilities Button (Skills & Integrations) */}
           <button
             onClick={() => {
-              setToolsEnabled(!toolsEnabled);
-              setIsToolsWindowOpen(true);
+              setIsToolsWindowOpen(prev => !prev);
             }}
-            onMouseEnter={() => setIsToolsWindowOpen(true)}
             className="mini accent"
             style={{
               padding: '4px 10px',
@@ -11994,7 +12018,7 @@ ${isDirector ? `
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: toolsEnabled ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
+              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
               border: 'none',
               color: '#fff',
               height: '24px',
@@ -12004,26 +12028,14 @@ ${isDirector ? `
               borderRadius: '4px',
               transition: 'all 0.15s'
             }}
-            title="Hover or click to open Skills & Extensions explorer."
+            title="Click to open Skills & Integrations explorer."
           >
             <span>{dtxt.toolsBtn}</span>
-            <span
-              style={{
-                fontSize: '8px',
-                padding: '1px 5px',
-                borderRadius: '3px',
-                background: toolsEnabled ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.3)',
-                color: '#fff',
-                fontWeight: 900
-              }}
-            >
-              {toolsEnabled ? 'ON' : 'OFF'}
-            </span>
           </button>
 
-          {/* Autonomy Switcher — compact chip to the right of Skills & Extensions */}
+          {/* Autonomy Switcher — expands to fill remaining empty space in 340px left container */}
           <div
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}
             onMouseEnter={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               setAutonomyPos({
@@ -12047,12 +12059,15 @@ ${isDirector ? `
               title="Click to toggle Autonomy ON/OFF. Hover to select mode."
               style={{
                 height: '24px',
-                padding: '0 8px',
+                width: '100%',
+                flex: 1,
+                padding: '0 10px',
                 fontSize: '8.5px',
                 fontWeight: 900,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                justifyContent: 'center',
+                gap: '5px',
                 background: !isAutonomyOn
                   ? 'linear-gradient(135deg, #475569, #334155)'
                   : autonomyLevel === 'autonomous'
@@ -12062,7 +12077,6 @@ ${isDirector ? `
                 borderRadius: '4px',
                 color: '#fff',
                 cursor: 'pointer',
-                flexShrink: 0,
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap'
               }}
@@ -12159,7 +12173,18 @@ ${isDirector ? `
               </div>
             )}
           </div>
+        </div>
 
+        {/* Right Section: Backlogs & Reviews Operational Ticker Container */}
+        <div className="bottombar-right-ticker" style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '4px 16px 4px 12px',
+          height: '38px',
+          boxSizing: 'border-box'
+        }}>
           {/* Operations Ticker Banner */}
           <div className="bottombar-ticker" style={{
             flex: 1,
@@ -12429,18 +12454,19 @@ ${isDirector ? `
 
       {/* ================= ADD MISSION MODAL ================= */}
       {isAddMissionOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.75)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 950,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.75)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 950,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             width: 'min(40rem, 95vw)',
             background: 'var(--surface)',
@@ -13548,20 +13574,18 @@ ${isDirector ? `
 
       {/* ================= PIPELINE CONFIGURATION MODAL (MERGED GATES & EFFORTS) ================= */}
       {(isGatesModalOpen || isEffortModalOpen) && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(4px)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border-soft)',
@@ -13834,20 +13858,18 @@ ${isDirector ? `
 
       {/* ================= REAL-TIME EXECUTION LOGS MODAL ================= */}
       {isLogsModalOpen && selectedMissionLogs && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(4px)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            backdropFilter: 'blur(4px)'
+          }}
+        >
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border-soft)',
@@ -13934,20 +13956,18 @@ ${isDirector ? `
 
       {/* ================= CUSTOM CONFIRMATION DIALOG ================= */}
       {confirmModal && confirmModal.isOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(3px)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            backdropFilter: 'blur(3px)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border)',
@@ -14043,20 +14063,18 @@ ${isDirector ? `
 
       {/* ================= IMPORT MODAL DIALOG ================= */}
       {isImportModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(3px)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            backdropFilter: 'blur(3px)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border)',
@@ -14855,20 +14873,18 @@ ${isDirector ? `
 
       {/* ================= EXPORT MODAL DIALOG ================= */}
       {isExportModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '20px',
-          backdropFilter: 'blur(3px)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            backdropFilter: 'blur(3px)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border)',
@@ -15436,18 +15452,19 @@ ${isDirector ? `
 
       {/* ================= BACKLOG / STRATEGIC INTENT EDITOR MODAL ================= */}
       {isBacklogEditorOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '24px',
-          backdropFilter: 'blur(4px)',
-          fontFamily: 'var(--mono)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '24px',
+            backdropFilter: 'blur(4px)',
+            fontFamily: 'var(--mono)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border-soft)',
@@ -15707,18 +15724,19 @@ ${isDirector ? `
 
       {/* ================= REVIEW QUEUE EDITOR MODAL ================= */}
       {isReviewEditorOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '24px',
-          backdropFilter: 'blur(4px)',
-          fontFamily: 'var(--mono)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '24px',
+            backdropFilter: 'blur(4px)',
+            fontFamily: 'var(--mono)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border-soft)',
@@ -15974,18 +15992,19 @@ ${isDirector ? `
 
       {/* ================= STRATEGIC BACKLOG ITEM DETAIL MODAL ================= */}
       {activeBacklogItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '24px',
-          backdropFilter: 'blur(4px)',
-          fontFamily: 'var(--mono)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '24px',
+            backdropFilter: 'blur(4px)',
+            fontFamily: 'var(--mono)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border-soft)',
@@ -16134,18 +16153,19 @@ ${isDirector ? `
 
       {/* ================= REVIEW QUEUE / COMPONENT AUDIT DETAIL MODAL ================= */}
       {activeReviewItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999,
-          padding: '24px',
-          backdropFilter: 'blur(4px)',
-          fontFamily: 'var(--mono)'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.82)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '24px',
+            backdropFilter: 'blur(4px)',
+            fontFamily: 'var(--mono)'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             background: 'var(--surface)',
             border: '1.5px solid var(--border-soft)',
@@ -16367,18 +16387,19 @@ ${isDirector ? `
 
       {/* ================= DETAILED MISSION CONTROL PANEL OVERLAY ================= */}
       {selectedMission && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.85)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
             width: 'min(64rem, 95vw)',
             height: 'min(42rem, 90vh)',
@@ -18209,18 +18230,19 @@ ${isDirector ? `
 
       {/* ================= EXTRA SOURCE / STORED OUTPUT INSPECTION MODAL ================= */}
       {inspectingSourceOutput && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(9, 13, 22, 0.82)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            background: 'rgba(9, 13, 22, 0.82)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
           <div style={{
             width: 'min(36rem, 95vw)',
             background: 'var(--surface)',
@@ -18345,20 +18367,18 @@ ${isDirector ? `
 
       {/* CREATE NEW PROJECT MODAL */}
       {isCreatingProjectModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
+        <div
+          className="dashboard-modal-overlay"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
           <div style={{
             width: '100%',
             maxWidth: '460px',
