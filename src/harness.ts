@@ -48,14 +48,14 @@ function copyDirSync(src: string, dest: string) {
 }
 
 /**
- * Dynamically loads a mission schema into memory from Fabrica_kernel/schemas/{type}.json.
+ * Dynamically loads a mission schema into memory from Fabrica_kernel/adapters/{type}.json.
  * Prevents dropping or copying raw prompt schema or system instruction files into the user's workspace.
  */
 export function getMissionSchema(missionType: string): any {
   const normType = (missionType || 'standard').replace(/^system_/, '').toLowerCase();
-  let schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'schemas', `${normType}.json`);
+  let schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'adapters', `${normType}.json`);
   if (!fs.existsSync(schemaPath)) {
-    schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'schemas', 'standard.json');
+    schemaPath = path.join(process.cwd(), 'Fabrica_kernel', 'adapters', 'standard.json');
   }
   if (fs.existsSync(schemaPath)) {
     try {
