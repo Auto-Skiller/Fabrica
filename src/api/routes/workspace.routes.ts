@@ -9,7 +9,8 @@ import {
   getWorkspaceMap,
   syncWorkspaceJson,
   listCloudStorageObjects,
-  syncTenantWorkspace
+  syncTenantWorkspace,
+  clearWorkspacePending
 } from '../../core/workspace.js';
 
 const router = Router();
@@ -45,18 +46,30 @@ router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
 // POST /api/workspace/file/write — Write file contents
 router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
-  const { path: filePath, content } = req.body || {};
+  const { path: filePath, content, isImport } = req.body || {};
   if (!filePath || content === undefined) {
     res.status(400).json({ ok: false, error: 'Path and content are required.' });
     return;
   }
   try {
-    const result = writeUserFile(tenantId, filePath, content);
+    const result = writeUserFile(tenantId, filePath, content, Boolean(isImport));
     syncWorkspaceJson(tenantId);
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(400).json({ ok: false, error: err.message });
   }
+});
+
+// POST /api/workspace/clear-pending — Clear pending workspace import/item
+router.post('/clear-pending', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { path: itemPath } = req.body || {};
+  if (!itemPath) {
+    res.status(400).json({ ok: false, error: 'Path/ID is required.' });
+    return;
+  }
+  clearWorkspacePending(tenantId, itemPath);
+  res.json({ ok: true });
 });
 
 // POST /api/workspace/file/move — Move file or directory

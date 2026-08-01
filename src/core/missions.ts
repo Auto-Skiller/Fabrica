@@ -49,6 +49,29 @@ export interface MissionSchema {
   };
 }
 
+export interface MissionPendingItem {
+  id: string;
+  title: string;
+  objective: string;
+  type: string;
+  status: string;
+  created_at: string;
+}
+
+export interface MissionActionItem {
+  id: string;
+  mission_id: string;
+  action: 'created' | 'updated' | 'deleted' | 'moved' | 'processed';
+  details?: Record<string, any>;
+  timestamp: string;
+}
+
+export interface MissionsStoreData {
+  missions: Mission[];
+  pendings: MissionPendingItem[];
+  actions: MissionActionItem[];
+}
+
 export interface Mission {
   id: string;
   title: string;
@@ -75,148 +98,6 @@ export interface Mission {
   created_at?: string;
   updated_at?: string;
 }
-
-export interface PipelineJob {
-  id: string;
-  name: string;
-  tenantId: string;
-  type: 'sync' | 'simulation' | 'audit' | 'custom' | 'mission_step';
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  queuedAt: string;
-  startedAt?: string;
-  endedAt?: string;
-  error?: string;
-  logs: string[];
-  execute: () => Promise<any>;
-}
-
-// ── Pipeline Orchestrator Engine ───────────────────────────────────────────────
-
-class PipelineOrchestrator {
-  private queue: PipelineJob[] = [];
-  private activeWorkers = 0;
-  private maxConcurrency = 4;
-  private activeJobs = new Map<string, PipelineJob>();
-  private completedJobs: PipelineJob[] = [];
-
-  constructor(maxConcurrency = 4) {
-    this.maxConcurrency = maxConcurrency;
-  }
-
-  public enqueue(
-    tenantId: string,
-    type: PipelineJob['type'],
-    name: string,
-    execute: () => Promise<any>
-  ): string {
-    const jobKey = `${tenantId}:${type}`;
-
-    if (this.activeJobs.has(jobKey)) {
-      const activeJob = this.activeJobs.get(jobKey)!;
-      if (activeJob.status === 'queued' || activeJob.status === 'running') {
-        activeJob.logs.push(`[Orchestrator] Coalesced duplicate trigger request received at ${new Date().toISOString()}`);
-        return activeJob.id;
-      }
-    }
-
-    const job: PipelineJob = {
-      id: `job_${Math.random().toString(36).substring(2, 11)}`,
-      name,
-      tenantId,
-      type,
-      status: 'queued',
-      queuedAt: new Date().toISOString(),
-      logs: [`[Orchestrator] Enqueued job: ${name} (type: ${type}) for tenant: "${tenantId}"`],
-      execute
-    };
-
-    this.queue.push(job);
-    this.activeJobs.set(jobKey, job);
-    this.processQueue();
-
-    return job.id;
-  }
-
-  private async processQueue(): Promise<void> {
-    if (this.activeWorkers >= this.maxConcurrency || this.queue.length === 0) {
-      return;
-    }
-
-    const job = this.queue.shift();
-    if (!job) return;
-
-    this.activeWorkers++;
-    job.status = 'running';
-    job.startedAt = new Date().toISOString();
-    job.logs.push(`[Orchestrator] Workers active: ${this.activeWorkers}/${this.maxConcurrency}. Executing job...`);
-
-    try {
-      await job.execute();
-      job.status = 'completed';
-      job.logs.push(`[Orchestrator] Job completed successfully at ${new Date().toISOString()}`);
-    } catch (err: any) {
-      job.status = 'failed';
-      job.error = err.message || String(err);
-      job.logs.push(`[Orchestrator] Job execution failed: ${job.error}`);
-    } finally {
-      job.endedAt = new Date().toISOString();
-      this.activeWorkers--;
-
-      this.completedJobs.push(job);
-      if (this.completedJobs.length > 50) {
-        this.completedJobs.shift();
-      }
-
-      const jobKey = `${job.tenantId}:${job.type}`;
-      this.activeJobs.delete(jobKey);
-      this.processQueue();
-    }
-  }
-
-  public getStatusReport() {
-    const running = Array.from(this.activeJobs.values()).filter(j => j.status === 'running');
-    const queued = this.queue;
-    return {
-      stats: {
-        activeWorkers: this.activeWorkers,
-        maxConcurrency: this.maxConcurrency,
-        pendingJobsCount: queued.length,
-        runningJobsCount: running.length,
-        completedJobsCount: this.completedJobs.length,
-      },
-      activeJobs: running.map(j => ({
-        id: j.id,
-        name: j.name,
-        tenantId: j.tenantId,
-        type: j.type,
-        queuedAt: j.queuedAt,
-        startedAt: j.startedAt,
-        logs: j.logs,
-      })),
-      queuedJobs: queued.map(j => ({
-        id: j.id,
-        name: j.name,
-        tenantId: j.tenantId,
-        type: j.type,
-        queuedAt: j.queuedAt,
-      })),
-      recentCompleted: this.completedJobs.map(j => ({
-        id: j.id,
-        name: j.name,
-        tenantId: j.tenantId,
-        type: j.type,
-        status: j.status,
-        queuedAt: j.queuedAt,
-        startedAt: j.startedAt,
-        endedAt: j.endedAt,
-        error: j.error,
-        durationMs: j.startedAt && j.endedAt ? Date.now() - Date.parse(j.startedAt) : 0,
-      })),
-    };
-  }
-}
-
-export const orchestrator = new PipelineOrchestrator(4);
 
 // ── Mission Schemas Loader ──────────────────────────────────────────────────────
 
@@ -327,10 +208,15 @@ export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
   }
 
   let existingMissions: Mission[] = [];
+  let existingPendings: MissionPendingItem[] = [];
+  let existingActions: MissionActionItem[] = [];
+
   if (fs.existsSync(singleMissionsPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
       existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      existingPendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
+      existingActions = Array.isArray(parsed.actions) ? parsed.actions : [];
     } catch (_) {}
   }
 
@@ -403,12 +289,104 @@ export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
   }
 
   const finalMissions = Array.from(combinedMap.values());
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: finalMissions }, null, 2), 'utf8');
+  fs.writeFileSync(
+    singleMissionsPath,
+    JSON.stringify({ missions: finalMissions, pendings: existingPendings, actions: existingActions }, null, 2),
+    'utf8'
+  );
 
   return finalMissions;
 }
 
 export const syncMissionsDb = syncMissionsJson;
+
+// ── Pending & Actions Helper Store Operations ──────────────────────────────────
+
+export function flagMissionPending(tenantId: string = 'default_user', pending: MissionPendingItem) {
+  const userRoot = getTenantRoot(tenantId);
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  let missions: Mission[] = [];
+  let pendings: MissionPendingItem[] = [];
+  let actions: MissionActionItem[] = [];
+
+  if (fs.existsSync(singleMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
+      missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      pendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
+      actions = Array.isArray(parsed.actions) ? parsed.actions : [];
+    } catch (_) {}
+  }
+
+  if (!pendings.some(p => p.id === pending.id)) {
+    pendings.push(pending);
+  }
+
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
+}
+
+export function recordMissionAction(tenantId: string = 'default_user', action: MissionActionItem) {
+  const userRoot = getTenantRoot(tenantId);
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  let missions: Mission[] = [];
+  let pendings: MissionPendingItem[] = [];
+  let actions: MissionActionItem[] = [];
+
+  if (fs.existsSync(singleMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
+      missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      pendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
+      actions = Array.isArray(parsed.actions) ? parsed.actions : [];
+    } catch (_) {}
+  }
+
+  actions.unshift(action);
+  if (actions.length > 100) actions = actions.slice(0, 100);
+
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
+}
+
+export function getMissionsData(tenantId: string = 'default_user'): MissionsStoreData {
+  const userRoot = getTenantRoot(tenantId);
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  syncMissionsJson(tenantId);
+
+  if (fs.existsSync(singleMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
+      return {
+        missions: Array.isArray(parsed.missions) ? parsed.missions : [],
+        pendings: Array.isArray(parsed.pendings) ? parsed.pendings : [],
+        actions: Array.isArray(parsed.actions) ? parsed.actions : []
+      };
+    } catch (_) {}
+  }
+  return { missions: [], pendings: [], actions: [] };
+}
+
+export function clearMissionPending(tenantId: string = 'default_user', missionId: string) {
+  const userRoot = getTenantRoot(tenantId);
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  if (fs.existsSync(singleMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
+      const missions = Array.isArray(parsed.missions) ? parsed.missions : [];
+      const pendings = (parsed.pendings || []).filter((p: any) => p.id !== missionId);
+      const actions = Array.isArray(parsed.actions) ? parsed.actions : [];
+
+      actions.unshift({
+        id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        mission_id: missionId,
+        action: 'processed',
+        details: { id: missionId },
+        timestamp: new Date().toISOString()
+      });
+
+      fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
+    } catch (_) {}
+  }
+}
 
 // ── Missions CRUD Helpers ─────────────────────────────────────────────────────
 
@@ -439,6 +417,25 @@ export function createMission(
   };
 
   syncMissionWorkspaceArtifacts(newMission);
+
+  // Flag new pending mission & log action (no auto triggering)
+  flagMissionPending(tenantId, {
+    id,
+    title: newMission.title,
+    objective: newMission.objective,
+    type: newMission.type,
+    status: 'pending_processing',
+    created_at: newMission.created_at || new Date().toISOString()
+  });
+
+  recordMissionAction(tenantId, {
+    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    mission_id: id,
+    action: 'created',
+    details: { title: newMission.title, type: newMission.type, objective: newMission.objective },
+    timestamp: new Date().toISOString()
+  });
+
   appendTenantAuditLog(tenantId, {
     type: 'mission',
     event: 'Mission Created',
@@ -466,6 +463,15 @@ export function updateMission(
   };
 
   syncMissionWorkspaceArtifacts(updated);
+
+  recordMissionAction(tenantId, {
+    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    mission_id: missionId,
+    action: 'updated',
+    details: updates,
+    timestamp: new Date().toISOString()
+  });
+
   return updated;
 }
 
@@ -478,6 +484,26 @@ export function deleteMission(tenantId: string = 'default_user', missionId: stri
 
   const missions = getMissions(tenantId).filter(m => m.id !== missionId);
   const singleMissionsPath = path.join(userRoot, 'missions.json');
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions }, null, 2), 'utf8');
+
+  let pendings: MissionPendingItem[] = [];
+  let actions: MissionActionItem[] = [];
+  if (fs.existsSync(singleMissionsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
+      pendings = (parsed.pendings || []).filter((p: any) => p.id !== missionId);
+      actions = parsed.actions || [];
+    } catch (_) {}
+  }
+
+  actions.unshift({
+    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    mission_id: missionId,
+    action: 'deleted',
+    details: { id: missionId },
+    timestamp: new Date().toISOString()
+  });
+  if (actions.length > 100) actions = actions.slice(0, 100);
+
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
   return true;
 }

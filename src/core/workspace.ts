@@ -27,6 +27,23 @@ export interface WorkspaceDeliverableItem {
   modified_at: string;
 }
 
+export interface WorkspacePendingItem {
+  id: string;
+  name: string;
+  path: string;
+  type: 'source' | 'deliverable' | 'imported' | 'file';
+  size: number;
+  created_at: string;
+}
+
+export interface WorkspaceActionItem {
+  id: string;
+  path: string;
+  action: 'imported' | 'created' | 'updated' | 'deleted' | 'moved' | 'processed';
+  details?: Record<string, any>;
+  timestamp: string;
+}
+
 export interface WorkspaceMap {
   sources: {
     discovery_and_scoping: WorkspaceSourceItem[];
@@ -41,6 +58,8 @@ export interface WorkspaceMap {
     completed: WorkspaceDeliverableItem[];
     all: WorkspaceDeliverableItem[];
   };
+  pendings: WorkspacePendingItem[];
+  actions: WorkspaceActionItem[];
   updated_at: string;
 }
 
@@ -83,6 +102,17 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   }
   for (const dd of deliverableDirs) {
     fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
+  }
+
+  let existingPendings: WorkspacePendingItem[] = [];
+  let existingActions: WorkspaceActionItem[] = [];
+
+  if (fs.existsSync(workspaceJsonPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(workspaceJsonPath, 'utf8'));
+      existingPendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
+      existingActions = Array.isArray(parsed.actions) ? parsed.actions : [];
+    } catch (_) {}
   }
 
   const scanDir = (dir: string): any[] => {
@@ -130,6 +160,8 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
       completed: scanDir(path.join(deliverablesDir, 'Completed')),
       all: scanDir(deliverablesDir)
     },
+    pendings: existingPendings,
+    actions: existingActions,
     updated_at: new Date().toISOString()
   };
 
@@ -140,6 +172,50 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   }
 
   return workspaceMap;
+}
+
+export function flagWorkspacePending(tenantId: string = 'default_user', item: WorkspacePendingItem) {
+  const userRoot = getTenantRoot(tenantId);
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  let map = getWorkspaceMap(tenantId);
+  if (!map.pendings) map.pendings = [];
+  if (!map.pendings.some(p => p.path === item.path || p.id === item.id)) {
+    map.pendings.push(item);
+  }
+  try {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+export function recordWorkspaceAction(tenantId: string = 'default_user', action: WorkspaceActionItem) {
+  const userRoot = getTenantRoot(tenantId);
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  let map = getWorkspaceMap(tenantId);
+  if (!map.actions) map.actions = [];
+  map.actions.unshift(action);
+  if (map.actions.length > 100) map.actions = map.actions.slice(0, 100);
+  try {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+export function clearWorkspacePending(tenantId: string = 'default_user', pendingIdOrPath: string) {
+  const userRoot = getTenantRoot(tenantId);
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  let map = getWorkspaceMap(tenantId);
+  if (map.pendings) {
+    map.pendings = map.pendings.filter(p => p.id !== pendingIdOrPath && p.path !== pendingIdOrPath);
+  }
+  if (!map.actions) map.actions = [];
+  map.actions.unshift({
+    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    path: pendingIdOrPath,
+    action: 'processed',
+    timestamp: new Date().toISOString()
+  });
+  try {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
+  } catch (_) {}
 }
 
 export function getWorkspaceMap(tenantId: string = 'default_user'): WorkspaceMap {
@@ -249,7 +325,7 @@ export function readUserFile(tenantId: string, relativePath: string): { content:
   };
 }
 
-export function writeUserFile(tenantId: string, relativePath: string, content: string): { path: string; size: number } {
+export function writeUserFile(tenantId: string, relativePath: string, content: string, isImport: boolean = false): { path: string; size: number } {
   const targetPath = resolveUserPath(tenantId, relativePath);
   const parentDir = path.dirname(targetPath);
   fs.mkdirSync(parentDir, { recursive: true });
@@ -257,16 +333,38 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
 
   const userRoot = getTenantRoot(tenantId);
   const normPath = path.relative(userRoot, targetPath);
+  const size = Buffer.byteLength(content, 'utf8');
+  const filename = path.basename(normPath);
+
+  // Flag new imported or workspace item in pendings
+  if (normPath.startsWith('workspace/') || isImport) {
+    flagWorkspacePending(tenantId, {
+      id: `wksp_p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: filename,
+      path: normPath,
+      type: isImport ? 'imported' : normPath.startsWith('workspace/Sources') ? 'source' : normPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file',
+      size,
+      created_at: new Date().toISOString()
+    });
+  }
+
+  recordWorkspaceAction(tenantId, {
+    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    path: normPath,
+    action: isImport ? 'imported' : 'created',
+    details: { size },
+    timestamp: new Date().toISOString()
+  });
 
   appendTenantAuditLog(tenantId, {
     type: 'user',
     event: 'File Written',
-    details: { path: normPath, size: Buffer.byteLength(content, 'utf8') }
+    details: { path: normPath, size }
   });
 
   return {
     path: normPath,
-    size: Buffer.byteLength(content, 'utf8')
+    size
   };
 }
 
@@ -288,6 +386,14 @@ export function moveUserFile(tenantId: string, srcRelativePath: string, destRela
   let size = 0;
   try { size = fs.statSync(destPath).size; } catch (_) {}
 
+  recordWorkspaceAction(tenantId, {
+    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    path: normDest,
+    action: 'moved',
+    details: { src: normSrc, dest: normDest, size },
+    timestamp: new Date().toISOString()
+  });
+
   return { src: normSrc, dest: normDest, size };
 }
 
@@ -295,12 +401,25 @@ export function deleteUserFile(tenantId: string, relativePath: string): boolean 
   const targetPath = resolveUserPath(tenantId, relativePath);
   if (!fs.existsSync(targetPath)) return false;
 
+  const userRoot = getTenantRoot(tenantId);
+  const normPath = path.relative(userRoot, targetPath);
+
   const stat = fs.statSync(targetPath);
   if (stat.isDirectory()) {
     fs.rmSync(targetPath, { recursive: true, force: true });
   } else {
     fs.unlinkSync(targetPath);
   }
+
+  clearWorkspacePending(tenantId, normPath);
+
+  recordWorkspaceAction(tenantId, {
+    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    path: normPath,
+    action: 'deleted',
+    timestamp: new Date().toISOString()
+  });
+
   return true;
 }
 

@@ -1,9 +1,9 @@
 # Infrastructure & Systems Guide
 
 > **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
-> All infrastructure services (sandboxed VM execution, multi-tenant database partitioning, hybrid storage, search engines, and pipeline orchestrators) are engineered to support the 24/7 autonomous business pipeline without requiring any technical setup from the user.
+> All infrastructure services (sandboxed VM execution, multi-tenant database partitioning, hybrid storage, search engines, and agent daemons) are engineered to support the 24/7 autonomous business pipeline without requiring any technical setup from the user.
 
-This guide describes the physical and logical layout of the Fabrica application, including database clients, sandboxed execution, pipeline orchestrators, hybrid storage, search engines, and multi-user scaling.
+This guide describes the physical and logical layout of the Fabrica application, including database clients, sandboxed execution, daemon processes, hybrid storage, search engines, and multi-user scaling.
 
 ## 1. RUNTIME & NETWORK CONSTRAINTS
 - **The Port 3000 Rule**: The application runs behind an Nginx reverse proxy routing external web traffic exclusively on **Port 3000**. All development and production web servers MUST run on port 3000. Other ports are inaccessible from outside the sandboxed container.
@@ -33,9 +33,8 @@ To safely execute dynamic user or AI-generated scripts without security risks:
 
 ---
 
-## 4. HIGH-CONCURRENCY PIPELINE ORCHESTRATOR (`/src/core/missions.ts` & `/src/core/harness.ts`)
-To handle background syncs and agentic mission execution without process bottlenecks:
-- **Worker Pool**: Uses a queue-based task scheduler with configurable concurrency.
+## 4. AGENT DAEMON & PROCESS ISOLATION (`/src/core/harness.ts`)
+To handle autonomous background tasks and agentic mission execution:
 - **Interactive Daemon Session & Single Daemon Policy**: All agent executions run via persistent interactive daemon sessions (`PiDaemonProcess`). Enforces a strict 1:1 binding per tenant ID with zero concurrent daemon threads per tenant.
 - **Workspace CWD & Native Session Isolation**: Process CWD is explicitly set to `/workspaces/<tenantId>/`. Uses `PI_CODING_AGENT_DIR=/workspaces/<tenantId>/.pi/` with native session management inside `.pi/agent/sessions/`.
 - **Path Traversal Protection**: Target path resolving is validated with absolute boundary checks (`path.resolve` verifying target paths start with `/workspaces/<tenantId>`).

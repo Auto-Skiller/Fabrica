@@ -6,7 +6,8 @@ import {
   updateMission,
   deleteMission,
   getMissionSchema,
-  orchestrator
+  getMissionsData,
+  clearMissionPending
 } from '../../core/missions.js';
 
 const router = Router();
@@ -16,6 +17,25 @@ router.get('/', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const missions = getMissions(tenantId);
   res.json({ ok: true, missions });
+});
+
+// GET /api/missions/data — List missions with pendings & actions
+router.get('/data', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const storeData = getMissionsData(tenantId);
+  res.json({ ok: true, ...storeData });
+});
+
+// POST /api/missions/clear-pending — Clear a pending mission flag
+router.post('/clear-pending', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { id } = req.body || {};
+  if (!id) {
+    res.status(400).json({ ok: false, error: 'Mission ID is required.' });
+    return;
+  }
+  clearMissionPending(tenantId, id);
+  res.json({ ok: true });
 });
 
 // POST /api/missions/create — Create new mission
@@ -63,12 +83,6 @@ router.get('/schema', (req: AuthenticatedRequest, res: Response) => {
   const type = (req.query.type as string) || 'standard';
   const schema = getMissionSchema(type);
   res.json({ ok: true, schema });
-});
-
-// GET /api/missions/orchestrator/status — Get pipeline orchestrator queue status
-router.get('/orchestrator/status', (req: AuthenticatedRequest, res: Response) => {
-  const report = orchestrator.getStatusReport();
-  res.json({ ok: true, orchestrator: report });
 });
 
 export default router;

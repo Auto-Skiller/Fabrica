@@ -34,6 +34,8 @@ export const harnessApi = {
   getPiModels: () => request<{ ok: boolean; models: any[] }>('/api/harness/models'),
   getHarnessLogs: () => request<{ ok: boolean; logs: any[] }>('/api/harness/logs'),
   getHarnessConfig: () => request<{ ok: boolean; config: any }>('/api/harness/config'),
+  getHarnessState: (tenantId: string = 'default_user') => request<{ ok: boolean; harness: any }>(`/api/harness/state?tenantId=${encodeURIComponent(tenantId)}`),
+  updateHarnessState: (updates: Record<string, any>) => request<{ ok: boolean; harness: any }>('/api/harness/state', { method: 'POST', body: JSON.stringify(updates) }),
   getModels: () => harnessApi.getPiModels().then(res => res.models || []).catch(() => []),
 
   deepResearch: (query: string, model?: string, customKey?: string, sessionId?: string) =>

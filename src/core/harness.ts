@@ -263,11 +263,16 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       status: "idle",
       selected_model: "gemini-3.6-flash",
       autonomy: "autonomous",
+      autonomy_interval: 20,
       agent_lang: "EN",
+      output_language: "EN",
       web_search_enabled: true,
       suggestions: [],
+      suggestion_cards: [],
       backlogs: [],
+      backlog: [],
       review_queues: [],
+      review: [],
       last_active: new Date().toISOString()
     }, null, 2), 'utf8');
   }
@@ -344,6 +349,105 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   };
 }
 
+export function getHarnessState(tenantId: string = 'default_user'): Record<string, any> {
+  ensureUserHarness(tenantId);
+  const userRoot = getTenantRoot(tenantId);
+  const harnessJsonPath = path.join(userRoot, 'harness.json');
+  try {
+    if (fs.existsSync(harnessJsonPath)) {
+      const data = JSON.parse(fs.readFileSync(harnessJsonPath, 'utf8'));
+      const lang = data.agent_lang || data.output_language || 'EN';
+      const suggestions = data.suggestions || data.suggestion_cards || [];
+      const backlog = data.backlog || data.backlogs || [];
+      const review = data.review || data.review_queues || [];
+      const interval = data.autonomy_interval ?? data.autonomyInterval ?? 20;
+
+      const autoMissions = data.auto_missions_processing ?? data.autoMissionsProcessing ?? true;
+      const autoImports = data.auto_imports_processing ?? data.autoImportsProcessing ?? true;
+
+      return {
+        tenant_id: tenantId,
+        status: data.status || 'idle',
+        selected_model: data.selected_model || 'gemini-3.6-flash',
+        autonomy: data.autonomy || 'autonomous',
+        autonomy_interval: Number(interval),
+        auto_missions_processing: Boolean(autoMissions),
+        auto_imports_processing: Boolean(autoImports),
+        agent_lang: lang,
+        output_language: lang,
+        web_search_enabled: data.web_search_enabled ?? true,
+        suggestions,
+        suggestion_cards: suggestions,
+        backlogs: backlog,
+        backlog,
+        review_queues: review,
+        review,
+        last_active: data.last_active || new Date().toISOString()
+      };
+    }
+  } catch (_) {}
+
+  return {
+    tenant_id: tenantId,
+    status: 'idle',
+    selected_model: 'gemini-3.6-flash',
+    autonomy: 'autonomous',
+    autonomy_interval: 20,
+    auto_missions_processing: true,
+    auto_imports_processing: true,
+    agent_lang: 'EN',
+    output_language: 'EN',
+    web_search_enabled: true,
+    suggestions: [],
+    suggestion_cards: [],
+    backlogs: [],
+    backlog: [],
+    review_queues: [],
+    review: [],
+    last_active: new Date().toISOString()
+  };
+}
+
+export function updateHarnessState(tenantId: string = 'default_user', updates: Record<string, any>): Record<string, any> {
+  const current = getHarnessState(tenantId);
+  const userRoot = getTenantRoot(tenantId);
+  const harnessJsonPath = path.join(userRoot, 'harness.json');
+
+  const lang = updates.agent_lang || updates.output_language || current.agent_lang;
+  const suggestionsList = updates.suggestions || updates.suggestion_cards || current.suggestions;
+  const backlogList = updates.backlogs || updates.backlog || current.backlog;
+  const reviewList = updates.review_queues || updates.review || current.review;
+  const interval = updates.autonomy_interval ?? updates.autonomyInterval ?? current.autonomy_interval ?? 20;
+  const autoMissions = updates.auto_missions_processing ?? updates.autoMissionsProcessing ?? current.auto_missions_processing ?? true;
+  const autoImports = updates.auto_imports_processing ?? updates.autoImportsProcessing ?? current.auto_imports_processing ?? true;
+
+  const merged = {
+    ...current,
+    ...updates,
+    tenant_id: tenantId,
+    agent_lang: lang,
+    output_language: lang,
+    autonomy_interval: Number(interval),
+    auto_missions_processing: Boolean(autoMissions),
+    auto_imports_processing: Boolean(autoImports),
+    suggestions: suggestionsList,
+    suggestion_cards: suggestionsList,
+    backlogs: backlogList,
+    backlog: backlogList,
+    review_queues: reviewList,
+    review: reviewList,
+    last_active: new Date().toISOString()
+  };
+
+  try {
+    fs.writeFileSync(harnessJsonPath, JSON.stringify(merged, null, 2), 'utf8');
+  } catch (err) {
+    console.warn(`[harness] Failed to update harness.json for tenant ${tenantId}:`, err);
+  }
+
+  return merged;
+}
+
 export function loadKernelSystemPrompts(tenantId: string = 'default_user'): string {
   const kernelPromptsDir = path.join(process.cwd(), 'Fabrica_kernel', 'system_prompts');
   let combinedPrompts = '';
@@ -370,6 +474,16 @@ export function loadKernelSystemPrompts(tenantId: string = 'default_user'): stri
       }
     } catch (_) {}
   }
+
+  // Inject Realtime Harness State from harness.json
+  const harnessData = getHarnessState(tenantId);
+  combinedPrompts += `\n\n[HARNESS REALTIME STATE DIRECTIVES]:\n` +
+    `- Output Language: ${harnessData.output_language || harnessData.agent_lang || 'EN'}\n` +
+    `- Autonomy Mode: ${harnessData.autonomy || 'autonomous'} (Heartbeat Interval: ${harnessData.autonomy_interval || 20}s)\n` +
+    `- Active Model Selection: ${harnessData.selected_model || 'gemini-3.6-flash'}\n` +
+    `- Active Backlog Items (${(harnessData.backlog || []).length}): ${JSON.stringify(harnessData.backlog || [])}\n` +
+    `- Active Review Queue (${(harnessData.review || []).length}): ${JSON.stringify(harnessData.review || [])}\n` +
+    `- Active Suggestion Cards: ${JSON.stringify(harnessData.suggestions || [])}\n`;
 
   return combinedPrompts;
 }
@@ -429,6 +543,15 @@ export function getPiExecutionOptions(
 export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentResponse> {
   const tenantId = options.tenantId || 'default_user';
   ensureUserHarness(tenantId);
+
+  updateHarnessState(tenantId, {
+    status: 'running',
+    selected_model: options.model || 'gemini-3.6-flash',
+    agent_lang: options.agentLang || 'EN',
+    output_language: options.agentLang || 'EN',
+    web_search_enabled: options.webSearchEnabled ?? true
+  });
+
   const userRoot = getTenantRoot(tenantId);
   const execOpts = getPiExecutionOptions(tenantId, options.disableWorkspaceSkills, options.disableWorkspaceExtensions);
 
@@ -568,9 +691,10 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       const inTokens = resParsed.usage?.inputTokens || Math.max(50, Math.round(options.prompt.length / 4));
       const outTokens = resParsed.usage?.outputTokens || Math.max(20, Math.round((resParsed.text || '').length / 4));
       try { deductLlmCredits(tenantId, fullModel, inTokens, outTokens); } catch (_) {}
+      updateHarnessState(tenantId, { status: 'idle', suggestions: resParsed.suggestions || [] });
       return resParsed;
     } catch (err: any) {
-      return {
+      const errRes = {
         ok: false,
         text: `Error executing pi agent: ${err.message}`,
         suggestions: ["Check API Key", "Retry request"],
@@ -578,6 +702,8 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
         model: fullModel,
         error: err.message
       };
+      updateHarnessState(tenantId, { status: 'idle', suggestions: errRes.suggestions });
+      return errRes;
     }
   }
 
@@ -630,6 +756,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       const outTokens = result.usage?.outputTokens || Math.max(20, Math.round((result.text || '').length / 4));
       try { deductLlmCredits(tenantId, fullModel, inTokens, outTokens); } catch (_) {}
 
+      updateHarnessState(tenantId, { status: 'idle', suggestions: result.suggestions || [] });
       return result;
     } catch (err: any) {
       const msg = (err.message || '').toLowerCase();
@@ -644,7 +771,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
     }
   }
 
-  return {
+  const limitRes = {
     ok: false,
     text: "Rate limit temporarily reached due to high platform traffic. Shared complimentary tokens are currently busy. Please wait 30 seconds or configure your custom API key (BYOK).",
     suggestions: ["Retry request", "Configure custom API key"],
@@ -652,6 +779,8 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
     model: fullModel,
     error: "RATE_LIMIT_EXHAUSTED"
   };
+  updateHarnessState(tenantId, { status: 'idle', suggestions: limitRes.suggestions });
+  return limitRes;
 }
 
 function parsePiJsonOutput(stdout: string, sessionId: string, model: string): PiAgentResponse {

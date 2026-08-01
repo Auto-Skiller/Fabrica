@@ -23,15 +23,12 @@ External modular service servers that expose standardized tool APIs, resources, 
 ### C. Sandboxed Code Execution Engine (`POST /api/sandbox/execute`)
 A secure VM execution channel allowing agents to run dynamically generated JavaScript/TypeScript routines within an isolated context with prototype locks and time budgets.
 
-### D. Pipeline Orchestrator Status (`GET /api/pipeline/status`)
-Exposes live task queue metrics, worker thread pool stats, and background mission simulation health.
-
-### E. Model Selection & Live Streaming Voice
+### D. Model Selection & Live Streaming Voice
 - **Model Selector (`chatModel`)**: Dynamic model provider switching (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`).
 - **Live Voice Stream (🎙️)**: Real-time bi-directional voice streaming channel adjacent to active session controls.
 
-### F. Domain Skills & Secondary Agents
-Sub-agents or specialist LLM pipelines spawned by the orchestrator to solve nested tasks in parallel (e.g., a "QA testing agent", "database administrator agent").
+### E. Domain Skills & Secondary Agents
+Sub-agents or specialist LLM pipelines spawned to solve nested tasks in parallel (e.g., a "QA testing agent", "database administrator agent").
 
 ---
 

@@ -9,7 +9,9 @@ import {
   deletePiSession,
   listPiModels,
   getPiProcessLogs,
-  ensureUserHarness
+  ensureUserHarness,
+  getHarnessState,
+  updateHarnessState
 } from '../../core/harness.js';
 
 const router = Router();
@@ -105,6 +107,21 @@ router.get('/config', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const info = ensureUserHarness(tenantId);
   res.json({ ok: true, config: info.config });
+});
+
+// GET /api/harness/state — Get harness realtime json state
+router.get('/state', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const state = getHarnessState(tenantId);
+  res.json({ ok: true, harness: state });
+});
+
+// POST /api/harness/state — Update harness realtime json state
+router.post('/state', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const updates = req.body || {};
+  const updated = updateHarnessState(tenantId, updates);
+  res.json({ ok: true, harness: updated });
 });
 
 export default router;

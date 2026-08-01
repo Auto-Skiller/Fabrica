@@ -12,7 +12,6 @@ import { MissionsYaml } from '../../components/missions/types';
 import { ToolboxesYaml, InboxYaml } from '../../components/workspace/types';
 
 const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });
-const MissionGraph = dynamic(() => import('../../components/missions/MissionGraph'), { ssr: false });
 
 const DependencyGraph = dynamic(() => import('../../components/missions/DependencyGraph'), { ssr: false });
 import { AccountWorkspaceModal } from '../../components/auth/AccountWorkspaceModal';
@@ -1883,9 +1882,11 @@ export default function Dashboard() {
 
     if (backlogUpdated) {
       await api.patchEntity(activeEntity, 'runtime', ['backlog'], currentBacklog);
+      await harnessApi.updateHarnessState({ backlog: currentBacklog, backlogs: currentBacklog }).catch(() => {});
     }
     if (reviewUpdated) {
       await api.patchEntity(activeEntity, 'runtime', ['review_queue'], currentReviews);
+      await harnessApi.updateHarnessState({ review: currentReviews, review_queues: currentReviews }).catch(() => {});
     }
     await fetchWorkspaceData();
   };
@@ -1981,6 +1982,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     }
     try {
       await api.patchEntity(activeEntity, 'runtime', ['backlog'], listToSave);
+      await harnessApi.updateHarnessState({ backlog: listToSave, backlogs: listToSave }).catch(() => {});
       await fetchWorkspaceData();
       setToast({
         message: showAutoMsg ? 'Strategic backlog cleared! Auto-generated agent vision goals.' : 'Strategic backlog updated successfully!',
@@ -2005,6 +2007,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     setIsSavingBacklog(true);
     try {
       await api.patchEntity(activeEntity, 'runtime', ['backlog'], nextBacklog);
+      await harnessApi.updateHarnessState({ backlog: nextBacklog, backlogs: nextBacklog }).catch(() => {});
       await fetchWorkspaceData();
       setToast({
         message: 'Successfully removed from strategic backlog!',
@@ -2028,6 +2031,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     setIsSavingReview(true);
     try {
       await api.patchEntity(activeEntity, 'runtime', ['review_queue'], updatedList);
+      await harnessApi.updateHarnessState({ review: updatedList, review_queues: updatedList }).catch(() => {});
       await fetchWorkspaceData();
       setToast({
         message: 'Review queue updated successfully!',
@@ -3209,7 +3213,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [realtimeTableFilter, setRealtimeTableFilter] = useState<string>('all');
   const [realtimeEventFilter, setRealtimeEventFilter] = useState<string>('all');
   const [autonomyLevel, setAutonomyLevel] = useState<'autonomous' | 'semi-autonomous' | 'manual'>('autonomous');
+  const [autonomyInterval, setAutonomyInterval] = useState<number>(20);
   const [isAutonomyOn, setIsAutonomyOn] = useState<boolean>(true);
+  const [autoMissionsProcessing, setAutoMissionsProcessing] = useState<boolean>(true);
+  const [autoImportsProcessing, setAutoImportsProcessing] = useState<boolean>(true);
   const [lastHeartbeatTime, setLastHeartbeatTime] = useState<string>('');
   const [heartbeatStatus, setHeartbeatStatus] = useState<'testing' | 'active' | 'no_key' | 'no_context' | 'error'>('testing');
   const [heartbeatStatusText, setHeartbeatStatusText] = useState<string>('Testing API Key & workspace context...');
@@ -3234,6 +3241,34 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
 
     const savedAgentLang = (localStorage.getItem('fabrica_agent_lang') as 'EN' | 'FR' | 'AR') || 'EN';
     setAgentLang(savedAgentLang);
+
+    harnessApi.getHarnessState(activeEntity || 'default_user').then(res => {
+      if (res.ok && res.harness) {
+        if (res.harness.agent_lang) {
+          setAgentLang(res.harness.agent_lang as any);
+          localStorage.setItem('fabrica_agent_lang', res.harness.agent_lang);
+        }
+        if (typeof res.harness.autonomy_interval === 'number') {
+          setAutonomyInterval(res.harness.autonomy_interval);
+        }
+        if (typeof res.harness.auto_missions_processing === 'boolean') {
+          setAutoMissionsProcessing(res.harness.auto_missions_processing);
+        }
+        if (typeof res.harness.auto_imports_processing === 'boolean') {
+          setAutoImportsProcessing(res.harness.auto_imports_processing);
+        }
+        if (res.harness.autonomy) {
+          if (res.harness.autonomy === 'off') {
+            setIsAutonomyOn(false);
+          } else {
+            setIsAutonomyOn(true);
+            if (['autonomous', 'semi-autonomous', 'manual'].includes(res.harness.autonomy)) {
+              setAutonomyLevel(res.harness.autonomy as any);
+            }
+          }
+        }
+      }
+    }).catch(() => {});
 
     const isHeroDismissed = localStorage.getItem('pb_hero_dismissed') === '1';
     setHeroCollapsed(isHeroDismissed);
@@ -3603,6 +3638,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     setAgentLang(lang);
     localStorage.setItem('fabrica_agent_lang', lang);
     window.dispatchEvent(new CustomEvent('fabrica:agent-lang-change', { detail: lang }));
+    harnessApi.updateHarnessState({ agent_lang: lang, output_language: lang }).catch(() => {});
   };
 
   const toggleTheme = () => {
@@ -4381,6 +4417,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
           sync_daemon: true
         }
       });
+      await harnessApi.updateHarnessState({
+        autonomy: newLevel,
+        autonomy_interval: autonomyInterval
+      }).catch(() => {});
       setToast({
         message: `Autonomy set to ${newLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}!`,
         type: 'success',
@@ -4412,7 +4452,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         // Fallback to saving directly in DB if patchEntity failed
       }
 
-      // Also persist to SQLite/DB to ensure persistent state transition across custom & preset missions
+      // Also persist to JSON store to ensure persistent state transition across custom & preset missions
       await api.saveDbMission({
         ...mission,
         status: normalizedStatus,
@@ -4483,6 +4523,35 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
 
       try {
         const keyToUse = activeKey === 'backend' ? undefined : activeKey;
+        const tenantKey = user?.id || activeEntity || 'default_user';
+
+        // Fetch missions data and workspace map to retrieve pendings & actions
+        let mPendings: any[] = [];
+        let mActions: any[] = [];
+        let wPendings: any[] = [];
+        let wActions: any[] = [];
+
+        try {
+          const mRes = await fetch(`/api/missions/data?tenantId=${encodeURIComponent(tenantKey)}`);
+          const mData = await mRes.json();
+          if (mData && mData.ok) {
+            mPendings = mData.pendings || [];
+            mActions = mData.actions || [];
+          }
+        } catch (e) {
+          console.warn('Failed to fetch missions data:', e);
+        }
+
+        try {
+          const wRes = await fetch(`/api/workspace/map?tenantId=${encodeURIComponent(tenantKey)}`);
+          const wData = await wRes.json();
+          if (wData && wData.ok && wData.map) {
+            wPendings = wData.map.pendings || [];
+            wActions = wData.map.actions || [];
+          }
+        } catch (e) {
+          console.warn('Failed to fetch workspace map:', e);
+        }
         
         const missionsSummary = (missions || []).slice(0, 10).map((m: any) => {
           const id = m.id || m.name;
@@ -4499,29 +4568,48 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
           return `• Session ${idx + 1} (${s.name || s.id}): ${lastMsg}`;
         }).join('\n');
 
+        const pendingMissionsSummary = mPendings.map((p: any) => `• Pending Mission [ID: ${p.id}] "${p.title}" (Objective: ${p.objective || 'N/A'}) Added at: ${p.addedAt}`).join('\n');
+        const missionActionsSummary = mActions.slice(-5).map((a: any) => `• Mission Action [${a.action.toUpperCase()}] ID: ${a.id} "${a.title || ''}" at ${a.timestamp}`).join('\n');
+
+        const pendingImportsSummary = wPendings.map((p: any) => `• Pending Imported Item: ${p.path} (Size: ${p.size || 0} bytes) Added at: ${p.addedAt}`).join('\n');
+        const workspaceActionsSummary = wActions.slice(-5).map((a: any) => `• Workspace Action [${a.action.toUpperCase()}] Path: ${a.path} at ${a.timestamp}`).join('\n');
+
         const heartbeatPrompt = `[AUTONOMOUS AGENT HEARTBEAT CYCLE - ${timeStr}]
 You are Fabrica's Autonomous AI Agent running in DIRECTOR (Full Auto) mode.
-Evaluate current workspace state, databases, and recent session logs, then decide if any mission or system needs your direct intervention.
+Evaluate current workspace state, pending items, recent actions, and session logs, then decide if any mission or system needs your direct intervention.
+
+AUTONOMY CONFIGURATION:
+- Auto Missions Processing: ${autoMissionsProcessing ? 'ENABLED (ON)' : 'DISABLED (OFF)'}
+- Auto Imports Processing: ${autoImportsProcessing ? 'ENABLED (ON)' : 'DISABLED (OFF)'}
 
 CURRENT WORKSPACE CONTEXT:
-- Active Tenant/Entity: ${activeEntity || 'default_user'}
+- Active Tenant/Entity: ${tenantKey}
 - Company Objective: ${boardContent || 'Build & optimize business software microservices'}
 - Active Missions (${missions?.length || 0}):
 ${missionsSummary || 'None'}
+- PENDING MISSIONS (New Unprocessed Missions: ${mPendings.length}):
+${pendingMissionsSummary || 'None pending'}
+- RECENT MISSION ACTIONS (Edits/Removals: ${mActions.length}):
+${missionActionsSummary || 'None recent'}
 - System Components (${systemComponents?.length || 0}):
 ${systemsSummary || 'None'}
 - Raw Data Sources (${rawDataList?.length || 0}):
 ${rawDataSummary || 'None'}
+- PENDING IMPORTS (New Imported Files/Items: ${wPendings.length}):
+${pendingImportsSummary || 'None pending'}
+- RECENT WORKSPACE ACTIONS (File writes/moves/deletions: ${wActions.length}):
+${workspaceActionsSummary || 'None recent'}
 - Recent Session Logs (Last 2 Sessions):
 ${lastSessionsSummary || 'None'}
 
 AGENT DIRECTIVES:
-1. Examine active missions and session summaries. If a DRAFT/PLANNING mission is ready to advance based on available context, select it to advance.
-2. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
-3. If no mission requires phase movement right now, provide a 1-sentence status assessment of current infrastructure.
-4. Keep your response brief, professional, and clear.`;
+1. Examine active missions, pending missions, and pending imports.
+2. If Auto Missions Processing is ENABLED and there are pending missions, evaluate and process them (e.g. advance ready missions or draft execution plans).
+3. If Auto Imports Processing is ENABLED and there are pending imports, inspect and analyze the newly imported data or system components.
+4. Note recent actions (edits, removals, moves) to maintain up-to-date accurate awareness of the workspace without hallucinating outdated files or missions.
+5. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
+6. Keep your response brief, professional, and clear.`;
 
-        const tenantKey = user?.id || activeEntity || 'default_user';
         const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang, activeSessionId, tenantKey, true);
 
         if (res && res.ok && res.text) {
@@ -4540,6 +4628,36 @@ AGENT DIRECTIVES:
                 type: 'success',
                 isOpen: true
               });
+            }
+          }
+
+          // Clear processed pending missions if autoMissionsProcessing was active
+          if (autoMissionsProcessing && mPendings.length > 0) {
+            for (const pItem of mPendings) {
+              try {
+                await fetch('/api/missions/clear-pending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tenantId: tenantKey, id: pItem.id })
+                });
+              } catch (e) {
+                console.warn(`Failed to clear pending mission ${pItem.id}:`, e);
+              }
+            }
+          }
+
+          // Clear processed pending imports if autoImportsProcessing was active
+          if (autoImportsProcessing && wPendings.length > 0) {
+            for (const pItem of wPendings) {
+              try {
+                await fetch('/api/workspace/clear-pending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tenantId: tenantKey, path: pItem.path })
+                });
+              } catch (e) {
+                console.warn(`Failed to clear pending workspace import ${pItem.path}:`, e);
+              }
             }
           }
 
@@ -4569,13 +4687,14 @@ AGENT DIRECTIVES:
     // Execute heartbeat initial check
     runHeartbeat();
 
-    // Set heartbeat interval (every 20s)
+    // Set heartbeat interval (realtimed from autonomyInterval setting)
+    const intervalMs = Math.max(3000, (autonomyInterval || 20) * 1000);
     const interval = setInterval(() => {
       runHeartbeat();
-    }, 20000);
+    }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [isAutonomyOn, autonomyLevel, activeEntity]);
+  }, [isAutonomyOn, autonomyLevel, autonomyInterval, activeEntity]);
 
   const handleUpdateMissionField = async (mission: any, fieldPath: string[], value: any) => {
     try {
@@ -12084,6 +12203,7 @@ ${isDirector ? `
               onClick={() => {
                 const nextState = !isAutonomyOn;
                 setIsAutonomyOn(nextState);
+                harnessApi.updateHarnessState({ autonomy: nextState ? autonomyLevel : 'off' }).catch(() => {});
                 setToast({
                   message: `Autonomy turned ${nextState ? 'ON' : 'OFF'} (${nextState ? (autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER') : 'SUPERVISED'})!`,
                   type: 'info',
@@ -12204,6 +12324,60 @@ ${isDirector ? `
                   </div>
                   <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
                 </button>
+
+                <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '6px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ fontSize: '8px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '2px' }}>⚡ Auto Processing Toggles</div>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextVal = !autoMissionsProcessing;
+                      setAutoMissionsProcessing(nextVal);
+                      harnessApi.updateHarnessState({ auto_missions_processing: nextVal }).catch(() => {});
+                      setToast({
+                        message: `Auto Missions Processing set to ${nextVal ? 'ON' : 'OFF'}`,
+                        type: 'info',
+                        isOpen: true
+                      });
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px',
+                      borderRadius: '4px', border: '1px solid var(--border-soft)',
+                      background: autoMissionsProcessing ? 'rgba(16,185,129,0.1)' : 'var(--surface-alt)',
+                      color: 'var(--text)', cursor: 'pointer', fontSize: '8px', fontWeight: 800
+                    }}
+                  >
+                    <span>🎯 Auto Missions Processing</span>
+                    <span style={{ fontSize: '8px', fontWeight: 900, color: autoMissionsProcessing ? '#10b981' : '#ef4444' }}>
+                      {autoMissionsProcessing ? '🟢 ON' : '🔴 OFF'}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextVal = !autoImportsProcessing;
+                      setAutoImportsProcessing(nextVal);
+                      harnessApi.updateHarnessState({ auto_imports_processing: nextVal }).catch(() => {});
+                      setToast({
+                        message: `Auto Imports Processing set to ${nextVal ? 'ON' : 'OFF'}`,
+                        type: 'info',
+                        isOpen: true
+                      });
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px',
+                      borderRadius: '4px', border: '1px solid var(--border-soft)',
+                      background: autoImportsProcessing ? 'rgba(16,185,129,0.1)' : 'var(--surface-alt)',
+                      color: 'var(--text)', cursor: 'pointer', fontSize: '8px', fontWeight: 800
+                    }}
+                  >
+                    <span>📦 Auto Imports Processing</span>
+                    <span style={{ fontSize: '8px', fontWeight: 900, color: autoImportsProcessing ? '#10b981' : '#ef4444' }}>
+                      {autoImportsProcessing ? '🟢 ON' : '🔴 OFF'}
+                    </span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
