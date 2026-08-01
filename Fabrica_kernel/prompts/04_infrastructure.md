@@ -1,5 +1,8 @@
 # Infrastructure & Systems Guide
 
+> **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
+> All infrastructure services (sandboxed VM execution, multi-tenant database partitioning, hybrid storage, search engines, and pipeline orchestrators) are engineered to support the 24/7 autonomous business pipeline without requiring any technical setup from the user.
+
 This guide describes the physical and logical layout of the Fabrica application, including database clients, sandboxed execution, pipeline orchestrators, hybrid storage, search engines, and multi-user scaling.
 
 ## 1. RUNTIME & NETWORK CONSTRAINTS

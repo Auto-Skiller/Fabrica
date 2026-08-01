@@ -316,10 +316,7 @@ export async function generateLlmText(options: GenerateLlmOptions): Promise<stri
 }
 
 const app = express();
-console.log(`[daemon] Debug: process.env.PORT = "${process.env.PORT}"`);
-const parsedPort = process.env.PORT ? parseInt(process.env.PORT, 10) : NaN;
-const PORT = !isNaN(parsedPort) ? parsedPort : 3000;
-console.log(`[daemon] Debug: Resolved PORT = ${PORT}`);
+const PORT = 3000;
 
 app.use(express.json());
 

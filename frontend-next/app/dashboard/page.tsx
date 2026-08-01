@@ -1546,7 +1546,6 @@ export default function Dashboard() {
   const [planningPhaseFilter, setPlanningPhaseFilter] = useState<string>('ALL');
   const [executionPhaseFilter, setExecutionPhaseFilter] = useState<string>('ALL');
   const [deliveryPhaseFilter, setDeliveryPhaseFilter] = useState<string>('ALL');
-  const [pipelineConfigActiveTab, setPipelineConfigActiveTab] = useState<'gates' | 'efforts' | 'verification'>('gates');
 
   // Approval Gates toggles across loops and non-loops
   const [approvalGates, setApprovalGates] = useState<Record<string, boolean>>({
@@ -13635,161 +13634,122 @@ ${isDirector ? `
               </button>
             </div>
 
-            {/* Tab Navigation Bar */}
-            <div style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--border-soft)',
-              background: 'rgba(0,0,0,0.15)',
-              padding: '0 12px'
-            }}>
-              <button
-                onClick={() => setPipelineConfigActiveTab('gates')}
-                style={{
-                  padding: '8px 14px',
-                  fontSize: '9.5px',
-                  fontWeight: 800,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: pipelineConfigActiveTab === 'gates' ? '2px solid #3b82f6' : '2px solid transparent',
-                  color: pipelineConfigActiveTab === 'gates' ? '#3b82f6' : 'var(--muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <span>🛡️ Approval Gates</span>
-              </button>
-              <button
-                onClick={() => setPipelineConfigActiveTab('efforts')}
-                style={{
-                  padding: '8px 14px',
-                  fontSize: '9.5px',
-                  fontWeight: 800,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: pipelineConfigActiveTab === 'efforts' ? '2px solid #f59e0b' : '2px solid transparent',
-                  color: pipelineConfigActiveTab === 'efforts' ? '#f59e0b' : 'var(--muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <span>⚡ Loop Effort Levels</span>
-              </button>
-            </div>
+            {/* Unified Controls - No Tabs */}
 
             {/* Body */}
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '65vh', overflowY: 'auto' }}>
-              {pipelineConfigActiveTab === 'gates' ? (
-                <>
-                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
-                    ℹ️ <b>Gate Logic:</b> When an approval gate is <b>ON</b>, the autonomous agent will pause execution at that specific phase step and await your explicit confirmation before advancing.
-                  </div>
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '9px',
+                color: 'var(--text)',
+                lineHeight: 1.5,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                <div>
+                  ℹ️ <b>Quality Gates:</b> When an approval gate is <b>ON</b>, the agent pauses execution at that step to await your explicit confirmation before advancing.
+                </div>
+                <div>
+                  ⚡ <b>Effort Scaling:</b> For <b>LOOP</b> components, adjust reasoning depth, web crawl iterations, and retry caps. Non-loop phases execute deterministically.
+                </div>
+              </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {[
-                      { key: 'discovery_scoping', phase: '1. Drafting', name: 'Discovery & Scoping', type: 'loop', desc: 'Interactive Q&A & trade-off debate (loop)' },
-                      { key: 'deep_research', phase: '2. Planning', name: 'Deep Research & Intelligence Gathering', type: 'loop', desc: 'Web searches, PDFs & competitor extraction (loop)' },
-                      { key: 'data_analysis', phase: '2. Planning', name: 'Data Analysis & Pattern Extraction', type: 'non-loop', desc: 'Anomaly detection & metric computation (non-loop)' },
-                      { key: 'strategic_synthesis', phase: '2. Planning', name: 'Strategic Synthesis & Decision Support', type: 'non-loop', desc: 'Actionable plan & decision matrix (non-loop)' },
-                      { key: 'generation', phase: '3. Execution', name: 'Generation', type: 'non-loop', desc: 'Code & asset generation into Deliverables (non-loop)' },
-                      { key: 'verification', phase: '3. Execution', name: 'Verification', type: 'non-loop', desc: 'Gap analysis vs Strategic Synthesis (non-loop)' },
-                      { key: 'review', phase: '4. Delivering', name: 'Review', type: 'non-loop', desc: 'Final production deliverable review (non-loop)' }
-                    ].map(gate => {
-                      const isEnabled = approvalGates[gate.key] !== false;
-                      return (
-                        <div
-                          key={gate.key}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { key: 'discovery_scoping', phase: '1. Drafting', name: 'Discovery & Scoping', type: 'loop', desc: 'Interactive Q&A & trade-off debate', effortKey: 'discovery_scoping', effortDesc: 'Controls Q&A trade-off depth & option synthesis' },
+                  { key: 'deep_research', phase: '2. Planning', name: 'Deep Research & Intelligence Gathering', type: 'loop', desc: 'Web searches, PDFs & competitor extraction', effortKey: 'deep_research', effortDesc: 'Controls web crawl depth, PDF extractions & paper audits' },
+                  { key: 'data_analysis', phase: '2. Planning', name: 'Data Analysis & Pattern Extraction', type: 'non-loop', desc: 'Anomaly detection & metric computation (deterministic)' },
+                  { key: 'strategic_synthesis', phase: '2. Planning', name: 'Strategic Synthesis & Decision Support', type: 'non-loop', desc: 'Actionable plan & decision matrix (deterministic)' },
+                  { key: 'generation', phase: '3. Execution', name: 'Generation', type: 'non-loop', desc: 'Code & asset generation into Deliverables (deterministic)' },
+                  { key: 'verification', phase: '3. Execution', name: 'Verification & Regeneration Loop', type: 'loop', desc: 'Gap analysis vs Strategic Synthesis & retry attempts', effortKey: 'execution_loop', effortDesc: 'Controls automated gap-fixing retry attempts' },
+                  { key: 'review', phase: '4. Delivering', name: 'Review', type: 'non-loop', desc: 'Final production deliverable review (deterministic)' }
+                ].map(gate => {
+                  const isEnabled = approvalGates[gate.key] !== false;
+                  const effortKey = gate.effortKey || gate.key;
+                  const currentEffort = loopEfforts[effortKey] || 'Medium';
+
+                  return (
+                    <div
+                      key={gate.key}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        background: 'var(--surface-alt)',
+                        border: isEnabled ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid var(--border-soft)',
+                        borderRadius: '8px',
+                        padding: '12px 14px',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {/* Phase Header & Gate Toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent)' }}>
+                              {gate.phase}
+                            </span>
+                            <b style={{ fontSize: '10px', color: 'var(--text-bright)' }}>{gate.name}</b>
+                            <span style={{
+                              fontSize: '7px',
+                              fontWeight: 800,
+                              background: gate.type === 'loop' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                              color: gate.type === 'loop' ? '#f59e0b' : 'var(--accent)',
+                              padding: '2px 5px',
+                              borderRadius: '4px'
+                            }}>
+                              {gate.type === 'loop' ? '🔄 LOOP' : '📄 NON-LOOP'}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>{gate.desc}</span>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setApprovalGates(prev => ({ ...prev, [gate.key]: !isEnabled }));
+                          }}
                           style={{
+                            background: isEnabled ? '#3b82f6' : 'var(--surface)',
+                            border: isEnabled ? 'none' : '1px solid var(--border-soft)',
+                            color: isEnabled ? '#ffffff' : 'var(--muted)',
+                            fontSize: '8.5px',
+                            fontWeight: 800,
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'var(--surface-alt)',
-                            border: isEnabled ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid var(--border-soft)',
-                            borderRadius: '6px',
-                            padding: '8px 12px',
-                            transition: 'all 0.15s ease'
+                            gap: '5px'
                           }}
                         >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(255,255,255,0.06)', padding: '1px 5px', borderRadius: '3px', color: 'var(--accent)' }}>
-                                {gate.phase}
-                              </span>
-                              <b style={{ fontSize: '9.5px', color: 'var(--text-bright)' }}>{gate.name}</b>
-                              <span style={{ fontSize: '7px', fontWeight: 800, background: gate.type === 'loop' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: gate.type === 'loop' ? '#f59e0b' : 'var(--accent)', padding: '1px 4px', borderRadius: '3px' }}>
-                                {gate.type === 'loop' ? '🔄 LOOP' : '📄 NON-LOOP'}
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '8px', color: 'var(--muted)' }}>{gate.desc}</span>
-                          </div>
+                          {isEnabled ? '🛡️ GATE ON' : '⚪ GATE OFF'}
+                        </button>
+                      </div>
 
-                          <button
-                            onClick={() => {
-                              setApprovalGates(prev => ({ ...prev, [gate.key]: !isEnabled }));
-                            }}
-                            style={{
-                              background: isEnabled ? '#3b82f6' : 'var(--surface)',
-                              border: isEnabled ? 'none' : '1px solid var(--border-soft)',
-                              color: isEnabled ? '#ffffff' : 'var(--muted)',
-                              fontSize: '8.5px',
-                              fontWeight: 800,
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {isEnabled ? '🛡️ GATE ON' : '⚪ GATE OFF'}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '10px 12px', fontSize: '9px', color: 'var(--text)', lineHeight: 1.4 }}>
-                    ⚡ <b>EFFORT Scaling:</b> EFFORT parameters control iteration caps, search depth, and LLM reasoning cycles exclusively for <b>LOOP</b> components. Non-loops run deterministically.
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {[
-                      { key: 'discovery_scoping', phase: 'Drafting Phase', name: 'Discovery & Scoping Loop', desc: 'Controls Q&A trade-off depth & option synthesis' },
-                      { key: 'deep_research', phase: 'Planning Phase', name: 'Deep Research & Intelligence Loop', desc: 'Controls web crawl depth, PDF extractions & paper audits' },
-                      { key: 'execution_loop', phase: 'Execution Phase', name: 'Verification & Regeneration Loop', desc: 'Controls automated gap-fixing retry attempts' }
-                    ].map(item => {
-                      const currentEffort = loopEfforts[item.key] || 'Medium';
-                      return (
-                        <div
-                          key={item.key}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '8px',
-                            padding: '10px 12px'
-                          }}
-                        >
+                      {/* Loop Effort Level Selector - Only for LOOP phases */}
+                      {gate.type === 'loop' && (
+                        <div style={{
+                          borderTop: '1px solid var(--border-soft)',
+                          paddingTop: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px'
+                        }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '7.5px', fontWeight: 800, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '1px 5px', borderRadius: '3px' }}>
-                                🔄 {item.phase}
-                              </span>
-                              <b style={{ fontSize: '10px', color: 'var(--text-bright)' }}>{item.name}</b>
-                            </div>
+                            <span style={{ fontSize: '8px', color: 'var(--muted)', fontWeight: 600 }}>
+                              ⚡ <b>Loop Effort Level:</b> {gate.effortDesc}
+                            </span>
                             <span style={{ fontSize: '8px', fontWeight: 800, color: '#f59e0b' }}>
                               Current: {currentEffort}
                             </span>
                           </div>
 
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)' }}>{item.desc}</p>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
                             {[
                               { val: 'Low', label: 'Low (1x)', desc: 'Fast turnaround' },
                               { val: 'Medium', label: 'Medium (2x)', desc: 'Balanced reasoning' },
@@ -13800,7 +13760,7 @@ ${isDirector ? `
                               return (
                                 <button
                                   key={eff.val}
-                                  onClick={() => setLoopEfforts(prev => ({ ...prev, [item.key]: eff.val as any }))}
+                                  onClick={() => setLoopEfforts(prev => ({ ...prev, [effortKey]: eff.val as any }))}
                                   style={{
                                     background: isSel ? 'rgba(245, 158, 11, 0.2)' : 'var(--surface)',
                                     border: isSel ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
@@ -13811,7 +13771,8 @@ ${isDirector ? `
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    gap: '2px'
+                                    gap: '2px',
+                                    transition: 'all 0.15s ease'
                                   }}
                                 >
                                   <b style={{ fontSize: '8.5px', color: isSel ? '#f59e0b' : 'var(--text)' }}>{eff.label}</b>
@@ -13821,11 +13782,11 @@ ${isDirector ? `
                             })}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Footer */}

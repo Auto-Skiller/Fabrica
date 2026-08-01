@@ -1,5 +1,9 @@
 # Fabrica Universal 4-Stage Looped Pipeline & Execution Engine
 
+> **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
+> *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.*
+> Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.
+
 This document defines the core 4-stage looped pipeline engine, mission execution protocols, skill invocation mechanisms, and loop mechanics in Fabrica:
 `Drafting ──> Planning ──> Execution ──> Delivering`
 

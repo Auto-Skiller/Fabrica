@@ -1,8 +1,10 @@
 # Fabrica — The Business-First Autonomous Operating System
 
-> ### **AI knows HOW to analyze & draft. Fabrica gives it a BUSINESS-FIRST PIPELINE.**
+> ### **Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.**
+> #### *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.*
+> **Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.**
 
-Fabrica is a Business-First autonomous operating system engineered for **non-technical solopreneurs, independent consultants, small marketing/creative agencies, and small startup ops & growth teams**. While standard AI chat interfaces execute transient single-turn queries and quickly lose context, Fabrica provides full control over a structured, repeatable 4-stage autonomous pipeline (**Drafting ➔ Planning ➔ Execution ➔ Delivery**), entirely from the UI, with **zero technical setup**.
+Fabrica is a Business-First autonomous operating system engineered for **non-technical solopreneurs, independent consultants, small marketing/creative agencies, small startup ops & growth teams, and researchers & analysts**. While standard AI chat interfaces execute transient single-turn queries and quickly lose context, Fabrica provides full control over a structured, repeatable 24/7 autonomous 4-stage business pipeline (**Drafting ➔ Planning ➔ Execution ➔ Delivery**), entirely from the UI, with **zero technical setup**.
 
 ---
 
@@ -29,6 +31,7 @@ Fabrica is built specifically for operators who need repeatable research ➔ ana
 2. **Small Marketing & Creative Agencies**: Standardize output quality across all accounts with repeatable autonomous pipelines and custom agency skills.
 3. **Solopreneurs & DTC Founders**: Run an autonomous research, market intelligence, and operations team without hiring staff or needing technical dev skills.
 4. **Startup Ops & Growth Teams**: Generate data-backed growth playbooks, competitive tracking matrices, and strategic proposals fast without waiting on engineering capacity.
+5. **Researchers & Analysts**: Build defensible audit trails with verified citations and automatic fact-checking before final report delivery.
 
 ---
 

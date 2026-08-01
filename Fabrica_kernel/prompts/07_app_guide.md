@@ -1,5 +1,9 @@
 # Application & User Interface Guide
 
+> **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
+> *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.*
+> The 3-panel UI layout empowers operators to stop prompting and instead draft, plan, execute, and verify from a single Dashboard with zero technical setup.
+
 This guide describes the physical layout of the Fabrica web application interface. It ensures that the agent understands how users interact with the app, how data binds to the screen, and how to maintain visual consistency when implementing front-end updates.
 
 ## 1. THE THREE-PANEL GRID LAYOUT

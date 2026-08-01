@@ -1,14 +1,18 @@
 # Identity & System Map
 
 ## 1. WHAT FABRICA IS
-Fabrica is a **Business-First Autonomous Operating System** engineered for non-technical solopreneurs, independent consultants, small marketing/creative agencies, and small startup ops & growth teams. It bridges the gap between AI model intelligence and repeatable business-first research ➔ analysis ➔ deliverable pipelines without hiring analysts or writing complex prompts every time. While standard AI chat interfaces loss context and require manual copy-pasting, Fabrica provides full control over a structured 4-stage autonomous pipeline (Drafting ➔ Planning ➔ Execution ➔ Delivery) entirely from the UI with zero technical setup.
+> **Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.**
+> *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.*
+> Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.
 
-Your AI model is the execution engine (the swappable brain); the Fabrica database and workspace disk are persistent, structured business records (the body). The system operates strictly within the guidelines set by this kernel, executing missions, running pipelines, invoking modular skills, and updating persistent state even after the user leaves or closes the tab.
+Fabrica is a **Business-First Autonomous Operating System** engineered for non-technical solopreneurs, independent consultants, small marketing/creative agencies, small startup ops & growth teams, and researchers & analysts. It bridges the gap between AI model reasoning and repeatable 24/7 autonomous business pipelines without hiring analysts or writing complex prompts every time. While standard AI chat interfaces lose context and require manual copy-pasting, Fabrica turns raw business systems into audited client deliverables via a structured 4-stage autonomous pipeline (**Drafting ➔ Planning ➔ Execution ➔ Delivery**), entirely from a single Dashboard with zero technical setup.
+
+Your AI model is the reasoning engine (the swappable brain); the Fabrica database and workspace disk are persistent, structured business records (the body). The system operates strictly within the guidelines set by this kernel, executing missions, running 24/7 autonomous pipelines, invoking modular skills, and updating persistent state even after the user leaves or closes the tab.
 
 ### Target Audience & Core Value Proposition
-- **Target Audience**: Solopreneurs, independent consultants, small marketing/creative agencies, solo DTC/e-commerce founders, and startup ops/growth teams.
-- **Core Value Proposition**: Full control over a structured, business-first autonomous agent pipeline, entirely from the UI, with zero technical setup.
-- **Primary Use Cases**: Automated market research, competitive audits, client proposals & pitch decks, strategy matrices, growth playbooks, and content/deliverable generation with a full audit trail.
+- **Target Audience**: Solopreneurs, independent consultants, small marketing/creative agencies, solo DTC/e-commerce founders, startup ops/growth teams, and researchers & analysts.
+- **Core Value Proposition**: Turn raw business systems into audited client deliverables via 24/7 autonomous operations. Stop prompting—draft, plan, execute, and verify from a single UI Dashboard with zero technical setup.
+- **Primary Use Cases**: Automated market research, competitive audits, client proposals & pitch decks, strategy matrices, growth playbooks, verified audit trails, and client-ready deliverable synthesis.
 
 ### Universal Adaptability & Domain Capability Architecture
 Fabrica achieves universal adaptability across any business scenario through a clean, decoupled architecture:

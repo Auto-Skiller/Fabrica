@@ -116,6 +116,13 @@ const PERSONAS_MAP = {
       fix: "Run 24/7 background research and strategy execution in autonomy mode — checking results in structured folder structures.",
       proof: "24/7 Autonomy Mode — Structured Folders per Phase (Drafting, Planning, Execution, Delivery)",
     },
+    {
+      id: 'researchers',
+      tab: "Researchers & Analysts",
+      pain: "Manually tracking sources, synthesizing findings, and drafting sourced reports is slow and hard to audit later.",
+      fix: "Deep Research gathers and logs verifiable sources into structured storage, while Execution checks drafts against citations before Delivery.",
+      proof: "Defensible Audit Trail — Verified Sources & Automatic Fact-Check Verification",
+    },
   ],
   FR: [
     {
@@ -146,6 +153,13 @@ const PERSONAS_MAP = {
       fix: "Exécutez des recherches et stratégies en arrière-plan 24/7 en mode autonomie et consultez les résultats dans des dossiers structurés.",
       proof: "Mode Autonomie 24/7 — Dossiers Structurés par Phase (Brouillon, Plan, Exécution, Livraison)",
     },
+    {
+      id: 'researchers',
+      tab: "Chercheurs & Analystes",
+      pain: "Le suivi manuel des sources, la synthèse des données et la rédaction de rapports documentés sont lents et difficiles à auditer.",
+      fix: "La Recherche Approfondie rassemble et consigne les sources vérifiables, et l'Exécution vérifie les brouillons avant la Livraison.",
+      proof: "Piste d'Audit Défendable — Sources Vérifiées & Vérification Factuelle Automatique",
+    },
   ],
   AR: [
     {
@@ -175,6 +189,13 @@ const PERSONAS_MAP = {
       pain: 'تحتاج إلى خطط نمو مبنية على البيانات ومتابعة المنافسين دون الانتظار في قائمة سبرينت الفرق الهندسية.',
       fix: 'تشغيل أبحاث واستراتيجيات متواصلة على مدار الساعة في وضع الاستقلالية مع استعراض النتائج في مجلدات منظمة.',
       proof: 'وضع الاستقلالية 24/7 — مجلدات منظمة حسب كل مرحلة (المسودة، التخطيط، التنفيذ، التسليم)',
+    },
+    {
+      id: 'researchers',
+      tab: 'الباحثون والمحللون',
+      pain: 'تتبع المصادر يدويًا وتلخيص النتائج وكتابة التقارير الموثقة عملية بطيئة وصعبة التدقيق لاحقًا.',
+      fix: 'يجمع نظام البحث المعمق المصادر القابلة للتحقق ويوثقها في التخزين، بينما يتم تدقيق المسودات قبل التسليم.',
+      proof: 'مسار تدقيق موثوق — مصادر موثقة والتحقق التلقائي من الحقائق',
     },
   ]
 };
@@ -349,9 +370,9 @@ const LANDING_TEXT = {
     nav: { matrix: 'The Matrix', systems: 'Pipelines', workspace: 'Workspace', deepResearch: 'Deep Research', faqs: 'FAQs', openDashboard: 'Open Dashboard' },
     hero: {
       tag: 'Business-First Agentic Operating System',
-      h1: 'STRUCTURED RESEARCH, STRATEGY & DELIVERABLE PIPELINES.',
-      sub: 'AI knows HOW to analyze & draft. Fabrica gives it a BUSINESS-FIRST PIPELINE.',
-      desc: 'Designed for non-technical solopreneurs, independent consultants, small agencies, and growth teams. Chat with an AI partner that runs structured 4-stage missions (Drafting ➔ Planning ➔ Execution ➔ Delivery) and keeps working in autonomy mode after you close the site — with zero technical setup.',
+      h1: 'Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.',
+      sub: 'AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.',
+      desc: 'Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.',
       launchBtn: 'Launch Your Workspace',
       seeBuildsBtn: 'See How The Pipeline Works'
     },
@@ -377,9 +398,9 @@ const LANDING_TEXT = {
     nav: { matrix: 'La Matrice', systems: 'Pipelines', workspace: 'Espace de Travail', deepResearch: 'Recherche Approfondie', faqs: 'FAQs', openDashboard: 'Ouvrir le Tableau de Bord' },
     hero: {
       tag: 'Système d\'Exploitation Autonome Métier',
-      h1: 'PIPELINES STRUCTURÉS DE RECHERCHE, STRATÉGIE & LIVRABLES.',
-      sub: 'L’IA sait COMMENT analyser et rédiger. Fabrica lui donne un PIPELINE MÉTIER.',
-      desc: 'Conçu pour les solopreneurs non-techniques, consultants indépendants, petites agences et équipes growth. Échangez avec un partenaire IA qui exécute des missions en 4 étapes (Brouillon ➔ Planification ➔ Exécution ➔ Livraison) et continue de travailler en arrière-plan sans aucune configuration technique.',
+      h1: 'TRANSFORMEZ VOS SYSTÈMES BRUTS EN LIVRABLES CLIENTS AUDITÉS VIA DES OPÉRATIONS AUTONOMES.',
+      sub: 'L’IA sait raisonner. Fabrica lui donne le pipeline métier autonome 24/7.',
+      desc: 'Fini les prompts sans fin. Rédigez, planifiez, exécutez et vérifiez — depuis un seul Tableau de Bord, sans aucune configuration technique.',
       launchBtn: 'Lancer Votre Espace de Travail',
       seeBuildsBtn: 'Découvrir Le Pipeline'
     },
@@ -405,9 +426,9 @@ const LANDING_TEXT = {
     nav: { matrix: 'مصفوفة العمل', systems: 'مسارات العمل', workspace: 'مساحة العمل', deepResearch: 'البحث العميق', faqs: 'الأسئلة الشائعة', openDashboard: 'فتح لوحة التحكم' },
     hero: {
       tag: 'نظام تشغيل مستقل مخصص للأعمال',
-      h1: 'مسارات منظمة للبحوث والاستراتيجية والمخرجات.',
-      sub: 'الذكاء الاصطناعي يعرف كيف يحلل ويكتب. Fabrica توفر له خط عمل تجاري محدد.',
-      desc: 'مصمم للرواد المستقلين غير التقنيين، المستشارين، الوكالات الصغيرة، وفرق النمو. تحدث مع شريك ذكي ينفذ مهاماً منظمة عبر 4 مراحل (المسودة ← التخطيط ← التنفيذ ← التسليم) ويواصل العمل في وضع الاستقلالية بدون أية تعقيدات تقنية.',
+      h1: 'حوّل أنظمة عملك الخام إلى مخرجات مدققة وجاهزة لعملائك عبر عمليات مستقلة.',
+      sub: 'الذكاء الاصطناعي يعرف كيف يحلل. Fabrica تمنحه مسار العمل التجاري المستقل على مدار الساعة.',
+      desc: 'توقف عن التوجيه المستمر. أنشئ، خطط، نفذ، وتأكد — من لوحة تحكم واحدة، بدون أي تعقيدات تقنية.',
       launchBtn: 'بدء استخدام مساحة العمل',
       seeBuildsBtn: 'استكشف كيف يعمل خط الإنتاج'
     },
@@ -432,10 +453,10 @@ const LANDING_TEXT = {
 };
 
 const CHAT_CHIPS: { q: string; a: string }[] = [
-  { q: 'What is Fabrica, really?', a: 'A persistent context operating system. Your AI model is the brain — swappable. Fabrica is the body: the database, the sandbox, and the mission history that remembers what the brain forgot.' },
-  { q: 'Can it build actual Odoo ERP modules — not just a plan?', a: 'Yes. We configure and deploy real Odoo data models, views, and finance/inventory routines, with live JSON-RPC telemetry — not a blueprint you still have to build yourself.' },
-  { q: 'How does the sandboxed execution work?', a: 'Every dynamic script runs in a locked-down Node.js vm context — process, require, and global stripped out, capped at a 1000ms CPU budget. Nothing touches your filesystem.' },
-  { q: 'What happens to my data if I stop paying?', a: 'It stays yours. Tenant-isolated storage means your raw_data and system_components are never entangled with anyone else’s account, and remain exportable.' },
+  { q: 'What is Fabrica, really?', a: 'A Business-First Agentic Operating System. Your AI partner runs structured 4-stage missions (Drafting ➔ Planning ➔ Execution ➔ Delivery) with custom skills and an autonomy mode that keeps working after you close the site — with zero technical setup.' },
+  { q: 'How does the 4-stage Mission pipeline work?', a: 'Every mission moves through Drafting, Planning, Execution, and Delivery. In Planning, it runs Deep Research & Pattern Extraction; in Execution, it drafts your client-ready deliverable and verifies claims against gathered sources.' },
+  { q: 'How does Autonomy Mode work?', a: 'When you close your browser tab, Fabrica continues running your scheduled research rounds, competitor scans, and pipeline checks in the background, saving all sources and drafts into your auditable storage layer.' },
+  { q: 'Can I manage research sources and client deliverables?', a: 'Yes. Fabrica\'s structured storage layer separates sources (gathered during scoping/research) from deliverables (generated in execution/reviews), allowing you to audit, delete, add, or export files anytime.' },
 ];
 
 /* ----------------------------------------------------------------------
@@ -450,144 +471,144 @@ const BOOT_LINES = [
 const PILLARS_MAP = {
   EN: {
     tag: 'The Unified Execution Pipeline',
-    title: 'We Build Anything From Anything',
-    col1Tag: '1. INPUTS', col1H3: 'Drop in Any Source', col1Desc: 'Ideas, ledgers, legacy systems — nothing needs to be normalized first.',
-    col1Items: ['💡 Abstract ideas & briefs', '📊 Raw data & ledgers', '🔗 Pre-existing systems'],
-    col2Tag: '2. AGENTIC TASKS', col2H3: 'Execute Any Operation', col2Desc: 'Six specialized modes coordinate the work end to end.',
-    col2Items: ['🛠️ System engineering & compilation', '📂 Mission backlog coordination', '🔬 Verified deep research', '✍️ Creative writing & copy'],
-    col3Tag: '3. CUSTOM OUTPUTS', col3H3: 'Pragmatic Final Value', col3Desc: 'Working outputs, not checklists.',
-    col3Items: ['⚡ Active n8n pipelines & workflows', '🏦 Installed ERP & relational databases', '📊 Deep analytics reports & SWOT docs']
+    title: 'From Unstructured Briefs to Audited Deliverables',
+    col1Tag: '1. BRIEFS & DATA', col1H3: 'Drop in Any Brief or File', col1Desc: 'Client discovery notes, CSVs, and spreadsheets — Fabrica digests your context without technical setup.',
+    col1Items: ['💡 Client briefs & discovery notes', '📊 Raw CSVs, spreadsheets & docs', '🔗 Pre-existing reports & guidelines'],
+    col2Tag: '2. 4-STAGE MISSIONS', col2H3: 'Run Structured Pipelines', col2Desc: 'Four structured phases (Drafting ➔ Planning ➔ Execution ➔ Delivery) turn research into deliverables.',
+    col2Items: ['🔬 Verified deep research & citations', '📈 Strategic synthesis & trade-off matrices', '✍️ Client-ready proposals & copy', '🕒 24/7 Autonomy Mode background work'],
+    col3Tag: '3. DELIVERABLES', col3H3: 'Audited Client-Ready Output', col3Desc: 'Polished deliverables with verified source trails, ready for your clients.',
+    col3Items: ['📑 Client-ready proposals & strategy decks', '📊 Verified competitive audits & pricing models', '🗂️ Exportable research sources & audit trails']
   },
   FR: {
     tag: 'Le Pipeline d’Exécution Unifié',
-    title: 'Nous Construisons Tout à Partir de Tout',
-    col1Tag: '1. ENTRÉES', col1H3: 'Déposez N’importe Quelle Source', col1Desc: 'Idées, registres, systèmes existants — rien n’a besoin d’être normalisé au préalable.',
-    col1Items: ['💡 Idées abstraites & briefs', '📊 Données brutes & registres', '🔗 Systèmes préexistants'],
-    col2Tag: '2. TÂCHES AGENTIQUES', col2H3: 'Exécutez N’importe Quelle Opération', col2Desc: 'Six modes spécialisés coordonnent le travail de bout en bout.',
-    col2Items: ['🛠️ Ingénierie système & compilation', '📂 Coordination du backlog de mission', '🔬 Recherche approfondie vérifiée', '✍️ Rédaction créative & textes'],
-    col3Tag: '3. RÉSULTATS SUR MESURE', col3H3: 'Valeur Finale Pragmatique', col3Desc: 'Des résultats fonctionnels, pas de simples listes de contrôle.',
-    col3Items: ['⚡ Pipelines & flux n8n actifs', '🏦 ERP installés & bases relationnelles', '📊 Rapports analytiques & docs SWOT']
+    title: 'Des Briefs Bruts Aux Livrables Audités',
+    col1Tag: '1. BRIEFS & DONNÉES', col1H3: 'Déposez Briefs ou Fichiers', col1Desc: 'Notes de découverte, CSVs et tableurs — Fabrica assimile votre contexte sans configuration technique.',
+    col1Items: ['💡 Briefs clients & notes de découverte', '📊 CSVs bruts, tableurs & documents', '🔗 Rapports existants & charte de marque'],
+    col2Tag: '2. MISSIONS EN 4 ÉTAPES', col2H3: 'Pipelines Structurés', col2Desc: 'Quatre phases (Brouillon ➔ Planification ➔ Exécution ➔ Livraison) transforment la recherche en livrables.',
+    col2Items: ['🔬 Recherche approfondie & citations vérifiées', '📈 Matrices stratégiques & arbitrages', '✍️ Propositions & livrables prêts pour clients', '🕒 Mode Autonomie 24/7 en arrière-plan'],
+    col3Tag: '3. LIVRABLES', col3H3: 'Résultats Audités Prêts', col3Desc: 'Livrables soignés accompagnés de sources vérifiées.',
+    col3Items: ['📑 Propositions clients & dossiers stratégiques', '📊 Audits concurrentiels & grilles tarifaires', '🗂️ Sources exportables & piste d’audit']
   },
   AR: {
     tag: 'خط إنتاج التنفيذ الموحد',
-    title: 'نبني أي نظام من أي مصدر بيانات',
-    col1Tag: '1. المدخلات', col1H3: 'أدرج أي مصدر بيانات', col1Desc: 'أفكار، سجلات، أنظمة قديمة — لا حاجة لمعالجة أولية.',
-    col1Items: ['💡 أفكار وموجزات تنفيذية', '📊 بيانات وسجلات خام', '🔗 أنظمة سابقة وتكاملية'],
-    col2Tag: '2. مهام الوكلاء', col2H3: 'نفذ أية عملية تشغيلية', col2Desc: 'ستة أوضاع مخصصة لتنسيق العمل من البداية للنهاية.',
-    col2Items: ['🛠️ هندسة النظام والتجميع', '📂 تنسيق المهام وقائمة الأعمال', '🔬 بحث عميق وموثق', '✍️ كتابة إبداعية ومحتوى'],
-    col3Tag: '3. مخرجات مخصصة', col3H3: 'قيمة عملية حقيقية', col3Desc: 'أنظمة تعمل بالفعل وليست مجرد قوائم.',
-    col3Items: ['⚡ مسارات n8n وسير عمل نشط', '🏦 أنظمة ERP وقواعد بيانات', '📊 تقارير تحليلية ومستندات SWOT']
+    title: 'من موجزات الأفكار إلى المخرجات المدققة',
+    col1Tag: '1. المدخلات والوثائق', col1H3: 'أدرج أي وثيقة أو ملف', col1Desc: 'ملاحظات العملاء، ملفات CSV، والجداول — فابريكا تستوعب سياق عملك بدون أي إعدادات تقنية.',
+    col1Items: ['💡 موجزات العملاء وملاحظات الاستكشاف', '📊 الجداول والملفات الخام', '🔗 التقارير السابقة وأدلة العلامة التجارية'],
+    col2Tag: '2. مهام من 4 مراحل', col2H3: 'مسارات عمل منظمة', col2Desc: 'أربع مراحل تشغيلية (المسودة ← التخطيط ← التنفيذ ← التسليم) تحول البحث إلى مخرجات.',
+    col2Items: ['🔬 بحث عميق ومصادر موثقة', '📈 تحليل استراتيجي ومقارنات البدائل', '✍️ عروض ومقترحات جاهزة للعملاء', '🕒 وضع الاستقلالية 24/7 في الخلفية'],
+    col3Tag: '3. المخرجات النهائية', col3H3: 'مخرجات مدققة وجاهزة', col3Desc: 'تقارير واستراتيجيات جاهزة للعملاء مع توثيق كامل للمصادر.',
+    col3Items: ['📑 عروض تقديمية وخطط استراتيجية جاهزة', '📊 دراسات تنافسية ونماذج تسعير موثقة', '🗂️ مصادر قابلة للتصدير وسجل تدقيق']
   }
 };
 
 const SYSTEMS_MAP = {
   EN: {
-    tag: 'Not a Blueprint. A Running System.',
-    title: 'Digital Transformation & Custom Systems',
-    c1H3: 'Custom Odoo ERP Extensions', c1Desc: 'Legacy paperwork and spreadsheet dumps become configured Odoo data models, views, and finance routines.', c1Foot: 'Live telemetry: JSON-RPC sync',
-    c2H3: 'n8n Automation Pipelines', c2Desc: 'Plain-language objectives become multi-step n8n flows with webhook listeners and cross-platform sync.', c2Foot: 'Live telemetry: trigger rates',
-    c3H3: 'Custom API Connectors', c3Desc: 'Every connector is registered and versioned before your business depends on it.', c3Foot: 'Maturity-guaranteed'
+    tag: 'No Technical Setup. A Standing Research & Content Partner.',
+    title: 'Repeatable Business-First Agentic Pipelines',
+    c1H3: 'Client Discovery & Strategy Briefs', c1Desc: 'Turn messy client calls and discovery notes into structured 90-day roadmaps, competitive teardowns, and strategic proposals without manual formatting.', c1Foot: 'Pipeline: Drafting ➔ Planning ➔ Execution ➔ Delivery',
+    c2H3: '24/7 Competitor & Market Monitoring', c2Desc: 'Let Autonomy Mode scan competitor pricing, reviews, and market trends weekly or monthly per client — saving auditable sources right in your workspace.', c2Foot: 'Autonomy Mode: Continuous background execution',
+    c3H3: 'Verified Deliverable Drafting', c3Desc: 'Execution phase verifies every claim against gathered research sources before your final review in Delivery, keeping a defensible audit trail.', c3Foot: 'Full auditability: Sources vs. Deliverables'
   },
   FR: {
-    tag: 'Pas un simple plan. Un système opérationnel.',
-    title: 'Transformation Numérique & Systèmes Sur Mesure',
-    c1H3: 'Extensions ERP Odoo Sur Mesure', c1Desc: 'Les documents papier et fichiers Excel deviennent des modèles de données, vues et routines financières Odoo configurés.', c1Foot: 'Télémétrie en direct: synchro JSON-RPC',
-    c2H3: 'Pipelines d’Automatisation n8n', c2Desc: 'Des objectifs en langage naturel deviennent des flux n8n étape par étape avec récepteurs webhooks.', c2Foot: 'Télémétrie en direct: taux de déclenchement',
-    c3H3: 'Connecteurs API Personnalisés', c3Desc: 'Chaque connecteur est enregistré et versionné avant que votre entreprise ne s’y fie.', c3Foot: 'Garantie de maturité'
+    tag: 'Zéro Config Technique. Un Partenaire Recherche & Stratégie.',
+    title: 'Pipelines Autonomes Répétables et Structurés',
+    c1H3: 'Briefs de Découverte & Stratégie Client', c1Desc: 'Transformez vos notes de réunion en feuilles de route sur 90 jours et propositions stratégiques sans mise en forme manuelle.', c1Foot: 'Pipeline : Brouillon ➔ Planification ➔ Exécution ➔ Livraison',
+    c2H3: 'Veille Concurrentielle & Marché 24/7', c2Desc: 'Le Mode Autonomie analyse les tarifs concurrents et avis chaque semaine ou mois pour vos clients, en consignant les sources.', c2Foot: 'Mode Autonomie : Exécution continue en arrière-plan',
+    c3H3: 'Rédaction de Livrables Vérifiés', c3Desc: 'La phase d’Exécution vérifie chaque affirmation avec les sources avant votre revue finale lors de la Livraison.', c3Foot: 'Auditabilité complète : Sources vs Livrables'
   },
   AR: {
-    tag: 'ليس مجرد مخطط. بل نظام يعمل بالفعل.',
-    title: 'التحول الرقمي والأنظمة المخصصة',
-    c1H3: 'امتدادات Odoo ERP المخصصة', c1Desc: 'تحويل المستندات الورقية والجداول إلى نماذج بيانات ووظائف مالية مهيأة في Odoo.', c1Foot: 'قياس مالي مباشر: مزامنة JSON-RPC',
-    c2H3: 'مسارات أتمتة n8n', c2Desc: 'تحويل الأهداف إلى تدفقات أتمتة متعددة الخطوات بذاكرة مستدامة.', c2Foot: 'قياس حركي مباشر: معدل التحرير',
-    c3H3: 'موصلات API مخصصة', c3Desc: 'تسجيل كل موصل وتوثيق إصداره لضمان أعلى مستويات الاعتمادية.', c3Foot: 'ضمان مستوى النضج'
+    tag: 'بدون إعدادات تقنية. شريك دائم للبحوث والاستراتيجية.',
+    title: 'مسارات عمل مستقلة ومتكررة للأعمال',
+    c1H3: 'تحليل موجزات العملاء والاستراتيجية', c1Desc: 'تحويل ملاحظات الاجتماعات وموجزات العملاء إلى خطط عمل لمدة 90 يومًا وعروض استراتيجية جاهزة بدون تنسيق يدوي.', c1Foot: 'المسار: المسودة ← التخطيط ← التنفيذ ← التسليم',
+    c2H3: 'مراقبة المنافسين والسوق 24/7', c2Desc: 'يقوم وضع الاستقلالية بمراقبة أسعار المنافسين واتجاهات السوق أسبوعيًا أو شهريًا، مع حفظ المصادر في مساحة عملك.', c2Foot: 'وضع الاستقلالية: تشغيل مستمر في الخلفية',
+    c3H3: 'صياغة مخرجات مدققة وموثقة', c3Desc: 'تتحقق مرحلة التنفيذ من صحة كل معلومة ومصدر قبل المراجعة النهائية في مرحلة التسليم، مما يوفر مسار تدقيق موثوق.', c3Foot: 'تدقيق كامل: المصادر مقابل المخرجات'
   }
 };
 
 const WORKSPACE_MAP = {
   EN: {
     tag: 'One Workspace. Three Panels. Nothing Hidden.',
-    title: 'Inside the Workspace',
-    sub: 'This is the actual product tour — interactive, structured, persistent.',
-    panelA: 'Panel A: System Maps & Configs',
-    panelADesc: 'A live dependency graph connecting Inbox → Gateway → OS Prompts/Data, autonomy toggles, and runtime state logs.',
-    panelB: 'Panel B: The Missions Board',
-    panelBDesc: 'Cards move across four statuses, five mission types deep. Nothing is archived until it compiles.',
-    panelC: 'Panel C: 50/50 Data & Systems Split',
-    panelCDesc: 'Raw, unstructured inputs on the left. Compiled, executable systems on the right.',
-    dataTitle: 'Your Data', dataSub: 'Unstructured CSVs, docs, notes & schema files',
-    sysTitle: 'Your Systems', sysSub: 'Compiled Odoo ERP, n8n flows & API routes'
+    title: 'Inside the Business-First Workspace',
+    sub: 'This is the actual interactive workspace — structured, auditable, and persistent.',
+    panelA: 'Panel A: Mission Control & Skills',
+    panelADesc: 'Control built-in + custom skills, toggle 24/7 Autonomy Mode, and inspect real-time agent execution logs — zero coding required.',
+    panelB: 'Panel B: The 4-Stage Mission Pipeline',
+    panelBDesc: 'Track every mission across Drafting ➔ Planning ➔ Execution ➔ Delivery. Review QA Gates and strategic trade-offs before approving.',
+    panelC: 'Panel C: Structured Storage Layer',
+    panelCDesc: 'Dedicated folders per phase: Sources (scoping, research, synthesis) on the left, and Deliverables (execution drafts, client reviews) on the right.',
+    dataTitle: 'Research & Sources', dataSub: 'Verified citations, client briefs, CSVs & notes',
+    sysTitle: 'Client Deliverables', sysSub: 'Proposals, strategy decks, copy & audit trails'
   },
   FR: {
     tag: 'Un Espace. Trois Panneaux. Rien de Caché.',
-    title: 'À l’Intérieur de l’Espace de Travail',
-    sub: 'Voici le parcours produit réel — interactif, structuré, persistant.',
-    panelA: 'Panneau A: Cartes Système & Configs',
-    panelADesc: 'Un graphe de dépendances en direct connectant Boîte de Réception → Passerelle → Prompts/Données OS.',
-    panelB: 'Panneau B: Tableau des Missions',
-    panelBDesc: 'Les cartes évoluent sur 4 statuts et 5 types de missions. Rien n’est archivé sans compilation.',
-    panelC: 'Panneau C: Division 50/50 Données & Systèmes',
-    panelCDesc: 'Données brutes non structurées à gauche. Systèmes compilés et exécutables à droite.',
-    dataTitle: 'Vos Données', dataSub: 'CSVs bruts, documents, notes & fichiers de schéma',
-    sysTitle: 'Vos Systèmes', sysSub: 'ERP Odoo compilé, flux n8n & routes API'
+    title: 'À l’Intérieur de l’Espace de Travail Métier',
+    sub: 'Voici votre espace interactif — structuré, auditable et persistant.',
+    panelA: 'Panneau A: Contrôle des Missions & Compétences',
+    panelADesc: 'Gérez vos compétences, activez le Mode Autonomie 24/7 et consultez les journaux d’exécution en temps réel sans coder.',
+    panelB: 'Panneau B: Le Pipeline en 4 Étapes',
+    panelBDesc: 'Suivez chaque mission sur Brouillon ➔ Planification ➔ Exécution ➔ Livraison. Validez les arbitrages aux Portes QA.',
+    panelC: 'Panneau C: Couche de Stockage Structurée',
+    panelCDesc: 'Dossiers dédiés : Sources (recherche, synthèse) à gauche, et Livrables (brouillons, revues clients) à droite.',
+    dataTitle: 'Recherches & Sources', dataSub: 'Citations vérifiées, briefs clients, CSVs & notes',
+    sysTitle: 'Livrables Clients', sysSub: 'Propositions, dossiers stratégiques & piste d’audit'
   },
   AR: {
     tag: 'مساحة عمل واحدة. ثلاثة لوحات. كل شيء شفاف.',
-    title: 'داخل مساحة العمل',
-    sub: 'جولة تفاعلية حقيقية داخل المنتج — منظمة ومستمرة.',
-    panelA: 'اللوحة أ: خرائط النظام والتكوينات',
-    panelADesc: 'مخطط تبعيات حي يربط صندوق الوارد → البوابة → الأوامر والبيانات.',
-    panelB: 'اللوحة ب: لوحة إدارة المهام',
-    panelBDesc: 'تتحرك بطاقات العمل عبر 4 حالات و5 أنواع من المهام.',
-    panelC: 'اللوحة ج: تقسيم 50/50 بين البيانات والأنظمة',
-    panelCDesc: 'المدخلات الخام على اليسار. الأنظمة المنفذة والجاهزة على اليمين.',
-    dataTitle: 'بياناتك', dataSub: 'ملفات CSV والوثائق والملاحظات',
-    sysTitle: 'أنظمتك', sysSub: 'أنظمة Odoo ومسارات n8n الجاهزة'
+    title: 'داخل مساحة العمل المخصصة للأعمال',
+    sub: 'جولة تفاعلية حقيقية داخل مساحة العمل — منظمة ومستمرة وموثقة.',
+    panelA: 'اللوحة أ: التحكم بالمهام والمهارات',
+    panelADesc: 'تحكم بالمهارات المدمجة والمخصصة، وقم بتفعيل وضع الاستقلالية 24/7، وراجع سجلات التنفيذ الحية بدون أي تعقيدات برمجية.',
+    panelB: 'اللوحة ب: مسار العمل من 4 مراحل',
+    panelBDesc: 'تابع كل مهمة عبر المراحل: المسودة ← التخطيط ← التنفيذ ← التسليم. راجع بوابات الجودة ومقارنات البدائل قبل الاعتماد.',
+    panelC: 'اللوحة ج: طبقة التخزين المنظمة',
+    panelCDesc: 'مجلدات مخصصة لكل مرحلة: المصادر والبحوث على اليسار، والمخرجات والعروض النهائية على اليمين.',
+    dataTitle: 'البحوث والمصادر', dataSub: 'التوثيق، موجزات العملاء، ملفات CSV والملاحظات',
+    sysTitle: 'مخرجات العملاء', sysSub: 'العروض التقديمية، الخطط الاستراتيجية وسجل التدقيق'
   }
 };
 
 const RESEARCH_MAP = {
   EN: {
-    tag: 'Verified, Not Guessed',
-    title: 'Official Docs Retrieved Every Session',
-    desc: 'Deep Research Mode never relies solely on pre-trained model weights. Every API schema, package requirement, and deployment route is queried live against authoritative documentation and verified before a single line of code is committed.',
-    c1H3: '🔬 Live API Scope Audit', c1Desc: 'Flags missing OAuth scopes, billing requirements, and rate limits upfront.',
-    c2H3: '🛡️ Vertex AI Search Grounding', c2Desc: 'Search queries are bound strictly to tenant-isolated datastores.'
+    tag: 'Verified Sources, Not Guessed',
+    title: 'Authoritative Market Research & Sources Retrieved Every Session',
+    desc: 'Deep Research Mode never relies solely on pre-trained model guesses. Every competitor pricing tier, market trend, and citation is queried live against authoritative sources and verified before your proposal or deliverable is generated.',
+    c1H3: '🔬 Verified Source Citations', c1Desc: 'Every claim and data point links back to an auditable source file stored in your workspace.',
+    c2H3: '🛡️ Tenant-Isolated Storage Layer', c2Desc: 'Research logs, client briefs, and review drafts are strictly isolated by client folder.'
   },
   FR: {
-    tag: 'Vérifié, Pas Deviné',
-    title: 'Documentation Officielle Récupérée à Chaque Session',
-    desc: 'Le mode Recherche Approfondie ne se fie pas uniquement aux poids entraînés. Chaque schéma API, prérequis et route est vérifié en direct par rapport aux documentations officielles.',
-    c1H3: '🔬 Audit de Portée API en Direct', c1Desc: 'Signale à l’avance les permissions OAuth manquantes, la facturation et les limites.',
-    c2H3: '🛡️ Ancrage Vertex AI Search', c2Desc: 'Les requêtes de recherche sont strictement confinées aux magasins de données isolés.'
+    tag: 'Sources Vérifiées, Pas Devinées',
+    title: 'Recherche Marché & Sources Officielles à Chaque Session',
+    desc: 'Le mode Recherche Approfondie ne se fie pas aux devinettes. Chaque tarif concurrent, tendance et citation est vérifié auprès de sources officielles.',
+    c1H3: '🔬 Citations de Sources Vérifiées', c1Desc: 'Chaque affirmation est reliée à un fichier source auditable stocké dans votre espace.',
+    c2H3: '🛡️ Stockage Isolé par Client', c2Desc: 'Les journaux de recherche et brouillons sont strictement isolés par dossier client.'
   },
   AR: {
-    tag: 'موثق بالدليل وليس بالتخمين',
-    title: 'استرجاع التوثيق الرسمي في كل جلسة',
-    desc: 'لا يعتمد وضع البحث العميق على الذاكرة السابقة للنماذج فحسب، بل يقوم باستعلام التوثيق الرسمي والتحقق المباشر من نطاقات API والمكتبات قبل البرمجة.',
-    c1H3: '🔬 تدقيق نطاقات API الحية', c1Desc: 'تحديد صلاحيات OAuth المطلوبة ومتطلبات الفوترة والحدود التشغيلية بوضوح.',
-    c2H3: '🛡️ ربط البحث عبر Vertex AI', c2Desc: 'استعلامات البحث مقيدة تمامًا بمخازن البيانات المعزولة لكل مستخدم.'
+    tag: 'مصادر موثقة بالدليل وليس بالتخمين',
+    title: 'استرجاع بحوث السوق والمصادر الموثوقة في كل جلسة',
+    desc: 'لا يعتمد وضع البحث العميق على التخمين، بل يتم التحقق من كل معلومة وسعر وتوجه في السوق عبر مصادر موثوقة ومباشرة قبل صياغة العرض أو المخرج.',
+    c1H3: '🔬 توثيق المصادر المعتمدة', c1Desc: 'ترتبط كل معلومة بمصدر موثق ومحفوظ داخل مساحة عملك لسهولة التدقيق.',
+    c2H3: '🛡️ طبقة تخزين معزولة وآمنة', c2Desc: 'يتم عزل سجلات البحث وموجزات العملاء والمسودات داخل مجلدات مستقلة لكل عميل.'
   }
 };
 
 const ALWAYS_ON_MAP = {
   EN: {
-    tag: 'Always-On Operational Memory',
-    title: 'Some Missions Don’t Need You to Ask Twice',
-    desc: 'Standard tasks and recurring maintenance run in the background on your schedule. Check backup states, refresh tokens, and log ad spend telemetry quietly overnight so you wake up to completed outcomes.',
-    t1: '⚡ Scheduled Cron Rounds', t2: '🟢 Autonomous State Recovery'
+    tag: '24/7 Autonomy Mode',
+    title: 'Missions That Keep Working After You Close The Site',
+    desc: 'Set recurring competitor scans, market monitoring, and content verification to run in the background on your schedule. Fabrica works quietly overnight so you wake up to completed, auditable client deliverables in your morning inbox.',
+    t1: '⚡ Scheduled Background Research', t2: '🟢 Continuous Pipeline Execution'
   },
   FR: {
-    tag: 'Mémoire Opérationnelle Continue',
-    title: 'Certaines Missions N’ont Pas Besoin d’Être Demandées Deux Fois',
-    desc: 'Les tâches standard et la maintenance récurrente s’exécutent en arrière-plan selon votre planning. Vérification des sauvegardes, rafraîchissement des jetons et télémétrie nocturne.',
-    t1: '⚡ Rondes Cron Planifiées', t2: '🟢 Récupération d’État Autonome'
+    tag: 'Mode Autonomie 24/7',
+    title: 'Des Missions Qui Continuent Après la Fermeture du Site',
+    desc: 'Planifiez des analyses de concurrence et surveillances de marché en arrière-plan. Fabrica travaille toute la nuit pour vous livrer des rapports complets au matin.',
+    t1: '⚡ Recherche de Fond Planifiée', t2: '🟢 Exécution Continue du Pipeline'
   },
   AR: {
-    tag: 'ذاكرة تشغيلية دائمة العمل',
-    title: 'مهام تنفذ تلقائيًا دون الحاجة لإعادتها',
-    desc: 'تنفذ المهام القياسية والصيانة الدورية في الخلفية وفقًا لجدولك الزمني. فحص النسخ الاحتياطية وتحديث المفاتيح وتسجيل البيانات ليلاً لتستيقظ على نتائج مكتملة.',
-    t1: '⚡ جولات مجدولة آليًا', t2: '🟢 استعادة حالة ذاتية'
+    tag: 'وضع الاستقلالية 24/7',
+    title: 'مهام تواصل العمل حتى بعد إغلاق الموقع',
+    desc: 'قم بجدولة تحليلات المنافسين ومراقبة السوق للعمل في الخلفية وفق جدولك الزمني. تعمل فابريكا ليلاً لتستيقظ على تقارير ومخرجات جاهزة وموثقة للعملاء.',
+    t1: '⚡ بحوث خلفية مجدولة آليًا', t2: '🟢 تنفيذ متواصل لمسارات العمل'
   }
 };
 
@@ -699,60 +720,63 @@ function BootSequence() {
 ---------------------------------------------------------------------- */
 const CONCIERGE_TRANSLATIONS = {
   EN: {
-    btnOpen: "Ask about Odoo & n8n",
-    btnClose: "Close concierge",
-    subtitle: "Instant AI Concierge",
-    title: "Fabrica Concierge",
-    status: "● ONLINE · persistent memory",
-    previewTag: "Simulated preview — no live backend required",
-    welcome: "Hi — I’m the Fabrica concierge. Ask me anything, or tap a question below.",
-    quickTitle: "Quick Inquiries",
-    thinking: "Kernel thinking",
-    inputPlaceholder: "Type your message or question...",
+    btnOpen: "Ask Fabrica AI Partner",
+    btnClose: "Close AI Partner",
+    subtitle: "24/7 Autonomous Pipeline",
+    title: "Fabrica AI Partner",
+    status: "● 24/7 AUTONOMOUS PIPELINE · ONLINE",
+    previewTag: "Interactive preview — discover our 4-stage autonomous pipeline",
+    welcome: "Hi — I’m your Fabrica AI Partner. Ask how our 24/7 autonomous pipeline turns raw business systems into audited client deliverables.",
+    quickTitle: "Frequently Asked Questions",
+    thinking: "Kernel reasoning...",
+    inputPlaceholder: "Ask about our 4-stage autonomous pipeline...",
     sendBtn: "Send",
+    clearBtn: "Reset",
     chips: [
-      { q: "What is Fabrica, really?", a: "A persistent context operating system. Your AI model is the brain — swappable. Fabrica is the body: the database, the sandbox, and the mission history that remembers what the brain forgot." },
-      { q: "Can it build actual Odoo ERP modules — not just a plan?", a: "Yes. We configure and deploy real Odoo data models, views, and finance/inventory routines, with live JSON-RPC telemetry — not a blueprint you still have to build yourself." },
-      { q: "How does the sandboxed execution work?", a: "Every dynamic script runs in a locked-down Node.js vm context — process, require, and global stripped out, capped at a 1000ms CPU budget. Nothing touches your filesystem." },
-      { q: "What happens to my data if I stop paying?", a: "It stays yours. Tenant-isolated storage means your raw_data and system_components are never entangled with anyone else’s account, and remain exportable." }
+      { q: "How does the 4-stage autonomous pipeline work?", a: "Fabrica operates a continuous 4-stage loop: Drafting ➔ Planning ➔ Execution ➔ Delivery. Your AI model reasons through tasks while Fabrica maintains persistent state, audit trails, and client deliverables 24/7." },
+      { q: "Can I use Fabrica with zero technical setup?", a: "Yes! Fabrica is engineered for non-technical solopreneurs, independent consultants, small agencies, and growth teams. You control the entire 24/7 pipeline from a single intuitive Dashboard." },
+      { q: "What client deliverables can Fabrica generate?", a: "Market research reports, competitive audits, client proposals, strategy matrices, growth playbooks, and automated client deliverables with full verification audit logs." },
+      { q: "How are my business systems & data protected?", a: "Tenant-isolated Supabase storage with Row Level Security ensures your raw business systems and client deliverables are strictly isolated, audited, and exportable anytime." }
     ]
   },
   FR: {
-    btnOpen: "Poser une question sur Odoo & n8n",
-    btnClose: "Fermer le concierge",
-    subtitle: "Concierge IA Instantané",
-    title: "Concierge Fabrica",
-    status: "● EN LIGNE · mémoire persistante",
-    previewTag: "Aperçu simulé — aucun backend requis",
-    welcome: "Bonjour — Je suis le concierge Fabrica. Posez-moi vos questions ou cliquez ci-dessous.",
-    quickTitle: "Questions Rapides",
-    thinking: "Réflexion du noyau",
-    inputPlaceholder: "Tapez votre message ou question...",
+    btnOpen: "Échanger avec le Partenaire IA",
+    btnClose: "Fermer le Partenaire IA",
+    subtitle: "Pipeline Autonome 24/7",
+    title: "Partenaire IA Fabrica",
+    status: "● PIPELINE AUTONOME 24/7 · EN LIGNE",
+    previewTag: "Aperçu interactif — découvrez notre pipeline en 4 étapes",
+    welcome: "Bonjour — Je suis votre Partenaire IA Fabrica. Comment puis-je vous aider à transformer vos systèmes en livrables clients audités aujourd'hui ?",
+    quickTitle: "Questions Fréquentes",
+    thinking: "Analyse du noyau...",
+    inputPlaceholder: "Posez une question sur le pipeline autonome...",
     sendBtn: "Envoyer",
+    clearBtn: "Réinitialiser",
     chips: [
-      { q: "Qu'est-ce que Fabrica, exactement ?", a: "Un système d'exploitation à contexte persistant. Votre modèle IA est le cerveau (interchangeable). Fabrica est le corps : la base de données, la sandbox et l'historique des missions." },
-      { q: "Peut-il construire de vrais modules ERP Odoo ?", a: "Oui. Nous configurons et déployons de vrais modèles de données Odoo, des vues et des routines financières/stocks avec télémétrie JSON-RPC en direct." },
-      { q: "Comment fonctionne l'exécution sandboxée ?", a: "Chaque script dynamique s'exécute dans un contexte Node.js vm sécurisé — sans accès au système de fichiers, limité à un budget CPU de 1000 ms." },
-      { q: "Que deviennent mes données si j'arrête l'abonnement ?", a: "Elles restent les vôtres. Le stockage isolé garantit que vos données brutes et composants système ne sont jamais mêlés à d'autres comptes." }
+      { q: "Comment fonctionne le pipeline autonome en 4 étapes ?", a: "Fabrica exécute une boucle continue en 4 étapes : Brouillon ➔ Planification ➔ Exécution ➔ Livraison. L'IA raisonne tandis que Fabrica maintient l'état et la traçabilité 24/7." },
+      { q: "Puis-je l'utiliser sans aucune compétence technique ?", a: "Oui ! Fabrica est conçu pour les solopreneurs, consultants et petites agences non-techniques. Vous contrôlez tout depuis un Tableau de Bord unique." },
+      { q: "Quels types de livrables Fabrica peut-il générer ?", a: "Rapports d'étude de marché, audits concurrentiels, propositions clients, matrices de stratégie et playbooks de croissance avec journal d'audit vérifié." },
+      { q: "Comment mes données et livrables sont-ils sécurisés ?", a: "Le stockage isolé Supabase avec Row Level Security garantit que vos systèmes et livrables clients sont protégés et exportables à tout moment." }
     ]
   },
   AR: {
-    btnOpen: "اسأل عن Odoo و n8n",
+    btnOpen: "اسأل شريك Fabrica الذكي",
     btnClose: "إغلاق المساعد",
-    subtitle: "مساعد الذكاء الاصطناعي",
-    title: "مساعد Fabrica",
-    status: "● متصل · ذاكرة مستمرة",
-    previewTag: "معاينة محاكاة — لا تتطلب خادمًا مباشرًا",
-    welcome: "مرحبًا — أنا مساعد Fabrica. اسألني أي شيء أو اختر سؤالًا من الأسفل.",
-    quickTitle: "استفسارات سريعة",
-    thinking: "النواة تفكر",
-    inputPlaceholder: "اكتب رسالتك أو سؤالك هنا...",
+    subtitle: "مسار عمل مستقل على مدار الساعة",
+    title: "شريك Fabrica الذكي",
+    status: "● مسار عمل مستقل 24/7 · متصل",
+    previewTag: "معاينة تفاعلية — اكتشف كيف يعمل مسارنا الرباعي",
+    welcome: "مرحبًا — أنا شريكك الذكي في Fabrica. كيف يمكنني مساعدتك اليوم في تحويل أنظمة عملك إلى مخرجات مدققة وجاهزة لعملائك؟",
+    quickTitle: "أسئلة شائعة",
+    thinking: "النواة تحلل...",
+    inputPlaceholder: "اسأل عن مسار العمل المستقل في 4 مراحل...",
     sendBtn: "إرسال",
+    clearBtn: "إعادة ضبط",
     chips: [
-      { q: "ما هو Fabrica بالضبط؟", a: "نظام تشغيل ذو سياق مستمر. نموذج الذكاء الاصطناعي هو العقل (قابل للتغيير). Fabrica هو الجسد: قاعدة البيانات، البيئة المعزولة، وهيكل المهام." },
-      { q: "هل يمكنه بناء وحدات Odoo ERP حقيقية؟", a: "نعم. نقوم بتهيئة ونشر نماذج بيانات Odoo الحقيقية والواجهات وروابط المالية والمخزون مع قياسات أداء حية عبر JSON-RPC." },
-      { q: "كيف تعمل البيئة المعزولة (Sandbox)؟", a: "يعمل كل برنامج نصي ديناميكي داخل بيئة Node.js vm آمنة معزولة تمامًا، بحد أقصى 1000 مللي ثانية لوقت المعالجة." },
-      { q: "ماذا يحدث لبياناتي إذا توقفت عن الاشتراك؟", a: "تبقى ملكك بالكامل. العزل التام للمستأجر يضمن عدم تداخل بياناتك ومكونات نظامك مع أي حساب آخر." }
+      { q: "كيف يعمل مسار العمل المستقل من 4 مراحل؟", a: "تعمل Fabrica عبر حلقة متصلة من 4 مراحل: المسودة ← التخطيط ← التنفيذ ← التسليم. يحلل الذكاء الاصطناعي المهام بينما تحافظ Fabrica على استمرارية العمل والتدقيق على مدار الساعة." },
+      { q: "هل يمكنني استخدامه بدون أي خبرة تقنية؟", a: "نعم! تم تصميم Fabrica خصيصًا للرواد المستقلين والمستشارين والوكالات بدون أي تعقيدات تقنية، وتدير كل شيء من لوحة تحكم واحدة." },
+      { q: "ما هي المخرجات التي يمكن لـ Fabrica إنشاؤها؟", a: "تقارير أبحاث السوق، دراسات المنافسين، عروض العملاء، مصفوفات الاستراتيجية، وخطط النمو مع سجلات تدقيق وتحقق كاملة." },
+      { q: "كيف تتم حماية بياناتي ومخرجات عملائي؟", a: "يضمن التخزين المعزول عبر Supabase RLS أمان وسرية أنظمتك ومخرجاتك بالكامل، مع إمكانية تصديرها في أي وقت." }
     ]
   }
 };
@@ -827,81 +851,108 @@ function ConciergeChatbot({ agentLang = 'EN' }: { agentLang?: 'EN' | 'FR' | 'AR'
       setTyping(false);
       let reply = "";
       const lower = query.toLowerCase();
-      if (lower.includes('price') || lower.includes('cost') || lower.includes('plan') || lower.includes('subscr') || lower.includes('سعر') || lower.includes('خطة')) {
+
+      // 1. Check exact or close match with chip questions first
+      const chipMatch = t.chips.find((c) => c.q.toLowerCase() === lower || lower.includes(c.q.toLowerCase().slice(0, 15)));
+      if (chipMatch) {
+        reply = chipMatch.a;
+      } else if (lower.includes('pipeline') || lower.includes('stage') || lower.includes('loop') || lower.includes('work') || lower.includes('how') || lower.includes('مراحل') || lower.includes('كيف') || lower.includes('4-stage')) {
+        reply = currentLang === 'AR'
+          ? "تعمل Fabrica عبر حلقة متصلة من 4 مراحل: المسودة ← التخطيط ← التنفيذ ← التسليم. يحلل الذكاء الاصطناعي المهام بينما تحافظ Fabrica على استمرارية العمل والتدقيق على مدار الساعة."
+          : currentLang === 'FR'
+          ? "Fabrica exécute une boucle continue en 4 étapes : Brouillon ➔ Planification ➔ Exécution ➔ Livraison. L'IA raisonne tandis que Fabrica maintient l'état et la traçabilité 24/7."
+          : "Fabrica operates a continuous 4-stage loop: Drafting ➔ Planning ➔ Execution ➔ Delivery. Your AI model reasons through tasks while Fabrica maintains persistent state, audit trails, and client deliverables 24/7.";
+      } else if (lower.includes('deliver') || lower.includes('output') || lower.includes('client') || lower.includes('audit') || lower.includes('report') || lower.includes('مخرجات') || lower.includes('عميل')) {
+        reply = currentLang === 'AR'
+          ? "تنتج فابريكا مخرجات مدققة وجاهزة لعملائك مثل تقارير أبحاث السوق، دراسات المنافسين، عروض العملاء، مصفوفات الاستراتيجية، وخطط النمو مع سجلات تدقيق وتحقق كاملة."
+          : currentLang === 'FR'
+          ? "Fabrica génère des livrables clients audités et vérifiés : rapports d'étude de marché, audits concurrentiels, propositions clients, matrices de stratégie et playbooks de croissance."
+          : "Fabrica generates audited client deliverables including market research reports, competitive audits, client proposals, strategy matrices, and growth playbooks with full verification logs.";
+      } else if (lower.includes('price') || lower.includes('cost') || lower.includes('plan') || lower.includes('subscr') || lower.includes('free') || lower.includes('سعر') || lower.includes('خطة') || lower.includes('forfait')) {
         reply = currentLang === 'AR'
           ? "تقدم فابريكا خطة مجانية للبدء، بالإضافة إلى اشتراكات للمحترفين والمؤسسات بمرونة كاملة ودعم تقني على مدار الساعة."
           : currentLang === 'FR'
           ? "Fabrica propose un forfait gratuit pour commencer, ainsi que des abonnements flexibles pour utilisateurs avancés et entreprises."
           : "Fabrica offers a Free tier to start, along with flexible Power User and Enterprise plans with 24/7 priority support.";
-      } else if (lower.includes('feature') || lower.includes('system') || lower.includes('odoo') || lower.includes('n8n') || lower.includes('misa') || lower.includes('ميزة')) {
+      } else if (lower.includes('setup') || lower.includes('tech') || lower.includes('code') || lower.includes('solopreneur') || lower.includes('agency') || lower.includes('تقني')) {
         reply = currentLang === 'AR'
-          ? "تتيح لك منصة فابريكا تصميم وإدارة الأنظمة البرمجية، المكونات، والمهمات الذكية مع تكامل مباشر لمستودعات GitHub ونقل بيانات Odoo."
+          ? "تم تصميم Fabrica خصيصًا للرواد المستقلين والمستشارين والوكالات بدون أي تعقيدات تقنية، وتدير كل شيء من لوحة تحكم واحدة."
           : currentLang === 'FR'
-          ? "Fabrica vous permet de concevoir et gérer vos systèmes logiciels, composants et missions IA avec synchronisation directe GitHub et Odoo."
-          : "Fabrica enables you to design, monitor, and deploy software systems, components, and automated AI missions with direct GitHub sync & Odoo integration.";
+          ? "Fabrica est conçu pour les solopreneurs, consultants et petites agences non-techniques. Vous contrôlez tout depuis un Tableau de Bord unique sans code ni configuration."
+          : "Fabrica is engineered for non-technical solopreneurs, consultants, and agencies. You control the entire 24/7 autonomous pipeline from a single Dashboard with zero technical setup.";
       } else {
         reply = currentLang === 'AR'
-          ? "شكراً لسؤالك! يمكنك البدء فوراً بالنقر على 'دخول المنصة' للاطلاع على لوحة التحكم والتطبيقات المباشرة."
+          ? "شكراً لسؤالك! يمكنك البدء فوراً بالنقر على 'دخول المنصة' أو اختيار أحد الأسئلة المقترحة أدناه للتعرف على مسار العمل المستقل."
           : currentLang === 'FR'
-          ? "Merci pour votre question ! Vous pouvez explorer la plateforme en direct en cliquant sur 'Lancer la plateforme'."
-          : "Thank you for asking! You can explore the live platform directly by clicking 'Launch Platform' to access the dashboard.";
+          ? "Merci pour votre question ! Vous pouvez explorer la plateforme en cliquant sur 'Lancer la plateforme' ou sélectionner une question ci-dessous."
+          : "Thank you for asking! You can explore the live platform directly by clicking 'Launch Your Workspace', or tap any question below to see our 24/7 autonomous pipeline in action.";
       }
       setMessages((m) => [...m, { role: 'bot', text: reply }]);
-    }, 700);
+    }, 600);
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: 12, right: 12, zIndex: 9999 }} className="landing-chat-widget flex flex-col items-end gap-2.5 max-w-[calc(100vw-24px)]">
+    <div style={{ position: 'fixed', bottom: 12, right: 12, zIndex: 9999 }} className="landing-chat-widget flex flex-col items-end gap-2 max-w-[calc(100vw-24px)]">
       {open && (
         <div
           dir={currentLang === 'AR' ? 'rtl' : 'ltr'}
-          className="landing-chat-window w-[calc(100vw-24px)] sm:w-[420px] max-w-[calc(100vw-24px)] sm:max-w-[420px] h-[calc(100vh-90px)] max-h-[560px] sm:h-[520px] bg-slate-950/95 backdrop-blur-2xl border border-slate-700/80 rounded-2xl sm:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300"
-          style={{ paddingTop: '0px', paddingLeft: '0px', paddingRight: '0px' }}
+          className="landing-chat-window w-[calc(100vw-24px)] sm:w-[380px] max-w-[calc(100vw-24px)] sm:max-w-[380px] h-[460px] max-h-[calc(100vh-80px)] min-h-[260px] bg-[#0E1117]/95 backdrop-blur-2xl border border-slate-800/90 rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.75)] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"
         >
           {/* Header */}
-          <div className="px-4 sm:px-6 py-3.5 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950">
-            <div className="flex items-center gap-3" style={{ paddingLeft: '0px' }}>
-              <div className="relative w-8 sm:w-9 h-8 sm:h-9 rounded-full bg-[#CC7A4A]/20 border border-[#CC7A4A]/40 flex items-center justify-center text-sm sm:text-base shadow-inner">
+          <div className="px-3.5 sm:px-4 py-2.5 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-[#131722] via-[#11141D] to-[#0E1117] shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="relative w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-sm shadow-inner shrink-0">
                 ⚡
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 animate-pulse" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#131722]" />
               </div>
               <div>
-                <span className="text-xs font-bold text-white block">{t.title}</span>
-                <span className="text-[9.5px] text-emerald-400 font-mono tracking-wider">{t.status}</span>
+                <span className="text-xs font-bold text-white block leading-tight">{t.title}</span>
+                <span className="text-[10px] text-emerald-400 font-mono tracking-wider block mt-0.5">{t.status}</span>
               </div>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white text-xs flex items-center justify-center transition-colors"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMessages([{ role: 'bot', text: t.welcome }])}
+                title="Reset chat"
+                className="text-[11px] text-slate-400 hover:text-white px-2 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800/80 transition-colors font-medium"
+              >
+                {t.clearBtn}
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white text-xs flex items-center justify-center border border-slate-800/80 transition-colors"
+                aria-label="Close chat"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
-          <div className="px-4 sm:px-6 pt-2 pb-1.5 bg-slate-900/40 border-b border-slate-800/40">
-            <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#CC7A4A]" />
+          {/* Preview Banner */}
+          <div className="px-3.5 sm:px-4 py-1.5 bg-slate-900/60 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+            <span className="text-[10.5px] text-slate-400 font-mono flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               {t.previewTag}
             </span>
           </div>
 
           {/* Messages body */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-3.5 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-slate-800">
+          <div ref={scrollRef} className="flex-1 min-h-[60px] overflow-y-auto px-3.5 sm:px-4 py-3 flex flex-col gap-2.5 scrollbar-thin scrollbar-thumb-slate-800">
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`text-xs sm:text-[12.5px] leading-relaxed px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl max-w-[88%] shadow-sm ${
+                className={`text-xs sm:text-[13px] leading-relaxed px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl max-w-[88%] shadow-sm ${
                   m.role === 'bot'
-                    ? 'bg-slate-800/90 text-slate-100 self-start rounded-tl-xs border border-slate-700/50'
-                    : 'bg-gradient-to-r from-[#CC7A4A] to-[#b2693e] text-white self-end rounded-tr-xs shadow-md shadow-[#CC7A4A]/20 font-medium'
+                    ? 'bg-[#141824]/90 text-slate-100 self-start rounded-tl-xs border border-slate-800'
+                    : 'bg-gradient-to-r from-amber-600 to-amber-700 text-white self-end rounded-tr-xs shadow-md shadow-amber-950/30 font-medium'
                 }`}
               >
                 {m.text}
               </div>
             ))}
             {typing && (
-              <div className="bg-slate-800/90 text-slate-400 self-start rounded-2xl rounded-tl-xs px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs border border-slate-700/50 flex items-center gap-2">
-                <span className="text-[10px] font-mono text-emerald-400">{t.thinking}</span>
+              <div className="bg-[#141824]/90 text-slate-400 self-start rounded-2xl rounded-tl-xs px-3.5 py-2 text-xs border border-slate-800 flex items-center gap-2">
+                <span className="text-[10.5px] font-mono text-emerald-400">{t.thinking}</span>
                 <span className="inline-flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.15s]" />
@@ -912,17 +963,17 @@ function ConciergeChatbot({ agentLang = 'EN' }: { agentLang?: 'EN' | 'FR' | 'AR'
           </div>
 
           {/* Quick Prompt Chips */}
-          <div className="border-t border-slate-800/60 p-2.5 bg-slate-950/80 flex flex-col gap-1.5 max-h-[120px] overflow-y-auto">
-            <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest px-1">{t.quickTitle}</span>
+          <div className="border-t border-slate-800/80 px-3 py-2 bg-[#0D101A]/95 flex flex-col gap-1.5 max-h-[110px] overflow-y-auto shrink-0">
+            <span className="text-[9.5px] font-mono font-bold text-slate-400 uppercase tracking-widest px-1">{t.quickTitle}</span>
             <div className="flex flex-col gap-1.5">
-              {t.chips.slice(0, 2).map((c, i) => (
+              {t.chips.map((c, i) => (
                 <button
                   key={i}
                   onClick={() => handleSendMessage(c.q)}
-                  className="text-left text-[11px] font-semibold text-slate-300 bg-slate-900/90 hover:bg-slate-800 hover:text-white border border-slate-800 hover:border-[#CC7A4A]/50 rounded-lg px-3 py-1.5 transition-all shadow-sm active:scale-[0.98] flex items-center justify-between group gap-2"
+                  className="text-left text-[11px] font-medium text-slate-300 bg-[#141824] hover:bg-[#1C2233] hover:text-white border border-slate-800/80 hover:border-amber-500/40 rounded-xl px-2.5 py-1.5 transition-all shadow-sm active:scale-[0.98] flex items-center justify-between group gap-2"
                 >
                   <span className="truncate">{c.q}</span>
-                  <span className="text-[#CC7A4A] opacity-80 group-hover:opacity-100 transition-opacity shrink-0">➔</span>
+                  <span className="text-amber-500 opacity-70 group-hover:opacity-100 transition-opacity shrink-0">→</span>
                 </button>
               ))}
             </div>
@@ -934,40 +985,40 @@ function ConciergeChatbot({ agentLang = 'EN' }: { agentLang?: 'EN' | 'FR' | 'AR'
               e.preventDefault();
               handleSendMessage();
             }}
-            className="p-2.5 border-t border-slate-800/80 bg-slate-900/90 flex items-center gap-2"
+            className="p-2.5 border-t border-slate-800/90 bg-[#111420]/95 flex items-center gap-2 shrink-0"
           >
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder={t.inputPlaceholder}
-              className="flex-1 min-w-0 bg-slate-950/80 border border-slate-700/70 focus:border-[#CC7A4A] text-white text-xs rounded-xl px-3.5 py-2 outline-none transition-colors placeholder:text-slate-500"
+              className="flex-1 min-w-0 bg-[#0A0D14] border border-slate-800 focus:border-amber-500/60 text-white text-xs sm:text-[13px] rounded-xl px-3 py-2 outline-none transition-colors placeholder:text-slate-500"
             />
             <button
               type="submit"
               disabled={!inputText.trim()}
-              className="px-3.5 py-2 bg-gradient-to-r from-[#CC7A4A] to-[#b2693e] hover:from-[#b2693e] hover:to-[#96552f] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 whitespace-nowrap shrink-0"
+              className="px-3.5 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 whitespace-nowrap shrink-0 flex items-center gap-1.5"
             >
-              {t.sendBtn} ➔
+              {t.sendBtn} →
             </button>
           </form>
         </div>
       )}
 
-      {/* Floating Toggle Button */}
+      {/* Sleek Floating Pill Button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2.5 sm:gap-3.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-700/80 hover:border-[#CC7A4A] rounded-full px-3.5 py-2.5 sm:px-5 sm:py-3 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_10px_35px_rgba(204,122,74,0.3)] transition-all duration-300 group hover:scale-[1.03] active:scale-[0.98] whitespace-nowrap min-w-fit max-w-[calc(100vw-24px)]"
+        className="flex items-center gap-2.5 sm:gap-3 bg-[#0E1117] hover:bg-[#141824] border border-slate-700/80 hover:border-amber-500/50 rounded-full px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-[0_12px_36px_rgba(0,0,0,0.6)] hover:shadow-[0_12px_40px_rgba(245,158,11,0.2)] transition-all duration-300 group hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
       >
-        <span className="relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#CC7A4A]/30 to-[#CC7A4A]/10 border border-[#CC7A4A]/40 shadow-inner shrink-0">
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-400 border-2 border-slate-950 animate-pulse" />
-          <span className="text-base sm:text-lg group-hover:rotate-12 transition-transform duration-300">⚡</span>
+        <span className="relative flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/40 shadow-inner shrink-0">
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0E1117] animate-pulse" />
+          <span className="text-base group-hover:rotate-12 transition-transform duration-300">⚡</span>
         </span>
         <div className="flex flex-col items-start text-left">
-          <span className="text-[11px] sm:text-xs font-bold text-white group-hover:text-[#CC7A4A] transition-colors whitespace-nowrap">
+          <span className="text-xs sm:text-[13px] font-bold text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">
             {open ? t.btnClose : t.btnOpen}
           </span>
-          <span className="text-[8.5px] sm:text-[9.5px] font-mono text-slate-400">{t.subtitle}</span>
+          <span className="text-[9.5px] sm:text-[10px] font-mono text-slate-400 leading-none mt-0.5">{t.subtitle}</span>
         </div>
       </button>
     </div>
@@ -1136,62 +1187,62 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#1C1C1E] leading-[1.25]">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-[#1C1C1E] leading-[1.3]">
             {(() => {
-              const spanGreen = "text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-xl inline-block mx-0.5 font-black";
-              const spanAmber = "text-amber-700 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-xl inline-block mx-0.5 font-black";
+              const spanGreen = "text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
+              const spanAmber = "text-amber-700 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
               if (uiLang === 'FR') {
                 return (
                   <>
-                    NOUS CONSTRUISONS DES <span className={spanGreen}>SYSTÈMES SUR MESURE</span> ET <span className={spanAmber}>SORTIES (OUTPUTS)</span> À PARTIR DE TOUTE <span className={spanAmber}>DONNÉE (INPUT)</span>.
+                    TRANSFORMEZ VOS <span className={spanAmber}>SYSTÈMES BRUTS</span> EN <span className={spanGreen}>LIVRABLES CLIENTS AUDITÉS</span> VIA DES <span className={spanAmber}>OPÉRATIONS AUTONOMES</span>.
                   </>
                 );
               }
               if (uiLang === 'AR') {
                 return (
                   <>
-                    بناء <span className={spanGreen}>أنظمة مخصصة</span> و<span className={spanAmber}>مخرجات (OUTPUTS)</span> من أي <span className={spanAmber}>مدخلات (INPUTS)</span>.
+                    حوّل <span className={spanAmber}>أنظمة عملك الخام</span> إلى <span className={spanGreen}>مخرجات مدققة وجاهزة</span> لعملائك عبر <span className={spanAmber}>عمليات مستقلة</span>.
                   </>
                 );
               }
               return (
                 <>
-                  WE BUILD <span className={spanGreen}>CUSTOM SYSTEMS</span> & <span className={spanAmber}>OUTPUTS</span> FROM ANY <span className={spanAmber}>INPUT</span>.
+                  Turn <span className={spanAmber}>RAW BUSINESS SYSTEMS</span> into <span className={spanGreen}>AUDITED CLIENT DELIVERABLES</span> via <span className={spanAmber}>AUTONOMOUS OPERATIONS</span>.
                 </>
               );
             })()}
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-slate-600 leading-relaxed">
+          <p className="text-sm sm:text-base md:text-lg font-bold text-slate-600 leading-relaxed">
             {(() => {
-              const spanBlue = "text-sky-700 bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 rounded-xl inline-block mx-0.5 font-black";
+              const spanBlue = "text-sky-700 bg-sky-500/10 border border-sky-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
               if (uiLang === 'FR') {
                 return (
                   <>
-                    L'IA sait <span className={spanBlue}>COMMENT (HOW)</span> construire. Fabrica lui montre <span className={spanBlue}>QUOI (WHAT)</span>.
+                    L’IA sait <span className={spanBlue}>raisonner</span>. Fabrica lui donne le <span className={spanBlue}>pipeline métier autonome 24/7</span>.
                   </>
                 );
               }
               if (uiLang === 'AR') {
                 return (
                   <>
-                    الذكاء الاصطناعي يعرف <span className={spanBlue}>كيف (HOW)</span> يبني. Fabrica توضح له <span className={spanBlue}>ماذا (WHAT)</span>.
+                    الذكاء الاصطناعي يعرف <span className={spanBlue}>كيف يحلل</span>. Fabrica تمنحه <span className={spanBlue}>مسار العمل التجاري المستقل على مدار الساعة</span>.
                   </>
                 );
               }
               return (
                 <>
-                  AI knows <span className={spanBlue}>HOW</span> to build. Fabrica shows it <span className={spanBlue}>WHAT</span>.
+                  AI knows how to <span className={spanBlue}>reason</span>. Fabrica gives it the <span className={spanBlue}>24/7 autonomous business pipeline</span>.
                 </>
               );
             })()}
           </p>
 
-          <p className="text-slate-600 text-base leading-relaxed max-w-2xl">
+          <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
             {txt.hero.desc}
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1 font-mono">
-            {['Custom Odoo ERP', 'n8n Pipelines', 'Vertex AI Search', 'Node.js VM Sandbox', 'Gemini · Claude · OpenRouter'].map((t, idx) => (
+            {['4-Stage Autonomous Pipeline', '24/7 Autonomy Mode', 'Audited Storage Layer', 'Zero Technical Setup', 'Gemini · Claude · OpenRouter'].map((t, idx) => (
               <span key={t} className="bg-slate-100 text-slate-700 text-[10px] font-semibold py-1 rounded border border-slate-200" style={{ marginLeft: idx === 0 ? '5px' : '3px', paddingLeft: '2px', paddingRight: '2px' }}>
                 {t}
               </span>
@@ -1214,7 +1265,7 @@ export default function Home() {
           <ImageCard
             src="/Fabrica%20Banner%2000.jpg"
             alt="Physical archived folders, smartphone capturing documents, and digital system screen"
-            badge="Banner 00 // Raw Ingestion Engine"
+            badge="Banner 00 // 4-Stage Autonomous Pipeline"
             aspect="aspect-[16/11]"
             blur={1}
           />
@@ -1521,9 +1572,9 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center" style={{ paddingTop: '15px', paddingBottom: '15px', paddingLeft: '10px' }}>
           <div className="lg:col-span-7 flex flex-col gap-8">
             <div className="flex flex-col gap-3">
-              <span className="text-[10px] font-mono font-extrabold text-[#CC7A4A] tracking-wider uppercase">Every Build Is Audited Before It&apos;s Approved</span>
-              <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">The 7-Step Drafting Pipeline</h2>
-              <p className="text-slate-400 text-sm max-w-2xl">Three distinct options presented at the QA Gate with explicit trade-offs. No black-box guesses.</p>
+              <span className="text-[10px] font-mono font-extrabold text-[#CC7A4A] tracking-wider uppercase">{txt.sections.pipelineTag}</span>
+              <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">{txt.sections.pipelineTitle}</h2>
+              <p className="text-slate-400 text-sm max-w-2xl">{txt.sections.pipelineSub}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 pb-2">
               {sevenSteps.map((s, i) => (

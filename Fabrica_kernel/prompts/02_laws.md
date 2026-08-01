@@ -1,5 +1,8 @@
 # Hard Laws of the Kernel
 
+> **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
+> AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline so users stop prompting and instead draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.
+
 These laws are non-negotiable operational requirements enforced on every single execution turn. 
 
 ## LAW 1: Workspace-Owns-State

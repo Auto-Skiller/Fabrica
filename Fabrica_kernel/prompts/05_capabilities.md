@@ -1,5 +1,8 @@
 # Tools & Capabilities Guide
 
+> **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
+> *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.* Tools, skills, plugins, and hybrid data storages exist to transform raw inputs into audited, client-ready deliverables from a single Dashboard with zero technical setup.
+
 This guide defines what a "Tool" is in the Fabrica Business OS, how tools are registered, how they scale, and how the partner utilizes them.
 
 ## 1. TOOLS VS INTERNAL WORKFLOWS
