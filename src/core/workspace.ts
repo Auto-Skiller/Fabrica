@@ -1,8 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { getTenantRoot, appendTenantAuditLog } from './tenant.js';
+import { ensureUserHarness } from './harness.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
+
+export interface UserFileItem {
+  name: string;
+  relativePath: string;
+  isDirectory: boolean;
+  size: number;
+  updatedAt: string;
+}
 
 export interface WorkspaceSourceItem {
   name: string;
@@ -184,3 +193,114 @@ export function detectFillGaps(tenantId: string = 'default_user'): { gapsFound: 
   syncWorkspaceJson(tenantId);
   return { gapsFound: 0, fixed: true };
 }
+
+// ── Filesystem Storage & Explorer Engine ──────────────────────────────────────
+
+export function resolveUserPath(tenantId: string, relativePath: string = ''): string {
+  const userRoot = getTenantRoot(tenantId);
+  const resolved = path.resolve(userRoot, relativePath);
+
+  if (!resolved.startsWith(userRoot)) {
+    throw new Error(`Security Violation: Access denied outside tenant workspace boundary (${userRoot}).`);
+  }
+  return resolved;
+}
+
+export function listUserFiles(tenantId: string = 'default_user', subDir: string = ''): UserFileItem[] {
+  ensureUserHarness(tenantId);
+  const targetDir = resolveUserPath(tenantId, subDir);
+  if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) return [];
+
+  const userRoot = getTenantRoot(tenantId);
+  const entries = fs.readdirSync(targetDir, { withFileTypes: true });
+
+  return entries.map(entry => {
+    const fullPath = path.join(targetDir, entry.name);
+    const relPath = path.relative(userRoot, fullPath);
+    let size = 0;
+    let updatedAt = new Date().toISOString();
+    try {
+      const stats = fs.statSync(fullPath);
+      size = stats.size;
+      updatedAt = stats.mtime.toISOString();
+    } catch (_) {}
+
+    return {
+      name: entry.name,
+      relativePath: relPath,
+      isDirectory: entry.isDirectory(),
+      size,
+      updatedAt
+    };
+  });
+}
+
+export function readUserFile(tenantId: string, relativePath: string): { content: string; path: string; size: number } {
+  const targetPath = resolveUserPath(tenantId, relativePath);
+  if (!fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) {
+    throw new Error(`File not found or is a directory: ${relativePath}`);
+  }
+  const content = fs.readFileSync(targetPath, 'utf8');
+  const userRoot = getTenantRoot(tenantId);
+  return {
+    content,
+    path: path.relative(userRoot, targetPath),
+    size: Buffer.byteLength(content, 'utf8')
+  };
+}
+
+export function writeUserFile(tenantId: string, relativePath: string, content: string): { path: string; size: number } {
+  const targetPath = resolveUserPath(tenantId, relativePath);
+  const parentDir = path.dirname(targetPath);
+  fs.mkdirSync(parentDir, { recursive: true });
+  fs.writeFileSync(targetPath, content, 'utf8');
+
+  const userRoot = getTenantRoot(tenantId);
+  const normPath = path.relative(userRoot, targetPath);
+
+  appendTenantAuditLog(tenantId, {
+    type: 'user',
+    event: 'File Written',
+    details: { path: normPath, size: Buffer.byteLength(content, 'utf8') }
+  });
+
+  return {
+    path: normPath,
+    size: Buffer.byteLength(content, 'utf8')
+  };
+}
+
+export function moveUserFile(tenantId: string, srcRelativePath: string, destRelativePath: string): { src: string; dest: string; size: number } {
+  const srcPath = resolveUserPath(tenantId, srcRelativePath);
+  const destPath = resolveUserPath(tenantId, destRelativePath);
+
+  if (!fs.existsSync(srcPath)) {
+    throw new Error(`Source file or folder does not exist: ${srcRelativePath}`);
+  }
+
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  fs.renameSync(srcPath, destPath);
+
+  const userRoot = getTenantRoot(tenantId);
+  const normSrc = path.relative(userRoot, srcPath);
+  const normDest = path.relative(userRoot, destPath);
+
+  let size = 0;
+  try { size = fs.statSync(destPath).size; } catch (_) {}
+
+  return { src: normSrc, dest: normDest, size };
+}
+
+export function deleteUserFile(tenantId: string, relativePath: string): boolean {
+  const targetPath = resolveUserPath(tenantId, relativePath);
+  if (!fs.existsSync(targetPath)) return false;
+
+  const stat = fs.statSync(targetPath);
+  if (stat.isDirectory()) {
+    fs.rmSync(targetPath, { recursive: true, force: true });
+  } else {
+    fs.unlinkSync(targetPath);
+  }
+  return true;
+}
+

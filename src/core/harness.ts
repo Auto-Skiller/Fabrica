@@ -120,14 +120,6 @@ export interface PiProcessLogItem {
   apiKeyStrategy: string;
 }
 
-export interface UserFileItem {
-  name: string;
-  relativePath: string;
-  isDirectory: boolean;
-  size: number;
-  updatedAt: string;
-}
-
 // ── Single Daemon Process & Active Trackers ────────────────────────────────────
 
 export class PiDaemonProcess {
@@ -241,30 +233,41 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   fs.mkdirSync(piSkillsDir, { recursive: true });
   fs.mkdirSync(piExtensionsDir, { recursive: true });
 
-  const settingsPath = path.join(userRoot, 'settings.json');
-  if (!fs.existsSync(settingsPath)) {
-    fs.writeFileSync(settingsPath, JSON.stringify({
-      language: "EN",
-      internet_access: true,
-      autonomy: "autonomous",
-      capabilities: ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
+  const tenantJsonPath = path.join(userRoot, 'tenant.json');
+  if (!fs.existsSync(tenantJsonPath)) {
+    fs.writeFileSync(tenantJsonPath, JSON.stringify({
+      tenant_id: tenantId,
+      name: tenantId === 'default_user' ? 'Default Workspace' : `Tenant (${tenantId})`,
+      plan: "Professional",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: { language: "EN", internet_access: true },
       subscription: { plan: "Professional", active: true },
-      quota: { monthly_tokens: 2000000, used_tokens: 0 },
-      alerts: []
+      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
+      logs: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: "system",
+          event: "Workspace Initialized",
+          details: "Unified audit event stream initialized in tenant.json."
+        }
+      ]
     }, null, 2), 'utf8');
   }
 
-  const runtimePath = path.join(userRoot, 'runtime.json');
-  if (!fs.existsSync(runtimePath)) {
-    fs.writeFileSync(runtimePath, JSON.stringify({
+  const harnessJsonPath = path.join(userRoot, 'harness.json');
+  if (!fs.existsSync(harnessJsonPath)) {
+    fs.writeFileSync(harnessJsonPath, JSON.stringify({
       tenant_id: tenantId,
-      status: "running",
+      status: "idle",
+      selected_model: "gemini-3.6-flash",
+      autonomy: "autonomous",
+      agent_lang: "EN",
+      web_search_enabled: true,
       suggestions: [],
       backlogs: [],
       review_queues: [],
-      recent_events: [
-        { date: new Date().toISOString(), type: "system", description: "Workspace initialized successfully." }
-      ],
       last_active: new Date().toISOString()
     }, null, 2), 'utf8');
   }
@@ -274,25 +277,18 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
     fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
   }
 
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  if (!fs.existsSync(workspaceJsonPath)) {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify({
+      sources: {},
+      deliverables: {},
+      last_synced_at: new Date().toISOString()
+    }, null, 2), 'utf8');
+  }
+
   const agentsMdPath = path.join(userRoot, 'AGENTS.md');
   if (!fs.existsSync(agentsMdPath)) {
     fs.writeFileSync(agentsMdPath, '', 'utf8');
-  }
-
-  const logsJsonPath = path.join(userRoot, 'logs.json');
-  if (!fs.existsSync(logsJsonPath)) {
-    fs.writeFileSync(logsJsonPath, JSON.stringify({
-      events: [
-        {
-          id: `evt-init-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          type: "system",
-          event: "Workspace Initialized",
-          details: "Unified audit event stream initialized."
-        }
-      ],
-      last_event_at: new Date().toISOString()
-    }, null, 2), 'utf8');
   }
 
   const workspaceDir = path.join(userRoot, 'workspace');
@@ -348,6 +344,36 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   };
 }
 
+export function loadKernelSystemPrompts(tenantId: string = 'default_user'): string {
+  const kernelPromptsDir = path.join(process.cwd(), 'Fabrica_kernel', 'system_prompts');
+  let combinedPrompts = '';
+
+  if (fs.existsSync(kernelPromptsDir)) {
+    const files = fs.readdirSync(kernelPromptsDir).filter(f => f.endsWith('.md')).sort();
+    for (const f of files) {
+      try {
+        const content = fs.readFileSync(path.join(kernelPromptsDir, f), 'utf8');
+        if (content.trim()) {
+          combinedPrompts += `\n\n[SYSTEM DIRECTIVE (${f})]:\n${content.trim()}`;
+        }
+      } catch (_) {}
+    }
+  }
+
+  const userRoot = getTenantRoot(tenantId);
+  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+  if (fs.existsSync(agentsMdPath)) {
+    try {
+      const agentsMdContent = fs.readFileSync(agentsMdPath, 'utf8');
+      if (agentsMdContent.trim()) {
+        combinedPrompts += `\n\n[USER AGENTS.MD DIRECTIVES]:\n${agentsMdContent.trim()}`;
+      }
+    } catch (_) {}
+  }
+
+  return combinedPrompts;
+}
+
 export function getPiExecutionOptions(
   tenantId: string = 'default_user',
   disableWorkspaceSkills: boolean = false,
@@ -358,9 +384,12 @@ export function getPiExecutionOptions(
   const piDir = path.join(userRoot, '.pi');
   fs.mkdirSync(path.join(piDir, 'agent', 'sessions'), { recursive: true });
 
-  const cliFlags: string[] = [
-    '--skill', path.join(process.cwd(), 'Fabrica_kernel', 'skills'),
-  ];
+  const cliFlags: string[] = [];
+
+  const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
+  if (fs.existsSync(kernelSkillsDir) && fs.readdirSync(kernelSkillsDir).length > 0) {
+    cliFlags.push('--skill', kernelSkillsDir);
+  }
 
   if (!disableWorkspaceSkills) {
     const userSkillsDir = path.join(userRoot, '.pi', 'skills');
@@ -377,6 +406,11 @@ export function getPiExecutionOptions(
         cliFlags.push('--extension', path.join(userExtDir, extFile));
       }
     }
+  }
+
+  const systemPrompts = loadKernelSystemPrompts(tenantId);
+  if (systemPrompts.trim()) {
+    cliFlags.push('--append-system-prompt', systemPrompts.trim());
   }
 
   return {
@@ -854,125 +888,29 @@ export function listPiModels(): PiModelItem[] {
   }
 }
 
-// ── Filesystem Isolation & Path Safety Helpers ─────────────────────────────────
-
-export function resolveUserPath(tenantId: string, relativePath: string = ''): string {
-  const userRoot = getTenantRoot(tenantId);
-  const resolved = path.resolve(userRoot, relativePath);
-
-  if (!resolved.startsWith(userRoot)) {
-    throw new Error(`Security Violation: Access denied outside tenant workspace boundary (${userRoot}).`);
-  }
-  return resolved;
-}
-
-export function listUserFiles(tenantId: string = 'default_user', subDir: string = ''): UserFileItem[] {
-  ensureUserHarness(tenantId);
-  const targetDir = resolveUserPath(tenantId, subDir);
-  if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) return [];
-
-  const userRoot = getTenantRoot(tenantId);
-  const entries = fs.readdirSync(targetDir, { withFileTypes: true });
-
-  return entries.map(entry => {
-    const fullPath = path.join(targetDir, entry.name);
-    const relPath = path.relative(userRoot, fullPath);
-    let size = 0;
-    let updatedAt = new Date().toISOString();
-    try {
-      const stats = fs.statSync(fullPath);
-      size = stats.size;
-      updatedAt = stats.mtime.toISOString();
-    } catch (_) {}
-
-    return {
-      name: entry.name,
-      relativePath: relPath,
-      isDirectory: entry.isDirectory(),
-      size,
-      updatedAt
-    };
-  });
-}
-
-export function readUserFile(tenantId: string, relativePath: string): { content: string; path: string; size: number } {
-  const targetPath = resolveUserPath(tenantId, relativePath);
-  if (!fs.existsSync(targetPath) || fs.statSync(targetPath).isDirectory()) {
-    throw new Error(`File not found or is a directory: ${relativePath}`);
-  }
-  const content = fs.readFileSync(targetPath, 'utf8');
-  const userRoot = getTenantRoot(tenantId);
-  return {
-    content,
-    path: path.relative(userRoot, targetPath),
-    size: Buffer.byteLength(content, 'utf8')
-  };
-}
-
-export function writeUserFile(tenantId: string, relativePath: string, content: string): { path: string; size: number } {
-  const targetPath = resolveUserPath(tenantId, relativePath);
-  const parentDir = path.dirname(targetPath);
-  fs.mkdirSync(parentDir, { recursive: true });
-  fs.writeFileSync(targetPath, content, 'utf8');
-
-  const userRoot = getTenantRoot(tenantId);
-  const normPath = path.relative(userRoot, targetPath);
-
-  appendTenantAuditLog(tenantId, {
-    type: 'user',
-    event: 'File Written',
-    details: { path: normPath, size: Buffer.byteLength(content, 'utf8') }
-  });
-
-  return {
-    path: normPath,
-    size: Buffer.byteLength(content, 'utf8')
-  };
-}
-
-export function moveUserFile(tenantId: string, srcRelativePath: string, destRelativePath: string): { src: string; dest: string; size: number } {
-  const srcPath = resolveUserPath(tenantId, srcRelativePath);
-  const destPath = resolveUserPath(tenantId, destRelativePath);
-
-  if (!fs.existsSync(srcPath)) {
-    throw new Error(`Source file or folder does not exist: ${srcRelativePath}`);
-  }
-
-  fs.mkdirSync(path.dirname(destPath), { recursive: true });
-  fs.renameSync(srcPath, destPath);
-
-  const userRoot = getTenantRoot(tenantId);
-  const normSrc = path.relative(userRoot, srcPath);
-  const normDest = path.relative(userRoot, destPath);
-
-  let size = 0;
-  try { size = fs.statSync(destPath).size; } catch (_) {}
-
-  return { src: normSrc, dest: normDest, size };
-}
-
-export function deleteUserFile(tenantId: string, relativePath: string): boolean {
-  const targetPath = resolveUserPath(tenantId, relativePath);
-  if (!fs.existsSync(targetPath)) return false;
-
-  const stat = fs.statSync(targetPath);
-  if (stat.isDirectory()) {
-    fs.rmSync(targetPath, { recursive: true, force: true });
-  } else {
-    fs.unlinkSync(targetPath);
-  }
-  return true;
-}
+// ── User Activity Recording ────────────────────────────────────────────────────
 
 export function recordUserHarnessActivity(tenantId: string, runIncrement: number = 0) {
-  const runtimePath = path.join(getTenantRoot(tenantId), 'runtime.json');
+  const harnessPath = path.join(getTenantRoot(tenantId), 'harness.json');
   try {
-    let runtimeData = { tenant_id: tenantId, status: "running", active_sessions: 1, total_runs: 0, last_active: new Date().toISOString() };
-    if (fs.existsSync(runtimePath)) {
-      runtimeData = JSON.parse(fs.readFileSync(runtimePath, 'utf8'));
+    let harnessData: any = { tenant_id: tenantId, status: "running", last_active: new Date().toISOString() };
+    if (fs.existsSync(harnessPath)) {
+      harnessData = JSON.parse(fs.readFileSync(harnessPath, 'utf8'));
     }
-    runtimeData.total_runs = (runtimeData.total_runs || 0) + runIncrement;
-    runtimeData.last_active = new Date().toISOString();
-    fs.writeFileSync(runtimePath, JSON.stringify(runtimeData, null, 2), 'utf8');
+    harnessData.status = "running";
+    harnessData.last_active = new Date().toISOString();
+    fs.writeFileSync(harnessPath, JSON.stringify(harnessData, null, 2), 'utf8');
+  } catch (_) {}
+
+  const tenantPath = path.join(getTenantRoot(tenantId), 'tenant.json');
+  try {
+    let tenantData: any = {};
+    if (fs.existsSync(tenantPath)) {
+      tenantData = JSON.parse(fs.readFileSync(tenantPath, 'utf8'));
+    }
+    if (!tenantData.telemetry) tenantData.telemetry = {};
+    tenantData.telemetry.total_runs = (tenantData.telemetry.total_runs || 0) + runIncrement;
+    tenantData.telemetry.last_active = new Date().toISOString();
+    fs.writeFileSync(tenantPath, JSON.stringify(tenantData, null, 2), 'utf8');
   } catch (_) {}
 }

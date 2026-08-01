@@ -51,7 +51,7 @@ export function MissionCardSkeleton() {
 ```tsx
 // hooks/useMissions.ts
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { supabase } from '@/components/auth/supabase'
 import type { Mission } from '@/types'
 
 export function useMissions() {

@@ -1,4 +1,4 @@
-import { getAccessToken } from './workspace-auth';
+import { getAccessToken } from './drive-auth';
 
 export interface DriveFile {
   id: string;

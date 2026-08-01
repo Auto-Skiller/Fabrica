@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../../firebase-applet-config.json';
 
 // Reuse existing Firebase app if already initialized
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

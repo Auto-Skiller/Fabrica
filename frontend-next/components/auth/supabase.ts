@@ -14,4 +14,3 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
 export function isSupabaseConfigured(): boolean {
   return !!supabase;
 }
-

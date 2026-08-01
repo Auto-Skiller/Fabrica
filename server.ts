@@ -40,7 +40,7 @@ app.use('/api/mission', missionsRouter);
 // ── Serve Next.js Frontend Static Exports ────────────────────────────────────────
 const outDir = path.join(process.cwd(), 'frontend-next', 'out');
 if (fs.existsSync(outDir)) {
-  app.use(express.static(outDir));
+  app.use(express.static(outDir, { extensions: ['html'] }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api/')) return next();
     const indexPath = path.join(outDir, 'index.html');

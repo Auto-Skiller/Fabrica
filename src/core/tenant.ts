@@ -139,27 +139,19 @@ export const dbEngine = new DatabaseEngine('default_user');
 
 export function getTenantProfile(tenantId: string = 'default_user'): TenantProfile {
   const root = getTenantRoot(tenantId);
-  const profilePath = path.join(root, 'tenant.json');
-  const settingsPath = path.join(root, 'settings.json');
+  const tenantJsonPath = path.join(root, 'tenant.json');
 
-  let settings: Record<string, any> = {};
-  if (fs.existsSync(settingsPath)) {
+  if (fs.existsSync(tenantJsonPath)) {
     try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    } catch (_) {}
-  }
-
-  if (fs.existsSync(profilePath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(profilePath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
       return {
         tenantId,
-        name: parsed.name || `Tenant ${tenantId}`,
+        name: parsed.name || (tenantId === 'default_user' ? 'Default Workspace' : `Tenant (${tenantId})`),
         email: parsed.email,
-        plan: parsed.plan || settings.subscription?.plan || 'Professional',
+        plan: parsed.plan || parsed.subscription?.plan || 'Professional',
         createdAt: parsed.createdAt || new Date().toISOString(),
         updatedAt: parsed.updatedAt || new Date().toISOString(),
-        settings: { ...settings, ...(parsed.settings || {}) }
+        settings: parsed.settings || { language: 'EN', internet_access: true }
       };
     } catch (_) {}
   }
@@ -167,20 +159,45 @@ export function getTenantProfile(tenantId: string = 'default_user'): TenantProfi
   const defaultProfile: TenantProfile = {
     tenantId,
     name: tenantId === 'default_user' ? 'Default Workspace' : `Tenant (${tenantId})`,
-    plan: settings.subscription?.plan || 'Professional',
+    plan: 'Professional',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    settings
+    settings: { language: 'EN', internet_access: true }
   };
 
   try {
-    fs.writeFileSync(profilePath, JSON.stringify(defaultProfile, null, 2), 'utf8');
+    const fullTenantData = {
+      tenant_id: tenantId,
+      ...defaultProfile,
+      subscription: { plan: 'Professional', active: true },
+      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
+      logs: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: "system",
+          event: "Workspace Initialized",
+          details: "Unified audit event stream initialized in tenant.json."
+        }
+      ]
+    };
+    fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
   } catch (_) {}
 
   return defaultProfile;
 }
 
 export function updateTenantProfile(tenantId: string = 'default_user', updates: Partial<TenantProfile>): TenantProfile {
+  const root = getTenantRoot(tenantId);
+  const tenantJsonPath = path.join(root, 'tenant.json');
+
+  let fullTenantData: any = {};
+  if (fs.existsSync(tenantJsonPath)) {
+    try {
+      fullTenantData = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+    } catch (_) {}
+  }
+
   const current = getTenantProfile(tenantId);
   const updated: TenantProfile = {
     ...current,
@@ -189,9 +206,14 @@ export function updateTenantProfile(tenantId: string = 'default_user', updates: 
     updatedAt: new Date().toISOString()
   };
 
-  const root = getTenantRoot(tenantId);
-  const profilePath = path.join(root, 'tenant.json');
-  fs.writeFileSync(profilePath, JSON.stringify(updated, null, 2), 'utf8');
+  fullTenantData = {
+    ...fullTenantData,
+    ...updated,
+    tenant_id: tenantId,
+    updatedAt: updated.updatedAt
+  };
+
+  fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
   return updated;
 }
 
@@ -236,15 +258,25 @@ export function getTenantTelemetry(tenantId: string = 'default_user'): TenantTel
 
 export function getTenantAuditLogs(tenantId: string = 'default_user'): AuditLogEvent[] {
   const root = getTenantRoot(tenantId);
-  const logsPath = path.join(root, 'logs.json');
+  const tenantJsonPath = path.join(root, 'tenant.json');
 
-  if (!fs.existsSync(logsPath)) return [];
-  try {
-    const parsed = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
-    return Array.isArray(parsed.events) ? parsed.events : [];
-  } catch (_) {
-    return [];
+  if (fs.existsSync(tenantJsonPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      if (Array.isArray(parsed.logs)) return parsed.logs;
+    } catch (_) {}
   }
+
+  // Fallback to legacy logs.json if present
+  const logsPath = path.join(root, 'logs.json');
+  if (fs.existsSync(logsPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
+      return Array.isArray(parsed.events) ? parsed.events : [];
+    } catch (_) {}
+  }
+
+  return [];
 }
 
 export function appendTenantAuditLog(
@@ -252,24 +284,21 @@ export function appendTenantAuditLog(
   event: Omit<AuditLogEvent, 'id' | 'timestamp'>
 ): AuditLogEvent {
   const root = getTenantRoot(tenantId);
-  const logsPath = path.join(root, 'logs.json');
+  const tenantJsonPath = path.join(root, 'tenant.json');
 
-  let logsData: { events: AuditLogEvent[]; last_event_at: string } = {
-    events: [],
-    last_event_at: new Date().toISOString()
-  };
+  let fullTenantData: any = { tenant_id: tenantId, logs: [] };
 
-  if (fs.existsSync(logsPath)) {
+  if (fs.existsSync(tenantJsonPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
       if (parsed && typeof parsed === 'object') {
-        logsData = parsed;
+        fullTenantData = parsed;
       }
     } catch (_) {}
   }
 
-  if (!Array.isArray(logsData.events)) {
-    logsData.events = [];
+  if (!Array.isArray(fullTenantData.logs)) {
+    fullTenantData.logs = [];
   }
 
   const newEntry: AuditLogEvent = {
@@ -278,14 +307,14 @@ export function appendTenantAuditLog(
     ...event
   };
 
-  logsData.events.unshift(newEntry);
-  if (logsData.events.length > 1000) {
-    logsData.events = logsData.events.slice(0, 1000);
+  fullTenantData.logs.unshift(newEntry);
+  if (fullTenantData.logs.length > 1000) {
+    fullTenantData.logs = fullTenantData.logs.slice(0, 1000);
   }
-  logsData.last_event_at = newEntry.timestamp;
+  fullTenantData.last_event_at = newEntry.timestamp;
 
   try {
-    fs.writeFileSync(logsPath, JSON.stringify(logsData, null, 2), 'utf8');
+    fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
   } catch (err) {
     console.warn(`[TenantCore] Error appending audit log for ${tenantId}:`, err);
   }

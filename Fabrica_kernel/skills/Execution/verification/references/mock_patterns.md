@@ -12,7 +12,7 @@ import { vi, describe, it, expect } from 'vitest'
 
 // Per-test mock — override default setup
 const mockSelect = vi.fn().mockResolvedValue({ data: [{ id: '1', title: 'Test Mission' }], error: null })
-vi.mock('../lib/supabase', () => ({
+vi.mock('../components/auth/supabase', () => ({
   getSupabase: () => ({ from: () => ({ select: mockSelect, eq: vi.fn().mockReturnThis() }) })
 }))
 

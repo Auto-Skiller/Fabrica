@@ -4,19 +4,22 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabase';
-import { api } from '../../lib/api';
-import { EntityData, EcosystemData, RuntimeYaml, MissionsYaml, ToolboxesYaml, InboxYaml } from '../../lib/types';
+import { supabase } from '../../components/auth/supabase';
+import { api } from '../../components/api';
+import { EntityData, EcosystemData } from '../../components/tenant/types';
+import { RuntimeYaml } from '../../components/harness/types';
+import { MissionsYaml } from '../../components/missions/types';
+import { ToolboxesYaml, InboxYaml } from '../../components/workspace/types';
 
-const SkillsAndExtensions = dynamic(() => import('../../components/flow/SkillsAndExtensions'), { ssr: false });
-const MissionGraph = dynamic(() => import('../../components/flow/MissionGraph'), { ssr: false });
+const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });
+const MissionGraph = dynamic(() => import('../../components/missions/MissionGraph'), { ssr: false });
 
-const DependencyGraph = dynamic(() => import('../../components/flow/DependencyGraph'), { ssr: false });
-import { AccountWorkspaceModal } from '../../components/AccountWorkspaceModal';
-import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } from '../../lib/pi-models';
-import { UserHarnessService } from '../../lib/user-harness';
-import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../lib/workspace-api';
-import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../lib/github-api';
+const DependencyGraph = dynamic(() => import('../../components/missions/DependencyGraph'), { ssr: false });
+import { AccountWorkspaceModal } from '../../components/auth/AccountWorkspaceModal';
+import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } from '../../components/harness/pi-models';
+import { UserHarnessService } from '../../components/harness/user-harness';
+import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../components/workspace/drive-api';
+import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../components/workspace/github-api';
 import JSZip from 'jszip';
 
 const consolidatedWorkflows = [

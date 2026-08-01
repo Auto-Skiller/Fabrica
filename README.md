@@ -108,8 +108,7 @@ Fabrica/
 ├── server.ts                          # Express 4 API server entrypoint
 └── frontend-next/                     # Next.js 16 App Router Client Application
     ├── app/                           # App pages (Main Workspace page.tsx & Dashboard page.tsx)
-    ├── components/                    # Modular visual UI components (auth, tenant, harness, missions, workspace)
-    └── lib/                           # Frontend API bridge (api.ts) & type definitions
+    └── components/                    # Domain modular UI & state modules (auth, tenant, harness, missions, workspace, api.ts)
 ```
 
 ---

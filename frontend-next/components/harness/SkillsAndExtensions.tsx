@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ToolboxesYaml } from '../../lib/types';
-import { api } from '../../lib/api';
+import { ToolboxesYaml } from '../workspace/types';
+import { api } from '../api';
 
 interface Props {
   entityName: string;

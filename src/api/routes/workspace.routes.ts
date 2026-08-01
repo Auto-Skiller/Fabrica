@@ -5,9 +5,7 @@ import {
   readUserFile,
   writeUserFile,
   moveUserFile,
-  deleteUserFile
-} from '../../core/harness.js';
-import {
+  deleteUserFile,
   getWorkspaceMap,
   syncWorkspaceJson,
   listCloudStorageObjects,

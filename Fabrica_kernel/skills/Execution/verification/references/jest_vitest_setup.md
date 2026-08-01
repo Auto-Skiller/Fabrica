@@ -44,7 +44,7 @@ module.exports = {
 import { vi } from 'vitest'
 
 // Mock Supabase to prevent real DB calls in tests
-vi.mock('../lib/supabase', () => ({
+vi.mock('../components/auth/supabase', () => ({
   getSupabase: () => ({
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),

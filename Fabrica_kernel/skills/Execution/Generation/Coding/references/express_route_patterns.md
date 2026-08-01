@@ -48,7 +48,7 @@ export default router
 ```typescript
 // src/middleware/auth.ts
 import { Request, Response, NextFunction } from 'express'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../components/auth/supabase'
 
 export async function validateUser(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace('Bearer ', '')

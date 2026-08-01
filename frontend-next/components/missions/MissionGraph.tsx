@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as d3 from 'd3';
-import { MissionsYaml, Mission, MissionClass, MissionTask, Priority } from '../../lib/types';
+import { MissionsYaml, Mission, MissionClass, MissionTask, Priority } from './types';
 
 interface Props {
   missions: MissionsYaml;

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { harnessApi } from './api';
 
 export interface UserHarnessConfig {
   tenantId: string;
@@ -114,7 +114,7 @@ export class UserHarnessService {
   static async execute(options: UserHarnessExecutionOptions): Promise<UserHarnessExecutionResult> {
     const startTime = Date.now();
     try {
-      const res = await api.chatAgent(
+      const res = await harnessApi.chatAgent(
         options.message,
         options.history || [],
         options.customKey,
@@ -146,13 +146,13 @@ export class UserHarnessService {
     model?: string,
     customKey?: string
   ) {
-    return api.generatePaugReport(templateName, companyName, extraContext, model, customKey);
+    return harnessApi.generatePaugReport(templateName, companyName, extraContext, model, customKey);
   }
 
   /**
    * Runs Deep Research loops via User Harness
    */
   static async deepResearch(query: string, model?: string, customKey?: string) {
-    return api.deepResearch(query, model, customKey);
+    return harnessApi.deepResearch(query, model, customKey);
   }
 }

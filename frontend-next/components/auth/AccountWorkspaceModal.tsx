@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BUSINESS_PLANS } from '../lib/user-harness';
-import { buildProvidersFromPiCli, FABRICA_POOL_MODELS } from '../lib/pi-models';
+import { BUSINESS_PLANS } from '../harness/user-harness';
+import { buildProvidersFromPiCli, FABRICA_POOL_MODELS } from '../harness/pi-models';
 
 export interface AccountWorkspaceModalProps {
   isOpen: boolean;

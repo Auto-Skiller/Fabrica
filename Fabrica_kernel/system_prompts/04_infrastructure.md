@@ -161,7 +161,7 @@ User configuration and state persist across sign-out and re-login sessions and m
 
 ## 9. 3-WAY REAL-TIME BI-DIRECTIONAL SYNCHRONIZATION PROTOCOL
 
-The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Single State Mappings (`missions.json`, `workspace.json`, `logs.json`) ↔ Disk Storage (`workspace/Sources/`, `workspace/Deliverables/` & `missions/{missionId}/`)**:
+The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Single State Mappings (`missions.json`, `workspace.json`, `tenant.json`) ↔ Disk Storage (`workspace/Sources/`, `workspace/Deliverables/` & `missions/{missionId}/`)**:
 
 1. **User UI → Index Files → Disk**:
    - When a user adds, edits, or deletes a source parameter or deliverable in the UI, the backend updates `workspace.json` or `missions.json` instantly and automatically reflects changes in the physical folders and files.

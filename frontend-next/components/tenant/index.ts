@@ -1,1 +1,2 @@
-export * from '../AccountWorkspaceModal';
+export * from './types';
+export * from './api';
