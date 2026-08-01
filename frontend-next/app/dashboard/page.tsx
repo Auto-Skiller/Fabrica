@@ -2876,45 +2876,20 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   };
 
   const getQuotaMetrics = (tierData: any) => {
-    if (tierData?.quotaSummary) {
-      return tierData.quotaSummary;
-    }
+    const qs = tierData?.quotaSummary;
+    const monthlyQuotaTokens = Number(qs?.monthlyQuotaTokens ?? qs?.monthlyQuota ?? tierData?.monthlyTokenQuota ?? 500000);
+    const monthlyQuotaUSD = Number(qs?.monthlyQuotaUSD ?? 5.00);
+    const usedTokensThisMonth = Number(qs?.usedTokensThisMonth ?? qs?.usedTokens ?? tierData?.usedTokensThisMonth ?? tierData?.llmCredits?.totalTokensUsed ?? 0);
+    const remainingTokensThisMonth = Number(qs?.remainingTokensThisMonth ?? qs?.remainingTokens ?? tierData?.remainingTokensThisMonth ?? Math.max(0, monthlyQuotaTokens - usedTokensThisMonth));
     const balanceUSD = tierData?.llmCredits?.balanceUSD ?? 5.00;
-    const totalTokensUsed = tierData?.llmCredits?.totalTokensUsed ?? 0;
-    const plan = tierData?.plan || 'free';
-    const activePlan = tierData?.llmCredits?.activePlan || 'byok_or_free';
+    const remainingCreditsUSD = Number(qs?.remainingCreditsUSD ?? Math.max(0, balanceUSD));
 
-    let monthlyQuotaUSD = 5.00;
-    let monthlyQuotaTokens = 500000;
-    let tierName = 'Free Starter Tier ($0)';
+    const rawRatio = monthlyQuotaTokens > 0 ? remainingTokensThisMonth / monthlyQuotaTokens : 1;
+    const percentRemaining = Number(qs?.percentRemaining ?? Math.min(100, Math.max(0, Math.round(rawRatio * 100))));
+    const percentUsed = Number(qs?.percentUsed ?? qs?.usagePercentage ?? Math.min(100, Math.max(0, 100 - percentRemaining)));
 
-    if (activePlan === 'credit_subscription_10') {
-      monthlyQuotaUSD = 10.00;
-      monthlyQuotaTokens = 1000000;
-      tierName = 'Token Starter Plan ($10/mo)';
-    } else if (activePlan === 'credit_subscription_25' || activePlan === 'credit_subscription_19') {
-      monthlyQuotaUSD = 25.00;
-      monthlyQuotaTokens = 2500000;
-      tierName = 'Token Pro Plan ($19/mo)';
-    } else if (activePlan === 'credit_subscription_50') {
-      monthlyQuotaUSD = 50.00;
-      monthlyQuotaTokens = 5000000;
-      tierName = 'Token Scale Plan ($50/mo)';
-    } else if (plan === 'paug') {
-      monthlyQuotaUSD = 15.00;
-      monthlyQuotaTokens = 1500000;
-      tierName = 'Developer Pro (At-Cost $15/mo)';
-    }
-
-    const remainingCreditsUSD = Math.max(0, balanceUSD);
-    const rawRatio = remainingCreditsUSD / monthlyQuotaUSD;
-    const percentRemaining = Math.min(100, Math.max(0, Math.round(rawRatio * 100)));
-    const percentUsed = Math.min(100, Math.max(0, 100 - percentRemaining));
-    const remainingTokensThisMonth = Math.round((percentRemaining / 100) * monthlyQuotaTokens);
-    const usedTokensThisMonth = totalTokensUsed || Math.max(0, monthlyQuotaTokens - remainingTokensThisMonth);
-
-    let statusColor = '#10b981';
-    let statusLabel = 'OPTIMAL BALANCE';
+    let statusColor = qs?.statusColor || '#10b981';
+    let statusLabel = qs?.statusLabel || 'OPTIMAL BALANCE';
 
     if (percentRemaining <= 10) {
       statusColor = '#ef4444';
@@ -2937,12 +2912,19 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
       percentUsed,
       statusColor,
       statusLabel,
-      tierName
+      tierName: qs?.tierName || tierData?.plan || 'Free Starter Tier ($0)'
     };
   };
 
   const renderQuotaWarningAlert = (q: any) => {
-    if (q.percentRemaining > 50) {
+    if (!q) return null;
+    const percentRemaining = q.percentRemaining ?? 100;
+    const percentUsed = q.percentUsed ?? 0;
+    const remainingTokens = Number(q.remainingTokensThisMonth || q.remainingTokens || 0).toLocaleString();
+    const usedTokens = Number(q.usedTokensThisMonth || q.usedTokens || 0).toLocaleString();
+    const remainingCreditsUSD = (Number(q.remainingCreditsUSD) || 0).toFixed(2);
+
+    if (percentRemaining > 50) {
       return (
         <div style={{
           background: 'rgba(16, 185, 129, 0.05)',
@@ -2958,7 +2940,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span>✅</span>
             <span style={{ fontWeight: 700 }}>Quota Status: Optimal Balance</span>
-            <span style={{ color: 'var(--muted)' }}>— {q.percentRemaining}% remaining ({q.remainingTokensThisMonth.toLocaleString()} tokens available)</span>
+            <span style={{ color: 'var(--muted)' }}>— {percentRemaining}% remaining ({remainingTokens} tokens available)</span>
           </div>
           <span style={{ fontSize: '7.5px', background: 'rgba(16, 185, 129, 0.15)', padding: '1px 6px', borderRadius: '3px', fontWeight: 800 }}>
             &gt;50% HEALTHY
@@ -2975,10 +2957,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
       icon: 'ℹ️',
       badgeText: '50% QUOTA NOTICE',
       title: '50% Monthly Quota Threshold Reached',
-      message: `You have consumed ${q.percentUsed}% of your monthly LLM quota (${q.usedTokensThisMonth.toLocaleString()} tokens used). ${q.remainingTokensThisMonth.toLocaleString()} tokens remaining.`
+      message: `You have consumed ${percentUsed}% of your monthly LLM quota (${usedTokens} tokens used). ${remainingTokens} tokens remaining.`
     };
 
-    if (q.percentRemaining <= 10) {
+    if (percentRemaining <= 10) {
       alertConfig = {
         bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(185, 28, 28, 0.08))',
         border: '1.5px solid rgba(239, 68, 68, 0.6)',
@@ -2987,9 +2969,9 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         icon: '🚨',
         badgeText: '10% CRITICAL QUOTA EXHAUSTION',
         title: 'Critical Warning: LLM Quota Nearly Exhausted (<10%)',
-        message: `Only ${q.percentRemaining}% (${q.remainingTokensThisMonth.toLocaleString()} tokens / $${q.remainingCreditsUSD.toFixed(2)} USD) remaining! Immediate top-up recommended to avoid execution throttling.`
+        message: `Only ${percentRemaining}% (${remainingTokens} tokens / $${remainingCreditsUSD} USD) remaining! Immediate top-up recommended to avoid execution throttling.`
       };
-    } else if (q.percentRemaining <= 25) {
+    } else if (percentRemaining <= 25) {
       alertConfig = {
         bg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06))',
         border: '1.5px solid rgba(245, 158, 11, 0.5)',
@@ -2998,7 +2980,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         icon: '⚠️',
         badgeText: '25% LOW QUOTA ALERT',
         title: 'Warning: Low LLM Token Quota (<25% Remaining)',
-        message: `You have dropped below 25% remaining quota (${q.remainingTokensThisMonth.toLocaleString()} tokens left). Consider refilling your balance soon.`
+        message: `You have dropped below 25% remaining quota (${remainingTokens} tokens left). Consider refilling your balance soon.`
       };
     }
 
@@ -3037,7 +3019,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         </p>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
           <span style={{ fontSize: '8px', color: 'var(--muted)' }}>
-            Remaining Balance: <b>${q.remainingCreditsUSD.toFixed(2)} USD</b> ({q.remainingTokensThisMonth.toLocaleString()} tokens)
+            Remaining Balance: <b>${remainingCreditsUSD} USD</b> ({remainingTokens} tokens)
           </span>
           <button
             onClick={() => handleTopUpCredits(10)}
@@ -7810,7 +7792,7 @@ ${isDirector ? `
                             fetchAgentsMd();
                             setIsAgentsMdWindowOpen(true);
                           }}
-                          title={`Real PI Context Window Usage: ${approxContextTokens.toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & open Workspace Context.`}
+                          title={`Real PI Context Window Usage: ${(approxContextTokens || 0).toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & open Workspace Context.`}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -8108,69 +8090,13 @@ ${isDirector ? `
                     padding: '3px 6px',
                     flexShrink: 0
                   }}>
-                    {/* Mode Switcher */}
-                    <div style={{ display: 'flex', gap: '2px', background: 'var(--surface)', padding: '1px', borderRadius: '3px', border: '1px solid var(--border-soft)' }}>
-                      <button
-                        onClick={() => setAgentsMdMode('edit')}
-                        style={{
-                          padding: '1px 5px',
-                          fontSize: '6.5px',
-                          fontWeight: 800,
-                          borderRadius: '2px',
-                          border: 'none',
-                          background: agentsMdMode === 'edit' ? 'var(--accent)' : 'transparent',
-                          color: agentsMdMode === 'edit' ? '#fff' : 'var(--muted)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        onClick={() => setAgentsMdMode('preview')}
-                        style={{
-                          padding: '1px 5px',
-                          fontSize: '6.5px',
-                          fontWeight: 800,
-                          borderRadius: '2px',
-                          border: 'none',
-                          background: agentsMdMode === 'preview' ? 'var(--accent)' : 'transparent',
-                          color: agentsMdMode === 'preview' ? '#fff' : 'var(--muted)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                      >
-                        👁️ Preview
-                      </button>
-                    </div>
-
                     {/* Stats & Path */}
                     <span style={{ fontSize: '6px', fontFamily: 'var(--mono)', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {agentsMdContent.split('\n').length} lines · {agentsMdContent.length.toLocaleString()} chars
+                      {agentsMdContent ? agentsMdContent.split('\n').length : 0} lines · {(agentsMdContent?.length || 0).toLocaleString()} chars
                     </span>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        onClick={fetchAgentsMd}
-                        disabled={isLoadingAgentsMd}
-                        title="Reload AGENTS.md"
-                        style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          color: 'var(--text)',
-                          fontSize: '6.5px',
-                          padding: '2px 4px',
-                          borderRadius: '3px',
-                          fontWeight: 800,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px'
-                        }}
-                      >
-                        {isLoadingAgentsMd ? '⌛' : '↺ Reload'}
-                      </button>
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(agentsMdContent);
@@ -8214,7 +8140,7 @@ ${isDirector ? `
                     </div>
                   </div>
 
-                  {/* Editor / Preview Content Box */}
+                  {/* Editor Content Box */}
                   <div style={{
                     flex: 1,
                     display: 'flex',
@@ -8226,43 +8152,27 @@ ${isDirector ? `
                     overflow: 'hidden',
                     position: 'relative'
                   }}>
-                    {agentsMdMode === 'edit' ? (
-                      <textarea
-                        value={agentsMdContent}
-                        onChange={(e) => setAgentsMdContent(e.target.value)}
-                        placeholder="# Agent Directives & Architecture Rules..."
-                        spellCheck={false}
-                        style={{
-                          flex: 1,
-                          width: '100%',
-                          height: '100%',
-                          border: 'none',
-                          outline: 'none',
-                          padding: '8px',
-                          fontFamily: 'var(--mono)',
-                          fontSize: '7.5px',
-                          lineHeight: '1.45',
-                          color: 'var(--text)',
-                          background: 'transparent',
-                          resize: 'none',
-                          tabSize: 2
-                        }}
-                      />
-                    ) : (
-                      <div style={{
+                    <textarea
+                      value={agentsMdContent}
+                      onChange={(e) => setAgentsMdContent(e.target.value)}
+                      placeholder="# Agent Directives & Architecture Rules..."
+                      spellCheck={false}
+                      style={{
                         flex: 1,
-                        padding: '10px',
-                        overflowY: 'auto',
-                        fontSize: '7.5px',
-                        lineHeight: '1.5',
-                        color: 'var(--text)',
-                        whiteSpace: 'pre-wrap',
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        outline: 'none',
+                        padding: '8px',
                         fontFamily: 'var(--mono)',
-                        background: 'var(--surface-alt)'
-                      }}>
-                        {agentsMdContent}
-                      </div>
-                    )}
+                        fontSize: '7.5px',
+                        lineHeight: '1.45',
+                        color: 'var(--text)',
+                        background: 'transparent',
+                        resize: 'none',
+                        tabSize: 2
+                      }}
+                    />
                   </div>
 
                   {/* Quick Presets Bar */}
@@ -8298,7 +8208,7 @@ ${isDirector ? `
                     </button>
                     <button
                       onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json.');
+                        setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json and sync workspace artifacts.');
                         setToast({ message: 'Added Storage Directive snippet!', type: 'info', isOpen: true });
                       }}
                       style={{
@@ -8333,6 +8243,120 @@ ${isDirector ? `
                       }}
                     >
                       + Security Isolation
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## UI & Design Directive\n- Maintain clean light themes with generous spacing and high contrast layout.');
+                        setToast({ message: 'Added UI & Design directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + UI & Design
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## Testing Directive\n- Automatically verify backend endpoints and component states before completion.');
+                        setToast({ message: 'Added Testing directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Auto Testing
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## Performance Directive\n- Optimize bundle sizes, memoize expensive renders, and minimize redundant API payloads.');
+                        setToast({ message: 'Added Performance directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Performance
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## Resilience Directive\n- Enforce robust try-catch guards with fallback UI indicators.');
+                        setToast({ message: 'Added Error Resilience directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Error Resilience
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## Clean Architecture Directive\n- Maintain modular code separation across components, hooks, core engines, and API routes.');
+                        setToast({ message: 'Added Architecture directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Architecture
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgentsMdContent(prev => prev + '\n\n## Audit Directive\n- Log state transitions, mission progress, and telemetry events in tenant.json.');
+                        setToast({ message: 'Added Audit Logging directive snippet!', type: 'info', isOpen: true });
+                      }}
+                      style={{
+                        fontSize: '6px',
+                        fontWeight: 700,
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        color: 'var(--text)',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Audit Logging
                     </button>
                   </div>
                 </div>
@@ -10821,7 +10845,7 @@ ${isDirector ? `
                 </div>
                 <div>
                   <span style={{ color: 'var(--muted)', display: 'block' }}>Timestamp</span>
-                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{new Date(selectedRealtimeEvent.timestamp).toLocaleString()}</span>
+                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>{selectedRealtimeEvent?.timestamp ? new Date(selectedRealtimeEvent.timestamp).toLocaleString() : 'N/A'}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--muted)', display: 'block' }}>Event Log ID</span>
@@ -11004,50 +11028,53 @@ ${isDirector ? `
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               padding: '12px 18px',
               borderBottom: '2px solid var(--border)',
               background: 'var(--surface-alt)',
               flexShrink: 0
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>📄</span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>WORKSPACE CONTEXT (AGENTS.md)</b>
-                  <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
-                    System directives, project guidelines & context active for the AI agent
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => setIsAgentsMdWindowOpen(false)}
+                  className="fw-close-btn"
+                  title="Close window"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    color: 'var(--muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '4px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  ✕
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.25rem' }}>📄</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>WORKSPACE CONTEXT (AGENTS.md)</b>
+                    <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
+                      System directives, project guidelines & context active for the AI agent
+                    </span>
+                  </div>
                 </div>
               </div>
-              <button
-                onClick={() => setIsAgentsMdWindowOpen(false)}
-                className="fw-close-btn"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  color: 'var(--muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '4px',
-                  transition: 'all 0.15s'
-                }}
-              >
-                ✕
-              </button>
             </div>
 
-            {/* Body: AGENTS.md Editor / Viewer */}
+            {/* Body: AGENTS.md Editor */}
             <div style={{ flex: 1, padding: '16px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0 }}>
-              {/* Controls & Mode Bar */}
+              {/* Controls Bar */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                justify: 'space-between',
+                justifyContent: 'space-between',
                 gap: '8px',
                 background: 'var(--surface-alt)',
                 border: '1px solid var(--border-soft)',
@@ -11055,58 +11082,13 @@ ${isDirector ? `
                 padding: '6px 10px',
                 flexShrink: 0
               }}>
-                {/* Mode Switcher */}
-                <div style={{ display: 'flex', gap: '4px', background: 'var(--surface)', padding: '2px', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
-                  <button
-                    onClick={() => setAgentsMdMode('edit')}
-                    style={{
-                      padding: '3px 10px',
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      borderRadius: '3px',
-                      border: 'none',
-                      background: agentsMdMode === 'edit' ? 'var(--accent)' : 'transparent',
-                      color: agentsMdMode === 'edit' ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    ✏️ Edit Directives
-                  </button>
-                  <button
-                    onClick={() => setAgentsMdMode('preview')}
-                    style={{
-                      padding: '3px 10px',
-                      fontSize: '9px',
-                      fontWeight: 800,
-                      borderRadius: '3px',
-                      border: 'none',
-                      background: agentsMdMode === 'preview' ? 'var(--accent)' : 'transparent',
-                      color: agentsMdMode === 'preview' ? '#fff' : 'var(--muted)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    👁️ Formatted Preview
-                  </button>
-                </div>
-
                 {/* Stats & Path */}
                 <span style={{ fontSize: '9px', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>
-                  {agentsMdContent.split('\n').length} lines · {agentsMdContent.length.toLocaleString()} chars · path: <code style={{ color: 'var(--accent)' }}>{agentsMdPath || 'AGENTS.md'}</code>
+                  {agentsMdContent ? agentsMdContent.split('\n').length : 0} lines · {(agentsMdContent?.length || 0).toLocaleString()} chars · path: <code style={{ color: 'var(--accent)' }}>{agentsMdPath || 'AGENTS.md'}</code>
                 </span>
 
                 {/* Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    onClick={fetchAgentsMd}
-                    disabled={isLoadingAgentsMd}
-                    title="Reload AGENTS.md from disk"
-                    className="mini outline"
-                    style={{ height: '26px', padding: '0 8px', fontSize: '9px', fontWeight: 800 }}
-                  >
-                    {isLoadingAgentsMd ? '⌛ Loading...' : '↺ Reload'}
-                  </button>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(agentsMdContent);
@@ -11129,72 +11111,122 @@ ${isDirector ? `
                 </div>
               </div>
 
-              {/* Presets */}
+              {/* Presets / Quick Directives */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '9px', color: 'var(--muted)', fontWeight: 800 }}>⚡ Quick Directives:</span>
                 <button
-                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Custom Directive\n- Always validate typescript types before writing file.')}
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Custom Directive\n- Always validate typescript types before writing file.');
+                    setToast({ message: 'Added Type Validation directive snippet!', type: 'info', isOpen: true });
+                  }}
                   className="mini outline"
                   style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
                 >
                   + Type Validation
                 </button>
                 <button
-                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json.')}
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json and sync workspace artifacts.');
+                    setToast({ message: 'Added Storage Directive snippet!', type: 'info', isOpen: true });
+                  }}
                   className="mini outline"
                   style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
                 >
                   + Storage Protocol
                 </button>
                 <button
-                  onClick={() => setAgentsMdContent(prev => prev + '\n\n## Security Directive\n- Enforce strict RLS policies and never leak secret keys.')}
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Security Directive\n- Enforce strict RLS policies and never leak secret keys.');
+                    setToast({ message: 'Added Security Policy snippet!', type: 'info', isOpen: true });
+                  }}
                   className="mini outline"
                   style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
                 >
                   + Security Policy
                 </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## UI & Design Directive\n- Maintain clean light themes with generous spacing, high contrast, and responsive layout.');
+                    setToast({ message: 'Added UI & Design directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + UI & Design
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Testing Directive\n- Automatically verify backend endpoints and component states prior to mission completion.');
+                    setToast({ message: 'Added Testing directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Auto Testing
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Performance Directive\n- Optimize bundle sizes, memoize expensive renders, and minimize redundant API payloads.');
+                    setToast({ message: 'Added Performance directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Performance
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Resilience Directive\n- Enforce robust try-catch guards with fallback UI indicators and zero unhandled rejections.');
+                    setToast({ message: 'Added Error Resilience directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Error Resilience
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Clean Architecture Directive\n- Maintain modular code separation across components, hooks, core engines, and API routes.');
+                    setToast({ message: 'Added Architecture directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Architecture
+                </button>
+                <button
+                  onClick={() => {
+                    setAgentsMdContent(prev => prev + '\n\n## Audit Directive\n- Log state transitions, mission progress, and telemetry events in tenant.json and harness.json.');
+                    setToast({ message: 'Added Audit Logging directive snippet!', type: 'info', isOpen: true });
+                  }}
+                  className="mini outline"
+                  style={{ fontSize: '8px', padding: '2px 6px', height: '22px' }}
+                >
+                  + Audit Logging
+                </button>
               </div>
 
-              {/* Editor / Preview Container */}
+              {/* Editor Container */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
-                {agentsMdMode === 'edit' ? (
-                  <textarea
-                    value={agentsMdContent}
-                    onChange={(e) => setAgentsMdContent(e.target.value)}
-                    placeholder="# AGENTS.md - System Directives & Context..."
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: '6px',
-                      padding: '12px',
-                      color: 'var(--text-bright)',
-                      fontFamily: 'var(--mono)',
-                      fontSize: '11px',
-                      lineHeight: '1.6',
-                      outline: 'none',
-                      resize: 'none'
-                    }}
-                  />
-                ) : (
-                  <div style={{
+                <textarea
+                  value={agentsMdContent}
+                  onChange={(e) => setAgentsMdContent(e.target.value)}
+                  placeholder="# AGENTS.md - System Directives & Context..."
+                  style={{
                     width: '100%',
                     height: '100%',
                     background: 'var(--surface-alt)',
                     border: '1px solid var(--border-soft)',
                     borderRadius: '6px',
-                    padding: '14px',
-                    color: 'var(--text)',
+                    padding: '12px',
+                    color: 'var(--text-bright)',
+                    fontFamily: 'var(--mono)',
                     fontSize: '11px',
                     lineHeight: '1.6',
-                    overflowY: 'auto',
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: 'var(--mono)'
-                  }}>
-                    {agentsMdContent}
-                  </div>
-                )}
+                    outline: 'none',
+                    resize: 'none'
+                  }}
+                />
               </div>
             </div>
           </div>

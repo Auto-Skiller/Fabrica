@@ -1,0 +1,120 @@
+import { Router, Response } from 'express';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
+import {
+  listUserFiles,
+  readUserFile,
+  writeUserFile,
+  moveUserFile,
+  deleteUserFile
+} from '../../core/harness.js';
+import {
+  getWorkspaceMap,
+  syncWorkspaceJson,
+  listCloudStorageObjects,
+  syncTenantWorkspace
+} from '../../core/workspace.js';
+
+const router = Router();
+
+// GET /api/workspace/files — List workspace files
+router.get('/files', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const subDir = (req.query.path as string) || '';
+  try {
+    const files = listUserFiles(tenantId, subDir);
+    res.json({ ok: true, files });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/workspace/file/read — Read file contents
+router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const filePath = req.query.path as string;
+  if (!filePath) {
+    res.status(400).json({ ok: false, error: 'File path is required.' });
+    return;
+  }
+  try {
+    const fileData = readUserFile(tenantId, filePath);
+    res.json({ ok: true, ...fileData });
+  } catch (err: any) {
+    res.status(404).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/workspace/file/write — Write file contents
+router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { path: filePath, content } = req.body || {};
+  if (!filePath || content === undefined) {
+    res.status(400).json({ ok: false, error: 'Path and content are required.' });
+    return;
+  }
+  try {
+    const result = writeUserFile(tenantId, filePath, content);
+    syncWorkspaceJson(tenantId);
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/workspace/file/move — Move file or directory
+router.post('/file/move', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { src, dest } = req.body || {};
+  if (!src || !dest) {
+    res.status(400).json({ ok: false, error: 'src and dest paths are required.' });
+    return;
+  }
+  try {
+    const result = moveUserFile(tenantId, src, dest);
+    syncWorkspaceJson(tenantId);
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/workspace/file/delete — Delete file or directory
+router.post('/file/delete', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { path: filePath } = req.body || {};
+  if (!filePath) {
+    res.status(400).json({ ok: false, error: 'Path is required.' });
+    return;
+  }
+  try {
+    const deleted = deleteUserFile(tenantId, filePath);
+    syncWorkspaceJson(tenantId);
+    res.json({ ok: deleted });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/workspace/map — Get single workspace.json map
+router.get('/map', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const map = getWorkspaceMap(tenantId);
+  res.json({ ok: true, map });
+});
+
+// GET /api/workspace/cloud-sync — List cloud storage objects
+router.get('/cloud-sync', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const folder = (req.query.folder as string) || '';
+  const objects = listCloudStorageObjects(tenantId, folder);
+  res.json({ ok: true, objects });
+});
+
+// POST /api/workspace/cloud-sync — Sync workspace storage
+router.post('/cloud-sync', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const result = syncTenantWorkspace(tenantId);
+  res.json({ ok: true, sync: result });
+});
+
+export default router;

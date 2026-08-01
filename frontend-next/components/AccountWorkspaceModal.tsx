@@ -326,7 +326,7 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
                               <span style={{ color: 'var(--muted)', fontWeight: 700 }}>MONTHLY QUOTA:</span>
-                              <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
+                              <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q?.percentUsed ?? 0}% ({(Number(q?.usedTokensThisMonth) || 0).toLocaleString()} / {(Number(q?.monthlyQuotaTokens) || 0).toLocaleString()})</span>
                             </div>
                             <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
                               <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
@@ -1108,7 +1108,7 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
                           <span style={{ color: 'var(--muted)', fontWeight: 700 }}>MONTHLY TOKEN ALLOCATION</span>
-                          <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% Used ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
+                          <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q?.percentUsed ?? 0}% Used ({(Number(q?.usedTokensThisMonth) || 0).toLocaleString()} / {(Number(q?.monthlyQuotaTokens) || 0).toLocaleString()})</span>
                         </div>
                         <div style={{ height: '7px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', overflow: 'hidden' }}>
                           <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor, transition: 'width 0.4s ease' }}></div>

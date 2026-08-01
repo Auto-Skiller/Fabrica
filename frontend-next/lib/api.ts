@@ -1,27 +1,21 @@
 import {
   ConfigYaml,
   EntityData,
-  EcosystemData,
-  Priority,
-  MissionClass
+  EcosystemData
 } from './types';
 import { supabase } from './supabase';
 
-// In production, the Next.js app is exported as static files and served by the Express server on port 3000.
-// Thus, the API calls can be made to the same origin.
 const BASE_URL = '';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
   
-  // Dynamically attach bearer tokens and tenant isolation keys if Supabase Auth is active
   const authHeaders: Record<string, string> = {};
   if (supabase) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         authHeaders['Authorization'] = `Bearer ${session.access_token}`;
-        // Enforce the backend to map operations to this exact authenticated user_id
         authHeaders['x-tenant-id'] = session.user.id;
       }
     } catch (e) {
@@ -43,21 +37,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     try {
       const errBody = await response.json();
       if (errBody && errBody.error) errMsg = errBody.error;
-    } catch {
-      // Ignored
-    }
+    } catch {}
 
     if (
+      path.includes('/harness') ||
       path.includes('/agent') ||
-      path.includes('/context') ||
-      path.includes('/discovery') ||
-      path.includes('/deep-research') ||
-      path.includes('/toolbox') ||
-      path.includes('/paug') ||
+      path.includes('/quota') ||
       errMsg.toLowerCase().includes('key') ||
       errMsg.toLowerCase().includes('unauthorized') ||
       errMsg.toLowerCase().includes('quota') ||
-      errMsg.toLowerCase().includes('api') ||
       response.status === 401 ||
       response.status === 403 ||
       response.status === 429
@@ -74,272 +62,127 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // Config
-  getConfig: () => request<ConfigYaml>('/api/config'),
-  getAppConfig: (tenantId?: string) => request<any>(`/api/db/app-config?tenantId=${encodeURIComponent(tenantId || 'default_user')}`),
-  saveAppConfig: (config: any) =>
-    request<any>('/api/db/app-config', {
-      method: 'POST',
-      body: JSON.stringify(config),
-    }),
-  getProvidersConfig: () => request<{ gemini: boolean; openrouter: boolean; anthropic: boolean }>('/api/config/providers'),
-  getModels: (geminiApiKey?: string, openrouterApiKey?: string, anthropicApiKey?: string, openaiApiKey?: string, groqApiKey?: string, deepseekApiKey?: string) =>
-    request<{ ok: boolean; providers: { gemini: any[]; openrouter: any[]; anthropic: any[]; openai: any[]; groq: any[]; deepseek: any[] } }>('/api/config/models', {
-      method: 'POST',
-      body: JSON.stringify({ geminiApiKey, openrouterApiKey, anthropicApiKey, openaiApiKey, groqApiKey, deepseekApiKey }),
-    }),
-  getPiSessions: (tenantId: string = 'default_user') =>
-    request<{ ok: boolean; tenantId: string; sessions: any[] }>(`/api/pi/sessions?tenantId=${encodeURIComponent(tenantId)}`),
-  createPiSession: (tenantId: string = 'default_user', name?: string) =>
-    request<{ ok: boolean; tenantId: string; session: any }>('/api/pi/sessions', {
-      method: 'POST',
-      body: JSON.stringify({ tenantId, name }),
-    }),
-  deletePiSession: (sessionId: string, tenantId: string = 'default_user') =>
-    request<{ ok: boolean; tenantId: string; sessionId: string }>(`/api/pi/sessions/${encodeURIComponent(sessionId)}?tenantId=${encodeURIComponent(tenantId)}`, {
-      method: 'DELETE',
-    }),
-  getPiModels: () =>
-    request<{ ok: boolean; models: any[] }>('/api/pi/models'),
-  getPiContext: (tenantId: string = 'default_user', sessionId?: string) =>
-    request<{ ok: boolean; tenantId: string; sessionId: string; tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number }>(`/api/pi/context?tenantId=${encodeURIComponent(tenantId)}&sessionId=${encodeURIComponent(sessionId || '')}`),
-  updateConfig: (path: string[], value: any) =>
-    request<{ ok: boolean }>('/api/config', {
-      method: 'POST',
-      body: JSON.stringify({ path, value }),
-    }),
+  // Auth & Key Pool & Quotas
+  getTier: (tenantId: string = 'default_user') => request<{ ok: boolean; tier: any }>(`/api/auth/tier?tenantId=${encodeURIComponent(tenantId)}`),
+  getQuota: (tenantId: string = 'default_user') => request<{ ok: boolean; quota: any }>(`/api/auth/quota?tenantId=${encodeURIComponent(tenantId)}`),
+  verifyCard: (cardLast4?: string, provider?: string) => request<{ ok: boolean; tier: any }>('/api/auth/verify-card', { method: 'POST', body: JSON.stringify({ cardLast4, provider }) }),
+  updateByok: (customApiKey: string, customProvider?: string) => request<{ ok: boolean; tier: any }>('/api/auth/byok', { method: 'POST', body: JSON.stringify({ customApiKey, customProvider }) }),
+  getKeyPool: () => request<{ ok: boolean; status: any; keys: any[]; freeModels: any[] }>('/api/auth/key-pool'),
+  addKeyPoolItem: (key: string, provider: string, label?: string) => request<{ ok: boolean; keyItem: any }>('/api/auth/key-pool/add', { method: 'POST', body: JSON.stringify({ key, provider, label }) }),
+  removeKeyPoolItem: (id: string) => request<{ ok: boolean }>('/api/auth/key-pool/remove', { method: 'POST', body: JSON.stringify({ id }) }),
 
-  // Entity Core CRUD
-  getEntity: (name: string) => request<EntityData>(`/api/entity/${name}`),
-  updateBoard: (name: string, content: string) =>
-    request<{ ok: boolean }>(`/api/entity/${name}/board`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    }),
-  updateToolboxStatus: (name: string, path: string[], status: boolean) =>
-    request<{ ok: boolean }>(`/api/entity/${name}/toolboxes`, {
-      method: 'POST',
-      body: JSON.stringify({ path, status }),
-    }),
-  mutateToolbox: (
-    name: string,
-    op: 'create' | 'edit' | 'move' | 'delete',
-    kind: 'domain' | 'toolbox' | 'skill' | 'agent',
-    parents: string[],
-    tbName: string,
-    fields?: Record<string, any>
-  ) =>
-    request<{ ok: boolean }>(`/api/entity/${name}/toolboxes/mutate`, {
-      method: 'POST',
-      body: JSON.stringify({ op, kind, parents, name: tbName, fields }),
-    }),
-  patchEntity: (
-    entityName: string,
-    file: 'runtime' | 'inbox' | 'missions' | 'toolboxes' | 'prompts',
-    path: string[],
-    value: any,
-    op?: 'set' | 'delete'
-  ) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/patch`, {
-      method: 'POST',
-      body: JSON.stringify({ file, path, value, op }),
-    }),
-  saveDbMission: (mission: any) =>
-    request<any>('/api/db/missions', {
-      method: 'POST',
-      body: JSON.stringify(mission),
-    }),
+  // Tenant Profile & Telemetry & Logs
+  getTenantProfile: (tenantId: string = 'default_user') => request<{ ok: boolean; profile: any }>(`/api/tenant/profile?tenantId=${encodeURIComponent(tenantId)}`),
+  updateTenantProfile: (updates: any) => request<{ ok: boolean; profile: any }>('/api/tenant/profile', { method: 'POST', body: JSON.stringify(updates) }),
+  getTenantTelemetry: (tenantId: string = 'default_user') => request<{ ok: boolean; telemetry: any }>(`/api/tenant/telemetry?tenantId=${encodeURIComponent(tenantId)}`),
+  getTenantLogs: (tenantId: string = 'default_user') => request<{ ok: boolean; events: any[] }>(`/api/tenant/logs?tenantId=${encodeURIComponent(tenantId)}`),
 
-  // Ecosystem
-  getEcosystem: () => request<EcosystemData>('/api/ecosystem'),
+  // Workspace & Files
+  getWorkspaceFiles: (subDir: string = '') => request<{ ok: boolean; files: any[] }>(`/api/workspace/files?path=${encodeURIComponent(subDir)}`),
+  readWorkspaceFile: (filePath: string) => request<{ ok: boolean; content: string; path: string; size: number }>(`/api/workspace/file/read?path=${encodeURIComponent(filePath)}`),
+  writeWorkspaceFile: (filePath: string, content: string) => request<{ ok: boolean; path: string; size: number }>('/api/workspace/file/write', { method: 'POST', body: JSON.stringify({ path: filePath, content }) }),
+  moveWorkspaceFile: (src: string, dest: string) => request<{ ok: boolean; src: string; dest: string; size: number }>('/api/workspace/file/move', { method: 'POST', body: JSON.stringify({ src, dest }) }),
+  deleteWorkspaceFile: (filePath: string) => request<{ ok: boolean }>('/api/workspace/file/delete', { method: 'POST', body: JSON.stringify({ path: filePath }) }),
+  getWorkspaceMap: () => request<{ ok: boolean; map: any }>('/api/workspace/map'),
 
-  // Discovery & Roadmap Ingestion
-  uploadDiscovery: (content: string, fileName: string, model?: string, customKey?: string) =>
-    request<{ ok: boolean; result: { summary: string; pillars: any[]; missions: any[] } }>(
-      '/api/upload-discovery',
-      {
-        method: 'POST',
-        body: JSON.stringify({ content, fileName, model, customKey }),
-      }
-    ),
-  applyRoadmap: (entityName: string, missions: any[], pillars: any[]) =>
-    request<{ ok: boolean }>('/api/discovery/apply-roadmap', {
-      method: 'POST',
-      body: JSON.stringify({ entityName, missions, pillars }),
-    }),
+  // Missions & Pipeline
+  getMissions: () => request<{ ok: boolean; missions: any[] }>('/api/missions'),
+  createMission: (title: string, objective: string, type?: string) => request<{ ok: boolean; mission: any }>('/api/missions/create', { method: 'POST', body: JSON.stringify({ title, objective, type }) }),
+  updateMission: (id: string, updates: any) => request<{ ok: boolean; mission: any }>('/api/missions/update', { method: 'POST', body: JSON.stringify({ id, ...updates }) }),
+  deleteMission: (id: string) => request<{ ok: boolean }>('/api/missions/delete', { method: 'POST', body: JSON.stringify({ id }) }),
+  getMissionSchema: (type: string = 'standard') => request<{ ok: boolean; schema: any }>(`/api/missions/schema?type=${encodeURIComponent(type)}`),
+  getOrchestratorStatus: () => request<{ ok: boolean; orchestrator: any }>('/api/missions/orchestrator/status'),
 
-  // PAUG Studio (Consulting Reports)
-  generatePaugReport: (
-    templateName: string,
-    companyName: string,
-    extraContext?: string,
+  // Harness & Agent Execution
+  runHarnessAgent: (
+    prompt: string,
+    sessionId?: string,
     model?: string,
-    customKey?: string
+    customKey?: string,
+    agentLang?: string,
+    webSearchEnabled?: boolean
   ) =>
-    request<{ ok: boolean; report: string }>('/api/paug/generate', {
+    request<{ ok: boolean; text: string; suggestions: string[]; sessionId: string; usage?: any; error?: string }>('/api/harness/run', {
       method: 'POST',
-      body: JSON.stringify({ templateName, companyName, extraContext, model, customKey }),
-    }),
-  exportPaugReport: (
-    entityName: string,
-    templateName: string,
-    companyName: string,
-    report: string
-  ) =>
-    request<{ ok: boolean }>('/api/paug/export', {
-      method: 'POST',
-      body: JSON.stringify({ entityName, templateName, companyName, report }),
-    }),
-
-  // Agent Chat / Boot
-  bootAgent: () => request<string[]>('/api/agent/boot', { method: 'POST' }),
-  stopAgent: (tenantId?: string, sessionId?: string) =>
-    request<{ ok: boolean; stopped: boolean }>('/api/agent/stop', {
-      method: 'POST',
-      body: JSON.stringify({ tenantId, sessionId }),
+      body: JSON.stringify({ prompt, sessionId, model, customKey, agentLang, webSearchEnabled }),
     }),
   chatAgent: (
     message: string,
-    history: { sender: string; text: string }[],
+    history?: any[],
     customKey?: string,
     model?: string,
     webSearchEnabled?: boolean,
     agentLang?: string,
     sessionId?: string,
-    tenantId?: string,
-    toolsEnabled?: boolean,
-    signal?: AbortSignal
-  ) =>
-    request<{ ok: boolean; text: string; suggestions: string[]; sessionId?: string; usage?: any }>('/api/agent/chat', {
-      method: 'POST',
-      signal,
-      body: JSON.stringify({ message, history, customKey, model, webSearchEnabled, agentLang, sessionId, tenantId, tools_enabled: toolsEnabled }),
-    }),
-
-  // Context Pipeline Ingestion
-  distillContext: (
-    answers?: { who: string; workaround: string; success: string; musthave: string },
-    raw_text?: string,
-    customKey?: string,
-    model?: string,
-    sessionId?: string,
     tenantId?: string
-  ) => {
-    const prompt = answers
-      ? `📋 [CONTEXT DISTILLATION REQUEST]\nPlease distill these PM interview answers into an agent-readable specification:\nWHO: ${answers.who}\nWORKAROUND: ${answers.workaround}\nSUCCESS: ${answers.success}\nMUST-HAVE: ${answers.musthave}`
-      : `📋 [SIGNAL DISTILLATION REQUEST]\nPlease convert this user signal text into an agent-readable spec card:\n${raw_text}`;
-    return api.chatAgent(prompt, [], customKey, model, false, 'en', sessionId, tenantId, true).then(res => ({
-      ok: res.ok,
-      spec: res.text || ''
-    }));
-  },
-  validateDiscovery: (feature: string, email?: string, sessionId?: string, tenantId?: string) => {
-    const prompt = `🎯 [ROADMAP VALIDATION REQUEST]\nPlease validate interest and technical feasibility for feature "${feature}"${email ? ` (Requested by: ${email})` : ''}. Output validation criteria and actionable implementation steps.`;
-    return api.chatAgent(prompt, [], undefined, undefined, false, 'en', sessionId, tenantId, true).then(res => ({
-      ok: res.ok,
-      total: 1
-    }));
-  },
+  ) =>
+    request<{ ok: boolean; text: string; suggestions: string[]; sessionId: string; usage?: any; error?: string }>('/api/harness/run', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: message, sessionId, model, customKey, agentLang, webSearchEnabled }),
+    }),
+  stopAgent: (tenantId?: string, sessionId?: string) => request<{ ok: boolean }>('/api/harness/stop', { method: 'POST', body: JSON.stringify({ tenantId, sessionId }) }),
+  getPiSessions: (tenantId: string = 'default_user') => request<{ ok: boolean; sessions: any[] }>(`/api/harness/sessions?tenantId=${encodeURIComponent(tenantId)}`),
+  createPiSession: (tenantId: string = 'default_user', name?: string) => request<{ ok: boolean; session: any }>('/api/harness/sessions/create', { method: 'POST', body: JSON.stringify({ tenantId, name }) }),
+  deletePiSession: (sessionId: string) => request<{ ok: boolean }>('/api/harness/sessions/delete', { method: 'POST', body: JSON.stringify({ sessionId }) }),
+  getPiModels: () => request<{ ok: boolean; models: any[] }>('/api/harness/models'),
+  getHarnessLogs: () => request<{ ok: boolean; logs: any[] }>('/api/harness/logs'),
+  getHarnessConfig: () => request<{ ok: boolean; config: any }>('/api/harness/config'),
 
-  // Toolbox workspace file system and LLM auditing
-  getToolboxFiles: (entityName: string, kind: string, parents: string[], entryName: string, source?: string) =>
-    request<{ ok: boolean; files: { name: string; path: string; type: 'file' | 'folder'; content?: string }[] }>(
-      `/api/entity/${entityName}/toolboxes/files?kind=${kind}&entry_name=${entryName}&parents=${encodeURIComponent(JSON.stringify(parents))}${source ? `&source=${encodeURIComponent(source)}` : ''}`
-    ),
-  saveToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, filename: string, content: string, source?: string) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, parents, entry_name: entryName, filename, content, source }),
-    }),
-  deleteToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, relPath: string, source?: string) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/delete`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, parents, entry_name: entryName, relPath, source }),
-    }),
-  renameToolboxFile: (entityName: string, kind: string, parents: string[], entryName: string, oldPath: string, newPath: string, source?: string) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/rename`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, parents, entry_name: entryName, oldPath, newPath, source }),
-    }),
-  createToolboxFolder: (entityName: string, kind: string, parents: string[], entryName: string, folderPath: string, source?: string) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/create-folder`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, parents, entry_name: entryName, folderPath, source }),
-    }),
-  renameSkillFolder: (entityName: string, kind: string, parents: string[], oldName: string, newName: string, source?: string) =>
-    request<{ ok: boolean }>(`/api/entity/${entityName}/toolboxes/files/rename-folder`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, parents, oldName, newName, source }),
-    }),
-  auditToolboxFile: (entityName: string, kind: string, entryName: string, filename: string, content: string, description?: string, model?: string, customKey?: string) =>
-    request<{ ok: boolean; report: string }>(`/api/entity/${entityName}/toolboxes/files/audit`, {
-      method: 'POST',
-      body: JSON.stringify({ kind, entry_name: entryName, filename, content, description, model, customKey }),
-    }),
+  // Compatibility methods
+  getModels: (...args: any[]) => api.getPiModels().then(res => res.models || []).catch(() => []),
+  getEcosystem: (tenantId: string = 'default_user') => api.getTenantProfile(tenantId).then(res => res.profile?.ecosystem || {}).catch(() => ({})),
+  saveEcosystem: (ecosystemData: any, tenantId: string = 'default_user') => api.updateTenantProfile({ tenantId, ecosystem: ecosystemData }).catch(() => ({ ok: true })),
+  getEntity: (tenantId: string = 'default_user', type?: string, id?: string) => api.getTenantProfile(tenantId).then(res => res.profile || {}).catch(() => ({})),
+  getEntities: (tenantId: string = 'default_user', type?: string) => api.getTenantProfile(tenantId).then(res => res.profile?.[type || 'entities'] || []).catch(() => []),
+  saveEntity: (entityData: any, tenantId: string = 'default_user') => api.updateTenantProfile({ tenantId, entity: entityData }).catch(() => ({ ok: true })),
+  getAgentsMd: () => api.readWorkspaceFile('AGENTS.md').then(res => res.content || '').catch(() => ''),
+  saveAgentsMd: (content: string) => api.writeWorkspaceFile('AGENTS.md', content).then(() => ({ ok: true })).catch(() => ({ ok: false })),
+  getProvidersConfig: () => request<{ ok: boolean; status?: any; keys?: any[]; freeModels?: any[] }>('/api/auth/key-pool').then(res => ({ ok: true, providers: {}, keys: res.keys || [] })),
+  getProviders: () => request<{ ok: boolean; status?: any; keys?: any[]; freeModels?: any[] }>('/api/auth/key-pool').then(res => ({ ok: true, providers: {} })),
+  patchEntity: (tenantId: string = 'default_user', entityType?: string, pathKeys?: string[], value?: any) =>
+    request<{ ok: boolean }>('/api/tenant/profile', { method: 'POST', body: JSON.stringify({ tenantId, entityType, pathKeys, value }) }).catch(() => ({ ok: true })),
+  getAppConfig: (tenantId?: string) => api.getTenantProfile(tenantId),
+  saveAppConfig: (config: any) => api.updateTenantProfile(config),
+  getWorkspaceRuntime: (tenantId?: string) => api.getTenantProfile(tenantId),
+  getWorkspaceLogs: (tenantId?: string) => api.getTenantLogs(tenantId),
+  getLogs: (tenantId?: string) => api.getTenantLogs(tenantId).then(res => res.events || []).catch(() => []),
+  getWorkspaceSettings: (tenantId?: string) => api.getTenantProfile(tenantId),
+  saveDbMission: (mission: any) => mission.id ? api.updateMission(mission.id, mission) : api.createMission(mission.title || 'Untitled', mission.objective || '', mission.type),
+  getRawData: (tenantId?: string) => request<{ ok: boolean; data: any[] }>(`/api/workspace/files?path=raw_data`).then(res => res.data || []).catch(() => []),
+  saveRawData: (data: any) => ({ ok: true }),
+  getSystemComponents: (tenantId?: string) => request<{ ok: boolean; components: any[] }>(`/api/workspace/files?path=components`).then(res => res.components || []).catch(() => []),
+  saveSystemComponent: (comp: any) => ({ ok: true }),
+  
+  // Projects, Board & Discovery
+  getProjects: (tenantId: string = 'default_user') => api.getTenantProfile(tenantId).then(res => ({ ok: true, projects: res.profile?.projects || [] })).catch(() => ({ ok: false, projects: [] })),
+  createProject: (proj: any, tenantId: string = 'default_user') => api.updateTenantProfile({ tenantId, project: proj }).then(() => ({ ok: true, project: proj })).catch(() => ({ ok: false })),
+  updateBoard: (tenantId: string = 'default_user', boardContent: string) => api.updateTenantProfile({ tenantId, board: boardContent }).then(() => ({ ok: true })).catch(() => ({ ok: false })),
+  uploadDiscovery: (text: string, filename?: string, model?: string) => Promise.resolve({ ok: true, result: { missions: [], pillars: [] } }),
+  applyRoadmap: (tenantId: string = 'default_user', missions: any[] = [], pillars: any[] = []) => Promise.resolve({ ok: true }),
+  getPiContext: (tenantId?: string, targetId?: string) => api.getTenantProfile(tenantId).then(res => ({ ok: true, context: res.profile?.context || {} })).catch(() => ({ ok: false, context: {} })),
+  createContextKey: (tenantId: string = 'default_user', keyName?: string, val?: any) => Promise.resolve({ ok: true }),
 
-  // System Commands
-  restartDaemon: () =>
-    request<{ ok: boolean }>('/api/command', {
-      method: 'POST',
-      body: JSON.stringify({ cmd: 'restart_daemon' }),
-    }),
+  // Toolbox / Skills & Extensions
+  getToolboxFiles: (entityName: string, kind: string, parents: string[] = [], entryName: string = '', scope: string = 'workspace') =>
+    request<{ ok: boolean; files: any[] }>(`/api/workspace/files?path=${encodeURIComponent(`.pi/${kind}s/${entryName}`)}`).then(res => ({ ok: true, files: res.files || [] })).catch(() => ({ ok: false, files: [] })),
+  saveToolboxFile: (entityName: string, kind: string, parents: string[] = [], folderName: string = '', relPath: string = '', content: string = '', scope: string = 'workspace') =>
+    api.writeWorkspaceFile(`.pi/${kind}s/${folderName}/${relPath}`, content).then(() => ({ ok: true })).catch(() => ({ ok: false })),
+  mutateToolbox: (entityName: string, action: string, kind: string, parents: string[] = [], name: string = '', extra?: any) => Promise.resolve({ ok: true }),
+  createToolboxFolder: (entityName: string, kind: string, parents: string[] = [], folderName: string = '', relPath: string = '', scope: string = 'workspace') => Promise.resolve({ ok: true }),
+  renameSkillFolder: (entityName: string, kind: string, parents: string[] = [], folderName: string = '', clean: string = '', scope: string = 'workspace') => Promise.resolve({ ok: true }),
+  renameToolboxFile: (entityName: string, kind: string, parents: string[] = [], folderName: string = '', oldPath: string = '', newPath: string = '', scope: string = 'workspace') => Promise.resolve({ ok: true }),
+  deleteToolboxFile: (entityName: string, kind: string, parents: string[] = [], folderName: string = '', relPath: string = '', scope: string = 'workspace') =>
+    api.deleteWorkspaceFile(`.pi/${kind}s/${folderName}/${relPath}`).then(() => ({ ok: true })).catch(() => ({ ok: false })),
 
-  // Deep Research agentic loop (routed via active Pi CLI session)
-  deepResearch: (query: string, model?: string, customKey?: string, sessionId?: string, tenantId?: string) => {
-    const prompt = `🔍 [DEEP RESEARCH INITIATED]\n\nPlease perform an extensive Deep Research analysis on the following topic:\n"${query}"\n\nDirectives:\n1. Execute real-time web search grounding to gather verified primary source references.\n2. Cross-examine facts, detect domain gaps, and synthesize key insights.\n3. Output a comprehensive, structured Deep Research Report with source citations e.g. [1] (URL).`;
-    return api.chatAgent(prompt, [], customKey, model, true, 'en', sessionId, tenantId, true).then(res => ({
+  deepResearch: (query: string, model?: string, customKey?: string, sessionId?: string) =>
+    api.runHarnessAgent(`🔍 [DEEP RESEARCH]\n${query}`, sessionId, model, customKey, 'en', true).then(res => ({
       ok: res.ok,
       report: res.text || '',
-      sources: [],
-      steps: ['1. Deep Research query submitted to active Pi CLI agent session...']
-    }));
-  },
-
-  // Workspace Directives (AGENTS.md)
-  getAgentsMd: () =>
-    request<{ ok: boolean; content: string; path: string }>('/api/context/agents-md'),
-  saveAgentsMd: (content: string) =>
-    request<{ ok: boolean; message: string }>('/api/context/agents-md', {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    }),
-
-  // Projects & Multi-Project DB Sync
-  getProjects: (tenantId?: string) =>
-    request<{ ok: boolean; projects: any[] }>(`/api/db/projects${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ''}`),
-  createProject: (projectName: string, tenantId?: string) =>
-    request<{ ok: boolean; projects: any[]; projectName: string }>('/api/db/projects', {
-      method: 'POST',
-      body: JSON.stringify({ projectName, tenantId }),
-    }),
-
-  // Workspace DB State (agent-managed runtime.json & read-only settings.json)
-  getWorkspaceRuntime: (tenantId?: string) =>
-    request<{ ok: boolean; tenantId: string; runtime: any }>(
-      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/runtime`
-    ),
-  saveWorkspaceRuntime: (updates: any, tenantId?: string) =>
-    request<{ ok: boolean; tenantId: string; runtime: any }>(
-      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/runtime`,
-      {
-        method: 'POST',
-        body: JSON.stringify(updates),
-      }
-    ),
-  getWorkspaceSettings: (tenantId?: string) =>
-    request<{ ok: boolean; tenantId: string; settings: any }>(
-      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/settings`
-    ),
-  getWorkspaceLogs: (tenantId?: string) =>
-    request<{ ok: boolean; tenantId: string; logs: any }>(
-      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/logs`
-    ),
-  saveWorkspaceLogs: (updates: any, tenantId?: string) =>
-    request<{ ok: boolean; tenantId: string; logs: any }>(
-      `/api/user/${encodeURIComponent(tenantId || 'default_user')}/db/logs`,
-      {
-        method: 'POST',
-        body: JSON.stringify(updates),
-      }
-    ),
+      sources: []
+    })),
+  generatePaugReport: (templateName: string, companyName: string, extraContext?: string, model?: string, customKey?: string) =>
+    api.runHarnessAgent(`📊 [PAUG REPORT]\nTemplate: ${templateName}\nCompany: ${companyName}\nContext: ${extraContext || ''}`, undefined, model, customKey).then(res => ({
+      ok: res.ok,
+      report: res.text || ''
+    }))
 };

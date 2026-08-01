@@ -58,54 +58,58 @@ Fabrica is built specifically for operators who need repeatable research ➔ ana
   * Expanded dual-column layout providing equal 50% width columns for **Sources** (`raw_data`) and **Deliverables** (`system_components`).
   * Sub-section search filters, import/export triggers, and D3 force-directed dependency visualization toggles.
 
-### 2. Enterprise Hybrid Backend Engine & 24/7 Autonomous Simulator
-* **24/7 Multi-Tenant Autonomous Daemon (`src/sync.ts`)**: Background daemon driving missions through Drafting, QA, Planning, Execution, and Archive stages. Under FULL AUTO, automatically synthesizes new contextual missions from raw data and system components when active queues drop below threshold.
-* **VM Sandboxed Execution (`src/execution/sandbox.ts`)**: Dynamically executes user or agent-generated JavaScript/TypeScript in an isolated Node.js `vm` context with global object locks (`process`, `require` blocked) and CPU time budgeting (default `1000ms` timeout).
-* **High-Concurrency Task Orchestrator (`src/pipeline/orchestrator.ts`)**: Queue-based task scheduler managing parallel background syncs and simulation runs with deduplication and thread worker pool limits.
-* **Hybrid Storage & Vertex AI Search (`src/db/hybrid_storage.ts`, `src/utils.ts`)**: Tenant-isolated GCS buckets (`gs://fabrica-tenant-[id]-bucket`) coupled with multi-tenant Vertex AI Search discovery engine query execution (`searchTenantDocuments`) and TTL caching.
-* **Relational Supabase DB Engine (`src/db/db_engine.ts`)**: Multi-tenant database layer enforcing Row-Level Security (RLS) and strict tenant isolation checks (`validateTenantId`), persisting user settings and chat sessions in `app_config`.
+### 2. Enterprise Modular Backend Engine & Interactive Daemon Architecture
+* **Interactive Daemon Session & Strict Single Daemon Policy (`src/core/harness.ts`)**: Migrated all execution pathways from static `pi -p --mode json` commands to persistent interactive daemon sessions (`PiDaemonProcess`). Enforces a strict 1:1 binding per tenant ID with zero concurrent daemon threads per tenant.
+* **Workspace CWD & Native Session Isolation**: Working directory is explicitly bound to `/workspaces/<tenantId>/`. Utilizes `PI_CODING_AGENT_DIR=/workspaces/<tenantId>/.pi/` with native `pi` CLI session management inside `.pi/agent/sessions/`.
+* **Path Traversal Security & VM Sandbox Isolation (`src/core/vm_sandbox.ts`)**: Path resolving is protected by absolute boundary verification (`path.resolve` verifying target paths start with `/workspaces/<tenantId>`). `executeSandboxedCode` freezes global prototypes (`Object.freeze`), completely blocks `process`, `require`, `import`, `global`, `fetch`, and enforces strict execution timeouts (`1000ms`).
+* **Environment & API Key Hygiene (`src/core/auth.ts`)**: Managed LLM key pool rotation (`.stash/auth.json`) and BYOK keys are strictly scoped by model strategy. Tenant processes never inherit server master secrets unexpectedly.
+* **Domain Engine & Modular API Routes (`src/core/` & `src/api/routes/`)**: Clear separation across 5 core domains: `auth` (`auth.ts`), `tenant` (`tenant.ts`), `harness` (`harness.ts`), `missions` (`missions.ts`), and `workspace` (`workspace.ts`).
 
 ---
 
-## 🏛️ Inside the Agent Kernel Architecture
+## 🏛️ Inside the Agent Kernel & Workspace Architecture
 
-Fabrica isolates its core intelligence into a read-only **Agent Kernel** (`/Fabrica_kernel/`), separating kernel laws and workflows from client workspace data:
+Fabrica isolates its core intelligence into a read-only **Agent Kernel** (`/Fabrica_kernel/`), separating kernel laws and workflows from tenant workspace data:
 
 ```
 Fabrica/
-├── Fabrica_kernel/
-│   ├── extensions/            # Kernel Extensions (context_injector, workspace_sync, registry_bridge)
-│   ├── prompts/               # Kernel System Laws & Operational Guides
-│   │   ├── 01_identity.md     # Purpose, target audience, and system boundary
-│   │   ├── 02_laws.md         # 6 Immutable Hard Laws of the Kernel
-│   │   ├── 03_behaviors.md    # Persona, verbal notation ([*],[OK],[+],[ERR]), 5-part error reports
-│   │   ├── 04_infrastructure.md # Port 3000 rules, full-stack server, sandbox, 4-directory workspace model
-│   │   ├── 05_capabilities.md # Skills, extensions, maturity ladder, and 50/50 dual-column specs
-│   │   ├── 06_modes.md        # Execution modes, phase planning & execution workflows
-│   │   └── 07_app_guide.md    # 3-Panel Workspace UI guide & overlay panel
-│   └── skills/                # 12 Read-only Built-in Kernel System Skills
-├── workspaces/<tenant_id>/    # Clean Isolated User Workspace
-│   ├── .pi/                   # PI Agent workspace skills, extensions, & auth
-│   ├── settings.json          # Read-only configuration (Language, autonomy, capabilities, subscription)
-│   ├── runtime.json           # Agent runtime state (Suggestions, backlogs, review queues, recent events)
-│   ├── db/                    # JSON persistence engine (missions.json, etc.)
-│   ├── Sources/               # Data Sources & Inputs Ecosystem
-│   ├── Deliverables/          # Production Assets & Execution Outputs
-│   └── missions/              # Real-time sync mission planning & execution space
-├── src/                       # Enterprise Backend Services
-│   ├── harness.ts             # User workspace harness & execution options
-│   ├── execution/sandbox.ts   # Secure VM JS sandbox context
-│   ├── pipeline/orchestrator.ts# Parallel worker pool scheduler
-│   ├── db/db_engine.ts        # Supabase RLS database client
-│   ├── db/hybrid_storage.ts   # CMEK GCS object storage
-│   ├── db/llm_key_pool.ts     # Multi-provider LLM key pool & load balancer
-│   ├── db/tier_manager.ts     # Subscription tier & token credit engine
-│   ├── sync.ts                # 24/7 background simulation loop
-│   └── utils.ts               # Vertex AI Search & system utilities
-├── server.ts                  # Express 4 API server entrypoint
-└── frontend-next/             # Next.js 15 Client Application
-    ├── app/dashboard/page.tsx # Primary 3-Panel Workspace UI
-    └── components/flow/       # Cytoscape & D3 interactive graph visualizers
+├── .stash/                            # Global Shared Storage
+│   └── auth.json                      # Shared auth state, master credentials, managed LLM key pools, & BYOK configs
+├── Fabrica_kernel/                    # Read-only System Kernel Instructions
+│   ├── extensions/                    # Extension hooks
+│   ├── system_prompts/                # Kernel System Laws & Operational Guides (01_identity.md .. 07_app_guide.md)
+│   └── skills/                        # Read-only Built-in Kernel System Skills
+├── workspaces/<tenant_id>/            # Clean Isolated User Workspace
+│   ├── .pi/                           # Hidden Pi Agent Runtime Folder
+│   │   ├── agent/sessions/            # Native Pi agent session history (.jsonl files)
+│   │   ├── skills/                    # Custom AI skills created for this tenant
+│   │   └── extensions/                # Custom AI extensions created for this tenant
+│   ├── workspace/                     # File & Project Storage
+│   │   ├── Sources/                   # Uploaded documents, data sources, & reference files
+│   │   └── Deliverables/              # AI-generated artifacts, reports, & code deliverables
+│   ├── missions/                      # Active Mission Working Folders (<missionId>/)
+│   ├── AGENTS.md                      # Persistent instruction guidelines for the AI agent
+│   ├── tenant.json                    # Tenant profile, user preferences, telemetry metrics, & audit logs
+│   ├── harness.json                   # Live daemon state, selected model, suggestions, autonomy, & harness options
+│   ├── missions.json                  # Light JSON database tracking all active & past missions
+│   └── workspace.json                 # File index mapping all workspace Sources, Deliverables, & phase storage
+├── src/                               # Enterprise Core Domain Engines & API Routes
+│   ├── api/
+│   │   ├── middlewares/               # Express auth & error middlewares
+│   │   └── routes/                    # Domain API Routers (auth, tenant, workspace, missions, harness)
+│   ├── core/                          # Domain Core Engines & Co-located Types
+│   │   ├── auth.ts                    # Auth, BYOK keys, managed LLM key pool rotation, pricing tiers
+│   │   ├── tenant.ts                  # Tenant lifecycle, database persistence, profile, telemetry, audit logs
+│   │   ├── harness.ts                 # Pi CLI background daemon, interactive session manager, prompt loader
+│   │   ├── missions.ts                # Workflow pipeline orchestrator, step blueprints, mission state machine
+│   │   ├── workspace.ts               # Multi-tenant hybrid filesystem, phase storage, cloud sync
+│   │   └── vm_sandbox.ts              # Secure VM JS sandbox context & evaluation tools
+│   └── utils.ts                       # Vertex AI Search & system utilities
+├── server.ts                          # Express 4 API server entrypoint
+└── frontend-next/                     # Next.js 16 App Router Client Application
+    ├── app/                           # App pages (Main Workspace page.tsx & Dashboard page.tsx)
+    ├── components/                    # Modular visual UI components (auth, tenant, harness, missions, workspace)
+    └── lib/                           # Frontend API bridge (api.ts) & type definitions
 ```
 
 ---
