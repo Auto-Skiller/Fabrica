@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
-import { api } from '../../components/api';
+import { api, harnessApi } from '../../components/api';
 import { EntityData, EcosystemData } from '../../components/tenant/types';
 import { RuntimeYaml } from '../../components/harness/types';
 import { MissionsYaml } from '../../components/missions/types';
@@ -248,7 +248,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ SUPERVISED",
     toolsOn: "TOOLS ON",
     toolsOff: "TOOLS OFF",
-    toolsBtn: "⚡ Skills & Integrations",
+    toolsBtn: "Skills & Integrations",
     accountBtn: "🔑 Account & API",
     logsBtn: "📟 Logs & DB",
     langTitle: "UI Language (EN/FR/AR)",
@@ -473,7 +473,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ SUPERVISÉ",
     toolsOn: "OUTILS ACTIFS",
     toolsOff: "OUTILS INACTIFS",
-    toolsBtn: "⚡ Compétences & Intégrations",
+    toolsBtn: "Compétences & Intégrations",
     accountBtn: "🔑 Compte & API",
     logsBtn: "📟 Journaux & BDD",
     langTitle: "Langue de l'interface (EN/FR/AR)",
@@ -698,7 +698,7 @@ const DASHBOARD_TEXT = {
     autoSupervised: "○ تحت الإشراف",
     toolsOn: "الأدوات مفعّلة",
     toolsOff: "الأدوات معطّلة",
-    toolsBtn: "⚡ المهارات والتكاملات",
+    toolsBtn: "المهارات والتكاملات",
     accountBtn: "🔑 الحساب و API",
     logsBtn: "📟 السجلات والبيانات",
     langTitle: "لغة الواجهة (EN/FR/AR)",
@@ -2745,6 +2745,30 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [isAgentsMdWindowOpen, setIsAgentsMdWindowOpen] = useState<boolean>(false);
   const [isAutonomyHoverOpen, setIsAutonomyHoverOpen] = useState<boolean>(false);
   const [autonomyPos, setAutonomyPos] = useState<{ bottom: number; left: number } | null>(null);
+  const autonomyHoverTimerRef = useRef<any>(null);
+
+  const handleAutonomyMouseEnter = (rect?: DOMRect) => {
+    if (autonomyHoverTimerRef.current) {
+      clearTimeout(autonomyHoverTimerRef.current);
+      autonomyHoverTimerRef.current = null;
+    }
+    if (rect) {
+      setAutonomyPos({
+        bottom: Math.max(10, Math.round(window.innerHeight - rect.top + 2)),
+        left: Math.max(10, Math.min(Math.round(rect.left), window.innerWidth - 225))
+      });
+    }
+    setIsAutonomyHoverOpen(true);
+  };
+
+  const handleAutonomyMouseLeave = () => {
+    if (autonomyHoverTimerRef.current) {
+      clearTimeout(autonomyHoverTimerRef.current);
+    }
+    autonomyHoverTimerRef.current = setTimeout(() => {
+      setIsAutonomyHoverOpen(false);
+    }, 300);
+  };
   const [chatInputHeight, setChatInputHeight] = useState<number>(96);
   const [isDraggingChatInput, setIsDraggingChatInput] = useState<boolean>(false);
   const [isAccountWindowOpen, setIsAccountWindowOpen] = useState<boolean>(false);
@@ -12138,16 +12162,16 @@ ${isDirector ? `
             }}
             className="mini accent"
             style={{
-              padding: '2px 7px',
-              fontSize: '8.5px',
+              padding: '1px 4px',
+              fontSize: '7px',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              gap: '3.5px',
+              gap: '2px',
               background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
               border: 'none',
               color: '#fff',
-              height: '20px',
+              height: '16px',
               flexShrink: 0,
               cursor: 'pointer',
               borderRadius: '3px',
@@ -12155,7 +12179,7 @@ ${isDirector ? `
             }}
             title="Click to open Workspace Context (AGENTS.md) directives window"
           >
-            <span>📄 Context</span>
+            <span>Context</span>
           </button>
 
           {/* Unified Capabilities Button (Skills & Integrations) */}
@@ -12165,20 +12189,20 @@ ${isDirector ? `
             }}
             className="mini accent"
             style={{
-              padding: '4px 10px',
-              fontSize: '9.5px',
+              padding: '1px 4px',
+              fontSize: '7px',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '2px',
               background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
               border: 'none',
               color: '#fff',
-              height: '24px',
+              height: '16px',
               marginLeft: '0',
               flexShrink: 0,
               cursor: 'pointer',
-              borderRadius: '4px',
+              borderRadius: '3px',
               transition: 'all 0.15s'
             }}
             title="Click to open Skills & Integrations explorer."
@@ -12189,15 +12213,8 @@ ${isDirector ? `
           {/* Autonomy Switcher — expands to fill remaining empty space in 340px left container */}
           <div
             style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}
-            onMouseEnter={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setAutonomyPos({
-                bottom: Math.max(10, window.innerHeight - rect.top + 6),
-                left: Math.max(10, Math.min(rect.left, window.innerWidth - 225))
-              });
-              setIsAutonomyHoverOpen(true);
-            }}
-            onMouseLeave={() => setIsAutonomyHoverOpen(false)}
+            onMouseEnter={(e) => handleAutonomyMouseEnter(e.currentTarget.getBoundingClientRect())}
+            onMouseLeave={handleAutonomyMouseLeave}
           >
             <button
               onClick={() => {
@@ -12215,13 +12232,13 @@ ${isDirector ? `
                 height: '24px',
                 width: '100%',
                 flex: 1,
-                padding: '0 10px',
+                padding: '0 6px',
                 fontSize: '8.5px',
                 fontWeight: 900,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '5px',
+                justifyContent: 'space-between',
+                gap: '4px',
                 background: !isAutonomyOn
                   ? 'linear-gradient(135deg, #475569, #334155)'
                   : autonomyLevel === 'autonomous'
@@ -12235,24 +12252,45 @@ ${isDirector ? `
                 whiteSpace: 'nowrap'
               }}
             >
-              <span style={{ fontSize: '10px' }}>🤖</span>
-              <span style={{
-                fontSize: '8px',
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <span style={{ fontSize: '10px' }}>🤖</span>
+                <span style={{
+                  fontSize: '8px',
+                  padding: '1px 4px',
+                  borderRadius: '2px',
+                  background: 'rgba(0,0,0,0.25)',
+                  fontWeight: 900
+                }}>
+                  {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
+                </span>
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                background: 'rgba(0,0,0,0.3)',
                 padding: '1px 4px',
-                borderRadius: '2px',
-                background: 'rgba(0,0,0,0.25)',
-                fontWeight: 900
+                borderRadius: '3px',
+                fontSize: '7.5px'
               }}>
-                {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
-              </span>
+                <span title={`Auto Missions: ${autoMissionsProcessing ? 'ON (Active)' : 'OFF (Paused)'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+                  <span style={{ fontSize: '6px', color: autoMissionsProcessing ? '#4ade80' : '#ef4444' }}>●</span>🎯
+                </span>
+                <span title={`Auto Imports: ${autoImportsProcessing ? 'ON (Active)' : 'OFF (Paused)'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+                  <span style={{ fontSize: '6px', color: autoImportsProcessing ? '#4ade80' : '#ef4444' }}>●</span>📦
+                </span>
+              </div>
             </button>
 
             {/* Hover Popover Dropdown for Autonomy Modes */}
             {isAutonomyHoverOpen && (
               <div
+                onMouseEnter={() => handleAutonomyMouseEnter()}
+                onMouseLeave={handleAutonomyMouseLeave}
                 style={{
                   position: 'fixed',
-                  bottom: '36px',
+                  bottom: `${autonomyPos ? autonomyPos.bottom : 26}px`,
                   left: `${autonomyPos ? autonomyPos.left : 20}px`,
                   width: '210px',
                   background: 'var(--surface)',
@@ -12380,6 +12418,59 @@ ${isDirector ? `
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Heartbeat Interval Dropdown — positioned right next to Autonomy button */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <select
+              value={autonomyInterval}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setAutonomyInterval(val);
+                harnessApi.updateHarnessState({ autonomy_interval: val }).catch(() => {});
+                const labels: Record<number, string> = {
+                  60: '1 min',
+                  120: '2 min',
+                  300: '5 min',
+                  900: '15 min',
+                  1800: '30 min',
+                  3600: '1 h',
+                  14400: '4 h',
+                  86400: '1 D'
+                };
+                setToast({
+                  message: `Heartbeat interval updated to ${labels[val] || val + 's'}`,
+                  type: 'info',
+                  isOpen: true
+                });
+              }}
+              title="Select Autonomy Heartbeat Interval"
+              style={{
+                height: '16px',
+                padding: '0 2px',
+                fontSize: '7px',
+                fontWeight: 800,
+                background: 'var(--surface-alt)',
+                color: 'var(--text)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                outline: 'none',
+                flexShrink: 0
+              }}
+            >
+              <option value={60}>⏱️ 1 min</option>
+              <option value={120}>⏱️ 2 min</option>
+              <option value={300}>⏱️ 5 min</option>
+              <option value={900}>⏱️ 15 min</option>
+              <option value={1800}>⏱️ 30 min</option>
+              <option value={3600}>⏱️ 1 h</option>
+              <option value={14400}>⏱️ 4 h</option>
+              <option value={86400}>⏱️ 1 D</option>
+              {![60, 120, 300, 900, 1800, 3600, 14400, 86400].includes(autonomyInterval) && (
+                <option value={autonomyInterval}>⏱️ {autonomyInterval}s</option>
+              )}
+            </select>
           </div>
         </div>
 

@@ -18,6 +18,717 @@
   },
   "logs": [
     {
+      "id": "evt_1785623101618_xvpfu",
+      "timestamp": "2026-08-01T22:25:01.618Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623096617_kbqr6",
+      "timestamp": "2026-08-01T22:24:56.617Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623091616_iztq9",
+      "timestamp": "2026-08-01T22:24:51.616Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623086615_s2i1t",
+      "timestamp": "2026-08-01T22:24:46.615Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623081613_6b34q",
+      "timestamp": "2026-08-01T22:24:41.613Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623076613_932bg",
+      "timestamp": "2026-08-01T22:24:36.613Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623071613_kngae",
+      "timestamp": "2026-08-01T22:24:31.613Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623066611_5lmav",
+      "timestamp": "2026-08-01T22:24:26.611Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623061609_we4vy",
+      "timestamp": "2026-08-01T22:24:21.609Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623056608_09aya",
+      "timestamp": "2026-08-01T22:24:16.608Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623051608_1ewtq",
+      "timestamp": "2026-08-01T22:24:11.608Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623046608_gtwxv",
+      "timestamp": "2026-08-01T22:24:06.608Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623041607_v2pi3",
+      "timestamp": "2026-08-01T22:24:01.608Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623036607_c2vpm",
+      "timestamp": "2026-08-01T22:23:56.607Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623031607_n6ddl",
+      "timestamp": "2026-08-01T22:23:51.607Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623026606_2c006",
+      "timestamp": "2026-08-01T22:23:46.606Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623021604_ucuw4",
+      "timestamp": "2026-08-01T22:23:41.604Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623016603_5o88h",
+      "timestamp": "2026-08-01T22:23:36.603Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623011602_m9d2o",
+      "timestamp": "2026-08-01T22:23:31.602Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623006600_djvi9",
+      "timestamp": "2026-08-01T22:23:26.600Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785623001599_fqzxk",
+      "timestamp": "2026-08-01T22:23:21.599Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622996598_mrxta",
+      "timestamp": "2026-08-01T22:23:16.598Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622991599_3vn80",
+      "timestamp": "2026-08-01T22:23:11.599Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622986597_flfqn",
+      "timestamp": "2026-08-01T22:23:06.597Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622981597_03tqu",
+      "timestamp": "2026-08-01T22:23:01.597Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622976596_lquij",
+      "timestamp": "2026-08-01T22:22:56.596Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622971595_mp6pl",
+      "timestamp": "2026-08-01T22:22:51.595Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622966595_38r8w",
+      "timestamp": "2026-08-01T22:22:46.595Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622961594_tb88j",
+      "timestamp": "2026-08-01T22:22:41.594Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622956594_w903m",
+      "timestamp": "2026-08-01T22:22:36.594Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622951592_9tt74",
+      "timestamp": "2026-08-01T22:22:31.592Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622946592_geoyp",
+      "timestamp": "2026-08-01T22:22:26.592Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622941591_xr67j",
+      "timestamp": "2026-08-01T22:22:21.591Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622936591_x93ft",
+      "timestamp": "2026-08-01T22:22:16.591Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622931590_du5cn",
+      "timestamp": "2026-08-01T22:22:11.590Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622926589_ewj8r",
+      "timestamp": "2026-08-01T22:22:06.589Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622921588_hfw4k",
+      "timestamp": "2026-08-01T22:22:01.588Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622916587_gx4r6",
+      "timestamp": "2026-08-01T22:21:56.587Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622911585_rz769",
+      "timestamp": "2026-08-01T22:21:51.585Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622906585_pbfzh",
+      "timestamp": "2026-08-01T22:21:46.585Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622901585_jv5ug",
+      "timestamp": "2026-08-01T22:21:41.585Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622896584_rtwvz",
+      "timestamp": "2026-08-01T22:21:36.584Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622891583_59sct",
+      "timestamp": "2026-08-01T22:21:31.583Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622886581_mowlc",
+      "timestamp": "2026-08-01T22:21:26.581Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622881580_k4hs5",
+      "timestamp": "2026-08-01T22:21:21.580Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622876581_327u3",
+      "timestamp": "2026-08-01T22:21:16.581Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622871578_68ps7",
+      "timestamp": "2026-08-01T22:21:11.578Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622866578_swr8b",
+      "timestamp": "2026-08-01T22:21:06.578Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622861575_9yqj9",
+      "timestamp": "2026-08-01T22:21:01.575Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622856575_jw1ba",
+      "timestamp": "2026-08-01T22:20:56.575Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622851575_kw7zj",
+      "timestamp": "2026-08-01T22:20:51.575Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622846575_7fdn5",
+      "timestamp": "2026-08-01T22:20:46.575Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622841575_btmaa",
+      "timestamp": "2026-08-01T22:20:41.575Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622836574_yhn3c",
+      "timestamp": "2026-08-01T22:20:36.574Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622831572_du7wo",
+      "timestamp": "2026-08-01T22:20:31.572Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622826571_iz9ja",
+      "timestamp": "2026-08-01T22:20:26.571Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622821569_xsocy",
+      "timestamp": "2026-08-01T22:20:21.569Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622816569_t2cie",
+      "timestamp": "2026-08-01T22:20:16.569Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622811568_nxqld",
+      "timestamp": "2026-08-01T22:20:11.568Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622806566_y9g9w",
+      "timestamp": "2026-08-01T22:20:06.566Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622801564_kzxyc",
+      "timestamp": "2026-08-01T22:20:01.564Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622796564_zy15t",
+      "timestamp": "2026-08-01T22:19:56.564Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622791563_pw3s0",
+      "timestamp": "2026-08-01T22:19:51.563Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622786563_t1uly",
+      "timestamp": "2026-08-01T22:19:46.563Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622781562_r2t56",
+      "timestamp": "2026-08-01T22:19:41.562Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622776563_38k14",
+      "timestamp": "2026-08-01T22:19:36.563Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622771560_ifg0n",
+      "timestamp": "2026-08-01T22:19:31.560Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622766560_5ty8h",
+      "timestamp": "2026-08-01T22:19:26.560Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622761559_z7hhc",
+      "timestamp": "2026-08-01T22:19:21.559Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622756571_tvukc",
+      "timestamp": "2026-08-01T22:19:16.571Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622751541_0x5tu",
+      "timestamp": "2026-08-01T22:19:11.541Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622746540_estll",
+      "timestamp": "2026-08-01T22:19:06.540Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622741539_psikp",
+      "timestamp": "2026-08-01T22:19:01.539Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622736538_0z5eb",
+      "timestamp": "2026-08-01T22:18:56.538Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622731538_uvhiu",
+      "timestamp": "2026-08-01T22:18:51.538Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622726537_hgb0l",
+      "timestamp": "2026-08-01T22:18:46.537Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622721538_2dde9",
+      "timestamp": "2026-08-01T22:18:41.538Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622716537_jurcm",
+      "timestamp": "2026-08-01T22:18:36.537Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
+      "id": "evt_1785622711577_zrifk",
+      "timestamp": "2026-08-01T22:18:31.577Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 0
+      }
+    },
+    {
       "id": "evt_1785616121083_ui8m2",
       "timestamp": "2026-08-01T20:28:41.083Z",
       "type": "system",
@@ -1258,5 +1969,5 @@
       "details": "Unified audit event stream initialized in tenant.json."
     }
   ],
-  "last_event_at": "2026-08-01T20:28:41.083Z"
+  "last_event_at": "2026-08-01T22:25:01.618Z"
 }
