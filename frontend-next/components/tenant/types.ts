@@ -1,11 +1,10 @@
 import { RuntimeYaml } from '../harness/types';
-import { MissionsYaml } from '../missions/types';
 import { ToolboxesYaml, InboxYaml, PromptsYaml } from '../workspace/types';
 
 export interface EntityData {
   board: string;
   runtime: RuntimeYaml;
-  missions: MissionsYaml;
+  missions: any;
   toolboxes: ToolboxesYaml;
   inbox: InboxYaml;
   prompts: PromptsYaml;

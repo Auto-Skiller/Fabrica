@@ -10,7 +10,8 @@ import {
   syncWorkspaceJson,
   listCloudStorageObjects,
   syncTenantWorkspace,
-  clearWorkspacePending
+  clearWorkspacePending,
+  flagWorkspaceAction
 } from '../../core/workspace.js';
 
 const router = Router();
@@ -69,6 +70,18 @@ router.post('/clear-pending', (req: AuthenticatedRequest, res: Response) => {
     return;
   }
   clearWorkspacePending(tenantId, itemPath);
+  res.json({ ok: true });
+});
+
+// POST /api/workspace/flag-action — Flag an item (file/folder) as action item
+router.post('/flag-action', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { path: itemPath, item } = req.body || {};
+  if (!itemPath && !item) {
+    res.status(400).json({ ok: false, error: 'itemPath or item is required.' });
+    return;
+  }
+  flagWorkspaceAction(tenantId, item || itemPath);
   res.json({ ok: true });
 });
 

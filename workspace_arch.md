@@ -59,11 +59,7 @@ Located in `frontend-next/components/workspace/`:
 
 ### A. Data Types & Interfaces (`frontend-next/components/workspace/types.ts`)
 
-- **`Toolbox`**: Capability descriptor (`role`, `when_to_use`, `triggers`, `inputs`, `outputs`, `maturity`).
-- **`ToolboxesYaml`**: Registry of active domains and toolboxes.
-- **`InboxItem`**: Uploaded source file state (`name`, `status`, `path`, `semantics`, `disposition`).
-- **`InboxYaml`**: Inbox items count and categorized lists (`raw`, `analysing`, `gateway`).
-- **`PromptsYaml`**: Workspace prompts registry.
+- Unused legacy types (`Toolbox`, `ToolboxesYaml`, `InboxItem`, `InboxYaml`, `PromptsYaml`) have been completely removed from the workspace types registry.
 
 ### B. Workspace Frontend API (`frontend-next/components/workspace/api.ts`)
 
@@ -133,6 +129,7 @@ Located in `src/core/workspace.ts`:
 - **`recordWorkspaceAction(tenantId, action)`**: Appends action record to historical log array (capped at 100 entries).
 - **`clearWorkspacePending(tenantId, pendingIdOrPath)`**: Removes item from `pendings` and records a `'processed'` action.
 - **`getWorkspaceMap(tenantId)`**: Reads `workspace.json` from tenant directory or runs `syncWorkspaceJson` if missing.
+- **`getWorkspaceArtifactsFromIndex(tenantId, existingMission?)`**: Reads sources and deliverables directly from `workspace.json` index and maps them for mission tracking while preserving `processed` state flags.
 - **`resolveUserPath(tenantId, relativePath)`**: Security path resolver enforcing workspace boundary checks.
 - **`writeUserFile(tenantId, relativePath, content, isImport)`**: Writes file content, flags pending item if written to `workspace/`, records action log, and appends tenant audit event.
 - **`deleteUserFile(tenantId, relativePath)`**: Removes file/folder from disk and updates index.

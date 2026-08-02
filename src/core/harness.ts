@@ -1,8 +1,7 @@
 import { execFile, execFileSync, ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { keyPoolManager } from './auth.js';
-import { getUserTier, deductLlmCredits } from './auth.js';
+import { keyPoolManager, getUserTier, deductLlmCredits, decryptSecret } from './auth.js';
 import { getTenantRoot, appendTenantAuditLog } from './tenant.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
@@ -222,6 +221,70 @@ export function recordPiProcessLog(item: PiProcessLogItem) {
 
 // ── Workspace Initialization & Execution Options ───────────────────────────────
 
+export function syncPiUserAuthKeys(tenantId: string = 'default_user', customKey?: string, customProvider?: string): void {
+  const userRoot = getTenantRoot(tenantId);
+  const piAgentDir = path.join(userRoot, '.pi', 'agent');
+  fs.mkdirSync(piAgentDir, { recursive: true });
+
+  const authJsonPath = path.join(piAgentDir, 'auth.json');
+  const modelsJsonPath = path.join(piAgentDir, 'models.json');
+
+  let authData: Record<string, any> = {};
+  if (fs.existsSync(authJsonPath)) {
+    try {
+      authData = JSON.parse(fs.readFileSync(authJsonPath, 'utf8'));
+    } catch (_) {}
+  }
+
+  // Sync user-side BYOK keys into .pi/agent/auth.json
+  const allKeys = keyPoolManager.getAllKeys();
+  const byokKeys = allKeys.filter(k => k.isByok && k.isActive);
+
+  for (const k of byokKeys) {
+    if (k.provider) {
+      const decrypted = k.encryptedKey ? decryptSecret(k.encryptedKey) : k.key;
+      if (decrypted && !decrypted.includes('****')) {
+        authData[k.provider] = {
+          type: 'api_key',
+          key: decrypted,
+          label: k.label || 'User BYOK Key'
+        };
+      }
+    }
+  }
+
+  if (customKey && customProvider && !customKey.includes('****')) {
+    authData[customProvider] = {
+      type: 'api_key',
+      key: customKey,
+      label: 'Request Custom BYOK Key'
+    };
+  }
+
+  fs.writeFileSync(authJsonPath, JSON.stringify(authData, null, 2), 'utf8');
+
+  // Populate .pi/agent/models.json mapping supported providers & env vars
+  if (!fs.existsSync(modelsJsonPath)) {
+    fs.writeFileSync(modelsJsonPath, JSON.stringify({
+      providers: {
+        google: { name: "Google Gemini", env_var: "GEMINI_API_KEY" },
+        gemini: { name: "Google Gemini", env_var: "GEMINI_API_KEY" },
+        openrouter: { name: "OpenRouter", env_var: "OPENROUTER_API_KEY" },
+        anthropic: { name: "Anthropic Claude", env_var: "ANTHROPIC_API_KEY" },
+        openai: { name: "OpenAI", env_var: "OPENAI_API_KEY" },
+        mistral: { name: "Mistral AI", env_var: "MISTRAL_API_KEY" },
+        groq: { name: "Groq", env_var: "GROQ_API_KEY" },
+        deepseek: { name: "DeepSeek", env_var: "DEEPSEEK_API_KEY" },
+        xai: { name: "xAI Grok", env_var: "XAI_API_KEY" },
+        azure: { name: "Azure OpenAI", env_var: "AZURE_OPENAI_API_KEY" },
+        together: { name: "Together AI", env_var: "TOGETHER_API_KEY" },
+        fireworks: { name: "Fireworks AI", env_var: "FIREWORKS_API_KEY" },
+        perplexity: { name: "Perplexity AI", env_var: "PERPLEXITY_API_KEY" }
+      }
+    }, null, 2), 'utf8');
+  }
+}
+
 export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnessInfo {
   const userRoot = getTenantRoot(tenantId);
   const piDir = path.join(userRoot, '.pi');
@@ -232,6 +295,8 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   fs.mkdirSync(piAgentDir, { recursive: true });
   fs.mkdirSync(piSkillsDir, { recursive: true });
   fs.mkdirSync(piExtensionsDir, { recursive: true });
+
+  syncPiUserAuthKeys(tenantId);
 
   const tenantJsonPath = path.join(userRoot, 'tenant.json');
   if (!fs.existsSync(tenantJsonPath)) {
@@ -573,6 +638,9 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
 
   const provider = fullModel.split('/')[0];
 
+  // Sync user BYOK key configuration into user's .pi/agent/auth.json and .pi/agent/models.json
+  syncPiUserAuthKeys(tenantId, options.customKey, provider);
+
   const piBin = fs.existsSync(path.resolve(process.cwd(), 'node_modules/.bin/pi'))
     ? path.resolve(process.cwd(), 'node_modules/.bin/pi')
     : 'pi';
@@ -591,11 +659,34 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
     };
 
     if (effectiveKey) {
-      if (provider === 'google') env.GEMINI_API_KEY = effectiveKey;
-      else if (provider === 'openrouter') env.OPENROUTER_API_KEY = effectiveKey;
-      else if (provider === 'anthropic') env.ANTHROPIC_API_KEY = effectiveKey;
-      else if (provider === 'openai') env.OPENAI_API_KEY = effectiveKey;
-      else env.GEMINI_API_KEY = effectiveKey;
+      if (provider === 'google' || provider === 'gemini') {
+        env.GEMINI_API_KEY = effectiveKey;
+        env.GOOGLE_GENERATIVE_AI_API_KEY = effectiveKey;
+      } else if (provider === 'openrouter') {
+        env.OPENROUTER_API_KEY = effectiveKey;
+      } else if (provider === 'anthropic') {
+        env.ANTHROPIC_API_KEY = effectiveKey;
+      } else if (provider === 'openai') {
+        env.OPENAI_API_KEY = effectiveKey;
+      } else if (provider === 'mistral') {
+        env.MISTRAL_API_KEY = effectiveKey;
+      } else if (provider === 'groq') {
+        env.GROQ_API_KEY = effectiveKey;
+      } else if (provider === 'deepseek') {
+        env.DEEPSEEK_API_KEY = effectiveKey;
+      } else if (provider === 'xai') {
+        env.XAI_API_KEY = effectiveKey;
+      } else if (provider === 'azure') {
+        env.AZURE_OPENAI_API_KEY = effectiveKey;
+      } else if (provider === 'together') {
+        env.TOGETHER_API_KEY = effectiveKey;
+      } else if (provider === 'fireworks') {
+        env.FIREWORKS_API_KEY = effectiveKey;
+      } else if (provider === 'perplexity') {
+        env.PERPLEXITY_API_KEY = effectiveKey;
+      } else {
+        env.GEMINI_API_KEY = effectiveKey;
+      }
     }
 
     let promptWithLang = options.prompt;
@@ -733,7 +824,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   while (attempts < maxAttempts) {
     attempts++;
     const keyItem = keyPoolManager.acquireKey(targetProvider, tenantId, excludedKeyIds);
-    const apiKey = keyItem ? keyItem.key : (targetProvider === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY);
+    const apiKey = keyItem ? (keyItem.rawDecryptedKey || keyItem.key) : (targetProvider === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY);
 
     if (!apiKey && !keyItem) break;
 

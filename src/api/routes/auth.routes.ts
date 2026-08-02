@@ -53,9 +53,9 @@ router.get('/key-pool', (req: AuthenticatedRequest, res: Response) => {
   res.json({ ok: true, status, keys, freeModels: FREE_MODELS });
 });
 
-// POST /api/auth/key-pool/add — Add new API key to rotation pool
+// POST /api/auth/key-pool/add — Add new BYOK API key to rotation pool
 router.post('/key-pool/add', (req: AuthenticatedRequest, res: Response) => {
-  const { key, provider, label } = req.body || {};
+  const { key, provider, label, isByok } = req.body || {};
   if (!key || !provider) {
     res.status(400).json({ ok: false, error: 'Key and provider are required.' });
     return;
@@ -63,10 +63,12 @@ router.post('/key-pool/add', (req: AuthenticatedRequest, res: Response) => {
   const added = keyPoolManager.addKey({
     key,
     provider,
-    label,
-    isActive: true
+    label: label || 'BYOK User Key',
+    isActive: true,
+    isByok: isByok !== undefined ? Boolean(isByok) : true
   });
-  res.json({ ok: true, keyItem: { ...added, key: '****' } });
+  const { encryptedKey, ...safeKeyItem } = added;
+  res.json({ ok: true, keyItem: { ...safeKeyItem, key: safeKeyItem.maskedKey || '****' } });
 });
 
 // POST /api/auth/key-pool/remove — Remove key from pool

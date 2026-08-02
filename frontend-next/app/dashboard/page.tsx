@@ -8,12 +8,8 @@ import { supabase } from '../../components/auth/supabase';
 import { api, harnessApi } from '../../components/api';
 import { EntityData, EcosystemData } from '../../components/tenant/types';
 import { RuntimeYaml } from '../../components/harness/types';
-import { MissionsYaml } from '../../components/missions/types';
-import { ToolboxesYaml, InboxYaml } from '../../components/workspace/types';
 
 const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });
-
-const DependencyGraph = dynamic(() => import('../../components/missions/DependencyGraph'), { ssr: false });
 import { AccountWorkspaceModal } from '../../components/auth/AccountWorkspaceModal';
 import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } from '../../components/harness/pi-models';
 import { UserHarnessService } from '../../components/harness/user-harness';
@@ -10497,7 +10493,9 @@ ${isDirector ? `
                 {/* DELIVERABLES CONTENT BODY */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '8px', overflowY: 'auto' }}>
                   {yourDataSystemsView === 'graph' ? (
-                    <DependencyGraph rawDataList={rawDataList} systemComponents={systemComponents} />
+                    <div style={{ padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' }}>
+                      Dependency Graph is no longer used. Please switch to List or Artifact view.
+                    </div>
                   ) : (yourDataSystemsView as any) === 'artifact' ? (
                     /* ARTIFACT VIEWER MODE */
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px' }}>

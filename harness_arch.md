@@ -164,9 +164,14 @@ const activeDaemons = new Map<string, {
   - Ensures required directories (`.pi/skills/`, `.pi/extensions/`) exist.
   - Constructs environment variables (`GEMINI_API_KEY`, `PATH`, workspace `CWD`).
   - Assembles CLI flags (`--workspace`, `--skills-dir`).
+- **`syncPiUserAuthKeys(tenantId, customKey?, customProvider?)`**:
+  - Syncs user-side BYOK API keys into `workspaces/<tenant_id>/.pi/agent/auth.json`.
+  - Generates or updates `workspaces/<tenant_id>/.pi/agent/models.json` mapping model providers to environment variables (`GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `TOGETHER_API_KEY`, `FIREWORKS_API_KEY`, `PERPLEXITY_API_KEY`).
+  - Ensures raw user BYOK keys are decrypted at runtime into `auth.json` so the `pi` agent CLI can authenticate, while server-side platform system keys remain strictly isolated.
 - **`ensureUserHarness(tenantId)`**:
   - Guarantees `harness.json` exists in `workspaces/<tenant_id>/`.
-  - Creates `.pi/skills/` and `.pi/extensions/` directories if not present.
+  - Creates `.pi/agent/`, `.pi/skills/`, and `.pi/extensions/` directories if not present.
+  - Automatically triggers `syncPiUserAuthKeys(tenantId)`.
 - **`getHarnessState(tenantId)`**: Reads `harness.json` and parses runtime state.
 - **`saveHarnessState(tenantId, state, config, logs)`**: Atomically writes updated state to `harness.json`.
 - **`startPiDaemon(tenantId, config)`**:
@@ -238,6 +243,10 @@ Located in `workspaces/<tenant_id>/`:
 workspaces/<tenant_id>/
 ├── harness.json                # Harness state, config, and logs
 └── .pi/                        # Agent configuration folder
+    ├── agent/                  # Agent credentials & models config
+    │   ├── auth.json           # User BYOK provider API keys
+    │   ├── models.json         # Supported provider environment variables mapping
+    │   └── sessions/           # Agent execution session history
     ├── skills/                 # User skills directory
     │   ├── web_search/
     │   │   └── SKILL.md
@@ -247,3 +256,24 @@ workspaces/<tenant_id>/
         ├── custom_tool.ts
         └── mcp_config.json
 ```
+
+---
+
+## 6. Supported Provider Environment Variables Reference Table
+
+The harness synchronizes user BYOK credentials into `.pi/agent/auth.json` and configures execution environment variables dynamically for the `pi` CLI runner:
+
+| Provider Key | Primary Env Var | Secondary / Alias Env Var | Provider Identifier |
+| :--- | :--- | :--- | :--- |
+| **google** / **gemini** | `GEMINI_API_KEY` | `GOOGLE_GENERATIVE_AI_API_KEY` | `google/` |
+| **openrouter** | `OPENROUTER_API_KEY` | - | `openrouter/` |
+| **anthropic** | `ANTHROPIC_API_KEY` | - | `anthropic/` |
+| **openai** | `OPENAI_API_KEY` | - | `openai/` |
+| **mistral** | `MISTRAL_API_KEY` | - | `mistral/` |
+| **groq** | `GROQ_API_KEY` | - | `groq/` |
+| **deepseek** | `DEEPSEEK_API_KEY` | - | `deepseek/` |
+| **xai** | `XAI_API_KEY` | - | `xai/` |
+| **azure** | `AZURE_OPENAI_API_KEY` | - | `azure/` |
+| **together** | `TOGETHER_API_KEY` | - | `together/` |
+| **fireworks** | `FIREWORKS_API_KEY` | - | `fireworks/` |
+| **perplexity** | `PERPLEXITY_API_KEY` | - | `perplexity/` |

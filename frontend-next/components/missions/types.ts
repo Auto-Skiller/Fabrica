@@ -55,19 +55,3 @@ export interface Mission {
   goals: Record<string, MissionGoal>;
   tasks: Record<string, MissionTask>;
 }
-
-export interface MissionsYaml {
-  standard: Record<string, Mission>;
-  research: Record<string, Mission>;
-  evolution: {
-    FAST: Record<string, any>;
-    DEEP: Record<string, any>;
-    RESEARCH?: Record<string, any>;
-    INBOX?: Record<string, any>;
-    ANALYTICS?: Record<string, any>;
-  };
-  analytics: Record<string, Mission>;
-  archived?: {
-    completed: Record<string, Mission>;
-  };
-}

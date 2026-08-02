@@ -1,15 +1,69 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+
+// ── Cryptographic Security & Server Key Protection Engine ─────────────────────
+
+const MASTER_ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || 'fabrica_master_secure_secret_2026_aes256_gcm';
+
+export function encryptSecret(plainText: string): string {
+  if (!plainText) return '';
+  try {
+    const iv = crypto.randomBytes(12);
+    const key = crypto.scryptSync(MASTER_ENCRYPTION_SECRET, 'fabrica_salt', 32);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
+  } catch (err) {
+    return plainText;
+  }
+}
+
+export function decryptSecret(encryptedData: string): string {
+  if (!encryptedData) return '';
+  if (!encryptedData.includes(':')) return encryptedData;
+  try {
+    const parts = encryptedData.split(':');
+    if (parts.length !== 3) return encryptedData;
+    const [ivHex, tagHex, contentHex] = parts;
+    const iv = Buffer.from(ivHex, 'hex');
+    const tag = Buffer.from(tagHex, 'hex');
+    const content = Buffer.from(contentHex, 'hex');
+    const key = crypto.scryptSync(MASTER_ENCRYPTION_SECRET, 'fabrica_salt', 32);
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const decrypted = Buffer.concat([decipher.update(content), decipher.final()]);
+    return decrypted.toString('utf8');
+  } catch (err) {
+    return encryptedData;
+  }
+}
+
+export function hashApiKey(rawKey: string): string {
+  if (!rawKey) return '';
+  return crypto.createHash('sha256').update(rawKey).digest('hex');
+}
+
+export function maskApiKey(rawKey: string): string {
+  if (!rawKey) return '';
+  if (rawKey.length <= 10) return '****';
+  return `${rawKey.substring(0, 6)}...${rawKey.slice(-4)}`;
+}
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
 
 export interface KeyPoolItem {
   id: string;
-  key: string;
+  key?: string;
+  keyHash?: string;
+  encryptedKey?: string;
+  maskedKey?: string;
   provider: 'gemini' | 'openrouter' | 'anthropic' | 'openai';
   modelTarget?: string;
   label?: string;
   isActive: boolean;
+  isByok?: boolean;
   rateLimitedUntil?: number; // Epoch time ms
   usageCount: number;
   errorCount: number;
@@ -152,18 +206,37 @@ export class KeyPoolManager {
 
   public saveKeys(): void {
     const store = ensureAuthStore();
-    store.key_pools = this.keys;
+    // Ensure all stored keys are encrypted and raw plain-text is stripped before writing to disk
+    store.key_pools = this.keys.map(k => {
+      const raw = k.key || '';
+      const enc = k.encryptedKey || (raw ? encryptSecret(raw) : '');
+      const hash = k.keyHash || (raw ? hashApiKey(raw) : '');
+      const masked = k.maskedKey || (raw ? maskApiKey(raw) : '****');
+      const { key, ...safeItem } = k;
+      return {
+        ...safeItem,
+        encryptedKey: enc,
+        keyHash: hash,
+        maskedKey: masked
+      };
+    });
     saveAuthStore(store);
   }
 
-  public addKey(item: Omit<KeyPoolItem, 'id' | 'usageCount' | 'errorCount' | 'createdAt'>): KeyPoolItem {
+  public addKey(item: Omit<KeyPoolItem, 'id' | 'usageCount' | 'errorCount' | 'createdAt'> & { key?: string }): KeyPoolItem {
+    const rawKey = item.key || '';
     const newKeyItem: KeyPoolItem = {
       ...item,
       id: `key_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      keyHash: hashApiKey(rawKey),
+      encryptedKey: encryptSecret(rawKey),
+      maskedKey: maskApiKey(rawKey),
+      isByok: item.isByok ?? true,
       usageCount: 0,
       errorCount: 0,
       createdAt: new Date().toISOString()
     };
+    delete newKeyItem.key;
     this.keys.push(newKeyItem);
     this.saveKeys();
     return newKeyItem;
@@ -183,7 +256,7 @@ export class KeyPoolManager {
     provider: 'gemini' | 'openrouter' | 'anthropic' | 'openai',
     tenantId?: string,
     excludeIds: Set<string> = new Set()
-  ): KeyPoolItem | null {
+  ): (KeyPoolItem & { rawDecryptedKey: string }) | null {
     const now = Date.now();
     const availableKeys = this.keys.filter(k => {
       if (!k.isActive) return false;
@@ -207,7 +280,15 @@ export class KeyPoolManager {
     selected.usageCount++;
     selected.lastUsedAt = new Date().toISOString();
     this.saveKeys();
-    return selected;
+
+    const rawDecryptedKey = selected.encryptedKey
+      ? decryptSecret(selected.encryptedKey)
+      : selected.key || '';
+
+    return {
+      ...selected,
+      rawDecryptedKey
+    };
   }
 
   public markRateLimited(id: string, durationSeconds: number = 60): void {
@@ -224,10 +305,15 @@ export class KeyPoolManager {
   }
 
   public getAllKeys(): KeyPoolItem[] {
-    return this.keys.map(k => ({
-      ...k,
-      key: k.key ? `${k.key.substring(0, 6)}...${k.key.slice(-4)}` : ''
-    }));
+    return this.keys.map(k => {
+      const displayKey = k.maskedKey || (k.key ? maskApiKey(k.key) : '****');
+      const { encryptedKey, key, ...safe } = k;
+      return {
+        ...safe,
+        key: displayKey,
+        maskedKey: displayKey
+      };
+    });
   }
 }
 
@@ -267,7 +353,7 @@ export function getUserTier(tenantId: string = 'default_user'): UserTierInfo {
     usedTokensThisMonth,
     remainingTokensThisMonth,
     byokEnabled: Boolean(rawTier.byokEnabled || rawTier.customApiKey),
-    customApiKey: rawTier.customApiKey,
+    customApiKey: rawTier.customApiKey ? maskApiKey(rawTier.customApiKey) : undefined,
     customProvider: rawTier.customProvider,
     billingCycleResetDate: rawTier.billingCycleResetDate || new Date(Date.now() + 30 * 86400000).toISOString()
   };

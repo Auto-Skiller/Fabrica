@@ -1,63 +1,63 @@
-export interface Toolbox {
-  role?: string;
+export interface WorkspaceItemLevel {
+  maturity: 'draft' | 'beta' | 'production' | string;
+  readability: 'low' | 'medium' | 'high' | string;
+}
+
+export interface WorkspaceItem {
+  id?: string;
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  type: string;
+  level: WorkspaceItemLevel;
+  description: string;
+  when_to_use: string;
+  triggers: string[];
+  size: number;
+  modified_at: string;
+  created_at?: string;
+  flagged_as_action?: boolean;
+}
+
+export type WorkspaceSourceItem = WorkspaceItem;
+export type WorkspaceDeliverableItem = WorkspaceItem;
+
+export interface WorkspacePendingItem extends WorkspaceItem {
+  id: string;
+  created_at: string;
+}
+
+export interface WorkspaceActionItem {
+  id: string;
+  name?: string;
+  path: string;
+  action: 'imported' | 'created' | 'updated' | 'deleted' | 'moved' | 'processed' | 'flagged';
+  type?: string;
+  level?: WorkspaceItemLevel;
+  description?: string;
   when_to_use?: string;
   triggers?: string[];
-  inputs?: string[];
-  outputs?: string[];
-  maturity: 'stub' | 'functional' | 'hardened' | 'battle-tested';
-  status?: boolean;
+  details?: Record<string, any>;
+  timestamp: string;
+  item?: WorkspaceItem;
 }
 
-export interface ToolboxesYaml {
-  freshness?: Record<string, any>;
-  metrics?: Record<string, any>;
-  active_domains?: string[];
-  domains: Record<string, {
-    status: boolean;
-    toolboxes: Record<string, {
-      status: boolean;
-      maturity?: string;
-      skills?: Record<string, Toolbox>;
-      agents?: Record<string, Toolbox>;
-    }>;
-  }>;
-}
-
-export interface InboxItem {
-  name: string;
-  status: 'needs_discovery' | 'needs_semantics' | 'ready_to_route' | 'rejected' | 'routed';
-  path: string;
-  semantics?: {
-    description: string;
-    contains: string[];
-    when_to_use: string[];
+export interface WorkspaceMap {
+  sources: {
+    discovery_and_scoping: WorkspaceSourceItem[];
+    deep_research: WorkspaceSourceItem[];
+    data_analysis: WorkspaceSourceItem[];
+    strategic_synthesis: WorkspaceSourceItem[];
+    all: WorkspaceSourceItem[];
   };
-  disposition?: {
-    action: 'route' | 'reject';
-    pillar?: string;
-    aspect?: 'Architecture' | 'Capabilities' | 'Monetization';
-    fg?: string;
+  deliverables: {
+    executions: WorkspaceDeliverableItem[];
+    reviews: WorkspaceDeliverableItem[];
+    completed: WorkspaceDeliverableItem[];
+    all: WorkspaceDeliverableItem[];
   };
-}
-
-export interface InboxYaml {
-  metrics: {
-    raw_items: number;
-    gateway_items: number;
-    analysing_items: number;
-  };
-  discovery: string[];
-  raw: Record<string, InboxItem>;
-  analysing: Record<string, InboxItem>;
-  gateway: Record<string, InboxItem>;
-}
-
-export interface PromptsYaml {
-  freshness?: Record<string, any>;
-  prompts: Record<string, {
-    file: string;
-    title: string;
-    role: string;
-    contains: string[];
-  }>;
+  pendings: WorkspacePendingItem[];
+  actions: WorkspaceActionItem[];
+  action_items: WorkspaceItem[];
+  updated_at: string;
 }
