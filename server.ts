@@ -38,11 +38,13 @@ app.use('/api/storage', workspaceRouter);
 app.use('/api/mission', missionsRouter);
 
 // ── Serve Next.js Frontend Static Exports ────────────────────────────────────────
-const outDir = path.join(process.cwd(), 'frontend-next', 'out');
-if (fs.existsSync(outDir)) {
-  app.use(express.static(outDir, { extensions: ['html'] }));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) return next();
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  const outDir = path.join(process.cwd(), 'frontend-next', 'out');
+  if (!fs.existsSync(outDir)) {
+    return res.status(503).send('<html><head><meta http-equiv="refresh" content="3"></head><body style="font-family:sans-serif;padding:2rem;text-align:center;"><h2>Frontend is building...</h2><p>This page will automatically refresh once the build completes.</p></body></html>');
+  }
+  express.static(outDir, { extensions: ['html'] })(req, res, () => {
     const indexPath = path.join(outDir, 'index.html');
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
@@ -50,7 +52,7 @@ if (fs.existsSync(outDir)) {
       next();
     }
   });
-}
+});
 
 // ── Error Handling Middleware ──────────────────────────────────────────────────
 app.use(errorMiddleware);

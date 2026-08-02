@@ -92,15 +92,15 @@ Located in `src/api/routes/workspace.routes.ts`:
 
 | Method | Endpoint | Description | Request Payload | Response Schema |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/workspace/files` | Lists files in relative path | Query: `?path=subDir` | `{ ok: true, files: UserFileItem[] }` |
+| `GET` | `/api/workspace/files` | Fetches items & state from `workspace.json` with path sanitization | Query: `?path=subDir` | `{ ok: true, files: WorkspaceItem[] }` |
+| `POST` | `/api/workspace/create` | Creates or imports workspace item with metadata | `{ path, content?, type?, level?, description?, when_to_use?, triggers?, isImport?, flagged_as_action? }` | `{ ok: true, path, item: WorkspaceItem }` |
 | `GET` | `/api/workspace/file/read` | Reads file text content | Query: `?path=filePath` | `{ ok: true, content, path, size }` |
 | `POST` | `/api/workspace/file/write` | Writes content to workspace file | `{ path, content, isImport? }` | `{ ok: true, path, size }` |
 | `POST` | `/api/workspace/clear-pending` | Clears workspace pending item flag | `{ path: string }` | `{ ok: true }` |
+| `POST` | `/api/workspace/flag-action` | Flags item as action item | `{ path?: string, item?: WorkspaceItem }` | `{ ok: true }` |
 | `POST` | `/api/workspace/file/move` | Moves/renames file or directory | `{ src, dest }` | `{ ok: true, src, dest, size }` |
 | `POST` | `/api/workspace/file/delete` | Deletes file or directory | `{ path: string }` | `{ ok: deleted: boolean }` |
 | `GET` | `/api/workspace/map` | Fetches index `workspace.json` | Query: `?tenantId=...` | `{ ok: true, map: WorkspaceMap }` |
-| `GET` | `/api/workspace/cloud-sync` | Lists simulated GCS storage objects | Query: `?folder=...` | `{ ok: true, objects: StorageObject[] }` |
-| `POST` | `/api/workspace/cloud-sync` | Resynchronizes workspace state | `{} ` | `{ ok: true, sync: SyncResult }` |
 
 ---
 
@@ -110,11 +110,10 @@ Located in `src/core/workspace.ts`:
 
 ### A. TypeScript Interfaces
 
-- **`UserFileItem`**: `{ name, relativePath, isDirectory, size, updatedAt }`
-- **`WorkspaceSourceItem` / `WorkspaceDeliverableItem`**: `{ name, path, size, modified_at }`
-- **`WorkspacePendingItem`**: `{ id, name, path, type: 'source'|'deliverable'|'imported'|'file', size, created_at }`
-- **`WorkspaceActionItem`**: `{ id, path, action: 'imported'|'created'|'updated'|'deleted'|'moved'|'processed', details?, timestamp }`
-- **`WorkspaceMap`**: Unified index containing `sources` categories, `deliverables` categories, `pendings`, `actions`, and `updated_at`.
+- **`WorkspaceItem`**: Unified item record containing `{ name, path, isDirectory, type, level: { maturity, readability }, description, when_to_use, triggers, size, modified_at, created_at?, flagged_as_action? }`
+- **`WorkspacePendingItem`**: `{ id, name, path, type, level, description, when_to_use, triggers, size, modified_at, created_at }`
+- **`WorkspaceActionItem`**: `{ id, path, action: 'imported'|'created'|'updated'|'deleted'|'moved'|'processed'|'flagged', details?, timestamp }`
+- **`WorkspaceMap`**: Unified index containing `sources` categories, `deliverables` categories, `pendings`, `actions`, `action_items` (items flagged as actions), and `updated_at`.
 
 ### B. Core Workspace Engine Functions
 
@@ -122,17 +121,23 @@ Located in `src/core/workspace.ts`:
   - Ensures required workspace folder structure exists (`workspace/Sources/` and `workspace/Deliverables/`).
   - Scans four Source subdirectories: `Discovery & Scoping`, `Deep Research & Intelligence Gathering`, `Data Analysis & Pattern Extraction`, `Strategic Synthesis & Decision Support`.
   - Scans three Deliverable subdirectories: `Executions`, `Reviews`, `Completed`.
-  - Aggregates file metadata (file size, modified timestamp, relative path).
-  - Preserves existing `pendings` and `actions` arrays.
-  - Atomically writes updated `workspace.json`.
-- **`flagWorkspacePending(tenantId, item)`**: Adds pending record to `workspace.json`.
+  - Aggregates file metadata and preserves/populates item attributes (`type`, `level`, `description`, `when_to_use`, `triggers`, `flagged_as_action`).
+  - Populates `action_items` array for items flagged as actions.
+  - Atomically writes updated `workspace.json` in real time.
+- **`listWorkspaceItemsFromJson(tenantId, subDir)`**:
+  - Fetches workspace items and state directly from `workspace.json`.
+  - Performs strict path sanitization against directory traversal (`..` blocking and `resolveUserPath` validation).
+- **`createWorkspaceItem(tenantId, params)`**:
+  - Creates or imports a workspace item, writes file to disk, saves custom metadata (`type`, `level`, `description`, `when_to_use`, `triggers`), flags action if requested, and triggers real-time `workspace.json` sync.
+- **`flagWorkspaceAction(tenantId, pathOrItem)`**: Flags item as action item and adds to `action_items` array in `workspace.json`.
 - **`recordWorkspaceAction(tenantId, action)`**: Appends action record to historical log array (capped at 100 entries).
 - **`clearWorkspacePending(tenantId, pendingIdOrPath)`**: Removes item from `pendings` and records a `'processed'` action.
 - **`getWorkspaceMap(tenantId)`**: Reads `workspace.json` from tenant directory or runs `syncWorkspaceJson` if missing.
 - **`getWorkspaceArtifactsFromIndex(tenantId, existingMission?)`**: Reads sources and deliverables directly from `workspace.json` index and maps them for mission tracking while preserving `processed` state flags.
 - **`resolveUserPath(tenantId, relativePath)`**: Security path resolver enforcing workspace boundary checks.
-- **`writeUserFile(tenantId, relativePath, content, isImport)`**: Writes file content, flags pending item if written to `workspace/`, records action log, and appends tenant audit event.
-- **`deleteUserFile(tenantId, relativePath)`**: Removes file/folder from disk and updates index.
+- **`writeUserFile(tenantId, relativePath, content, isImport)`**: Writes file content, flags pending item if written to `workspace/`, records action log, appends tenant audit event, and syncs `workspace.json` in real time.
+- **`moveUserFile(tenantId, srcRelativePath, destRelativePath)`**: Renames file on disk and updates `workspace.json` in real time.
+- **`deleteUserFile(tenantId, relativePath)`**: Removes file/folder from disk and updates index in real time.
 
 ---
 

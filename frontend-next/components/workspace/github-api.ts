@@ -1,3 +1,5 @@
+import { workspaceApi } from './api';
+
 export interface GitHubFile {
   name: string;
   path: string;
@@ -130,4 +132,25 @@ export async function exportToGitHub(params: {
     sha: resData.content.sha,
     commitUrl: resData.commit.html_url
   };
+}
+
+/**
+ * Imports a GitHub file into workspace using POST /api/workspace/create
+ */
+export async function importGitHubFileToWorkspace(downloadUrl: string, fileName: string, targetCategory: string = 'Discovery & Scoping', token?: string): Promise<{ ok: boolean; path: string }> {
+  const content = await downloadGitHubFile(downloadUrl, token);
+  const relativePath = `workspace/Sources/${targetCategory}/${fileName}`;
+
+  const res = await workspaceApi.createWorkspaceItem({
+    path: relativePath,
+    content,
+    type: 'imported',
+    level: { maturity: 'draft', readability: 'high' },
+    description: `GitHub imported file: ${fileName}`,
+    when_to_use: `Referenced as imported source file from GitHub for ${fileName}`,
+    triggers: [fileName, 'github_import'],
+    isImport: true
+  });
+
+  return { ok: res.ok, path: res.path };
 }

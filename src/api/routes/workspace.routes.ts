@@ -1,28 +1,53 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import {
-  listUserFiles,
   readUserFile,
   writeUserFile,
   moveUserFile,
   deleteUserFile,
   getWorkspaceMap,
   syncWorkspaceJson,
-  listCloudStorageObjects,
-  syncTenantWorkspace,
   clearWorkspacePending,
-  flagWorkspaceAction
+  flagWorkspaceAction,
+  listWorkspaceItemsFromJson,
+  createWorkspaceItem
 } from '../../core/workspace.js';
 
 const router = Router();
 
-// GET /api/workspace/files — List workspace files
+// GET /api/workspace/files — List workspace files from workspace.json index with path sanitization
 router.get('/files', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const subDir = (req.query.path as string) || '';
   try {
-    const files = listUserFiles(tenantId, subDir);
+    const files = listWorkspaceItemsFromJson(tenantId, subDir);
     res.json({ ok: true, files });
+  } catch (err: any) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/workspace/create — Create/Import workspace item
+router.post('/create', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { path: filePath, content, type, level, description, when_to_use, triggers, isImport, flagged_as_action } = req.body || {};
+  if (!filePath) {
+    res.status(400).json({ ok: false, error: 'Path is required.' });
+    return;
+  }
+  try {
+    const result = createWorkspaceItem(tenantId, {
+      path: filePath,
+      content: content || '',
+      type,
+      level,
+      description,
+      when_to_use,
+      triggers,
+      isImport: Boolean(isImport),
+      flagged_as_action: Boolean(flagged_as_action)
+    });
+    res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(400).json({ ok: false, error: err.message });
   }
@@ -124,21 +149,6 @@ router.get('/map', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const map = getWorkspaceMap(tenantId);
   res.json({ ok: true, map });
-});
-
-// GET /api/workspace/cloud-sync — List cloud storage objects
-router.get('/cloud-sync', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
-  const folder = (req.query.folder as string) || '';
-  const objects = listCloudStorageObjects(tenantId, folder);
-  res.json({ ok: true, objects });
-});
-
-// POST /api/workspace/cloud-sync — Sync workspace storage
-router.post('/cloud-sync', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
-  const result = syncTenantWorkspace(tenantId);
-  res.json({ ok: true, sync: result });
 });
 
 export default router;

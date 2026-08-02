@@ -136,10 +136,11 @@ Located in `src/core/missions.ts`:
   - Instantly records `created` action in `actions` array of `missions.json`.
 - **`updateMission(tenantId, missionId, updates)`**:
   - Applies partial updates and resynchronizes workspace artifacts.
-  - Automatically detects pipeline stage/phase changes and records `action: 'moved'` (or `action: 'updated'`) in `actions` array of `missions.json` so the agent is instantly notified.
+  - Automatically detects pipeline stage/phase changes, executes file moving operations via `moveUserFile` (`/api/workspace/file/move`), updates item stage and path in `workspace.json`, and records `action: 'moved'` (or `action: 'updated'`) in `actions` array of `missions.json`.
 - **`deleteMission(tenantId, missionId)`**:
   - Removes runtime temp directory `workspaces/<tenant_id>/missions/<missionId>/`.
-  - Instantly records `action: 'deleted'` in `actions` array of `missions.json`.
+  - Deletes associated mission deliverable files via `deleteUserFile` (`/api/workspace/file/delete`) and removes item state from `workspace.json`.
+  - Instantly records `action: 'deleted'` in `actions` array of `missions.json` and resynchronizes `workspace.json`.
 
 ---
 

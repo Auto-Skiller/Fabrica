@@ -2,6 +2,7 @@ import { request } from '../auth/api';
 
 export const workspaceApi = {
   getWorkspaceFiles: (subDir: string = '') => request<{ ok: boolean; files: any[] }>(`/api/workspace/files?path=${encodeURIComponent(subDir)}`),
+  createWorkspaceItem: (data: { path: string; content?: string; type?: string; level?: any; description?: string; when_to_use?: string; triggers?: string[]; isImport?: boolean; flagged_as_action?: boolean }) => request<{ ok: boolean; path: string; item: any }>('/api/workspace/create', { method: 'POST', body: JSON.stringify(data) }),
   readWorkspaceFile: (filePath: string) => request<{ ok: boolean; content: string; path: string; size: number }>(`/api/workspace/file/read?path=${encodeURIComponent(filePath)}`),
   writeWorkspaceFile: (filePath: string, content: string) => request<{ ok: boolean; path: string; size: number }>('/api/workspace/file/write', { method: 'POST', body: JSON.stringify({ path: filePath, content }) }),
   moveWorkspaceFile: (src: string, dest: string) => request<{ ok: boolean; src: string; dest: string; size: number }>('/api/workspace/file/move', { method: 'POST', body: JSON.stringify({ src, dest }) }),

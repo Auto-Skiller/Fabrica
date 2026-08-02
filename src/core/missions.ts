@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getTenantRoot, appendTenantAuditLog } from './tenant.js';
-import { getWorkspaceArtifactsFromIndex } from './workspace.js';
+import { getWorkspaceArtifactsFromIndex, moveUserFile, deleteUserFile, syncWorkspaceJson } from './workspace.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
 
@@ -417,6 +417,32 @@ export function updateMission(
   const isMoved = (updates.phase && updates.phase !== target.phase) || (updates.status && updates.status !== target.status);
   const actionType: 'moved' | 'updated' = isMoved ? 'moved' : 'updated';
 
+  const newPhase = updates.phase || target.phase;
+  const newStatus = updates.status || target.status;
+
+  // Moving a mission through pipeline stages triggers file moving operations and workspace.json item stage update
+  if (isMoved && target.deliverables && target.deliverables.length > 0) {
+    let destSubDir = 'workspace/Deliverables/Executions';
+    if (newStatus === 'completed' || newPhase === 'review') {
+      destSubDir = newStatus === 'completed' ? 'workspace/Deliverables/Completed' : 'workspace/Deliverables/Reviews';
+    } else if (newPhase === 'discovery' || newPhase === 'blueprint') {
+      destSubDir = 'workspace/Sources/Discovery & Scoping';
+    }
+
+    for (const deliv of target.deliverables) {
+      if (!deliv.path) continue;
+      const fileName = path.basename(deliv.path);
+      const destPath = `${destSubDir}/${fileName}`;
+
+      if (deliv.path !== destPath) {
+        try {
+          moveUserFile(tenantId, deliv.path, destPath);
+          deliv.path = destPath;
+        } catch (_) {}
+      }
+    }
+  }
+
   const updated: Mission = {
     ...target,
     ...updates,
@@ -425,6 +451,7 @@ export function updateMission(
   };
 
   syncMissionWorkspaceArtifacts(updated);
+  syncWorkspaceJson(tenantId);
 
   recordMissionAction(tenantId, {
     id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -444,7 +471,21 @@ export function deleteMission(tenantId: string = 'default_user', missionId: stri
     fs.rmSync(missionDir, { recursive: true, force: true });
   }
 
-  const missions = getMissions(tenantId).filter(m => m.id !== missionId);
+  const missions = getMissions(tenantId);
+  const target = missions.find(m => m.id === missionId);
+
+  // Removing a mission triggers file deletion operations and workspace.json item removal
+  if (target && target.deliverables) {
+    for (const deliv of target.deliverables) {
+      if (deliv.path) {
+        try {
+          deleteUserFile(tenantId, deliv.path);
+        } catch (_) {}
+      }
+    }
+  }
+
+  const filteredMissions = missions.filter(m => m.id !== missionId);
   const singleMissionsPath = path.join(userRoot, 'missions.json');
 
   let pendings: MissionPendingItem[] = [];
@@ -466,6 +507,7 @@ export function deleteMission(tenantId: string = 'default_user', missionId: stri
   });
   if (actions.length > 100) actions = actions.slice(0, 100);
 
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: filteredMissions, pendings, actions }, null, 2), 'utf8');
+  syncWorkspaceJson(tenantId);
   return true;
 }

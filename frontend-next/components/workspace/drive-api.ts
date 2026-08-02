@@ -1,4 +1,5 @@
 import { getAccessToken } from './drive-auth';
+import { workspaceApi } from './api';
 
 export interface DriveFile {
   id: string;
@@ -132,4 +133,33 @@ export async function fetchDriveFileContent(fileId: string, mimeType: string): P
   }
 
   return await response.text();
+}
+
+/**
+ * Imports a Google Drive file into workspace using POST /api/workspace/create
+ */
+export async function importDriveFileToWorkspace(fileId: string, mimeType: string, fileName: string, targetCategory: string = 'Discovery & Scoping'): Promise<{ ok: boolean; path: string }> {
+  let content = '';
+  if (mimeType === 'application/vnd.google-apps.spreadsheet') {
+    const sheetData = await fetchGoogleSheetAsCSV(fileId);
+    content = sheetData.csv;
+  } else {
+    content = await fetchDriveFileContent(fileId, mimeType);
+  }
+
+  const cleanFileName = fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.md') ? fileName : (mimeType === 'application/vnd.google-apps.spreadsheet' ? `${fileName}.csv` : `${fileName}.txt`);
+  const relativePath = `workspace/Sources/${targetCategory}/${cleanFileName}`;
+
+  const res = await workspaceApi.createWorkspaceItem({
+    path: relativePath,
+    content,
+    type: 'imported',
+    level: { maturity: 'draft', readability: 'high' },
+    description: `Google Drive imported file: ${fileName}`,
+    when_to_use: `Referenced as imported source data for ${fileName}`,
+    triggers: [fileName, 'drive_import'],
+    isImport: true
+  });
+
+  return { ok: res.ok, path: res.path };
 }

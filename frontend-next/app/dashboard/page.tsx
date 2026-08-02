@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
 import { api, harnessApi } from '../../components/api';
-import { EntityData, EcosystemData } from '../../components/tenant/types';
 import { RuntimeYaml } from '../../components/harness/types';
 
 const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });

@@ -46,11 +46,7 @@ Located in `frontend-next/components/tenant/`:
 
 ### A. Data Types & Interfaces (`frontend-next/components/tenant/types.ts`)
 
-- **`EntityData`**: High-level entity structure holding runtime state, missions, toolboxes, inbox, and prompts.
-- **`EcosystemEntity`**: Metrics container (`missions`, `toolboxes_total`, `toolboxes_active`, `pillars`, `backlog`, `review_queue`, `prompts`).
-- **`EcosystemData`**: Array of `EcosystemEntity` items and system totals.
-- **`ConfigYaml`**: Tenant layout configuration (`current_window`, `autonomy`, `dashboard.theme`).
-- **`TenantProfile`**: Frontend representation of tenant account (`tenantId`, `name`, `email`, `plan`, `ecosystem`, `projects`, `board`, `telemetry`, `last_active`).
+- **`TenantProfile`**: Frontend representation of tenant account (`tenantId`, `name`, `email`, `plan`, `context`, `telemetry`, `last_active`).
 
 ### B. Frontend API Wrapper (`frontend-next/components/tenant/api.ts`)
 
@@ -59,10 +55,7 @@ Located in `frontend-next/components/tenant/`:
   - `updateTenantProfile(updates)`: `POST /api/tenant/profile` — Updates profile settings on disk.
   - `getTenantTelemetry(tenantId)`: `GET /api/tenant/telemetry` — Fetches real-time CPU, RAM, and disk metrics.
   - `getTenantLogs(tenantId)`: `GET /api/tenant/logs` — Retrieves event stream from `tenant.json`.
-  - `appendLog(event)`: `POST /api/tenant/logs/event` — Appends audit log entry.
-  - `getEcosystem() / saveEcosystem()`: Helper wrappers around tenant profile.
-  - `getProjects() / createProject()`: Manages tenant project array.
-  - `updateBoard(content)`: Saves visual board text state.
+  - `getLogs(tenantId)`: Helper wrapper returning audit logs array.
 
 ---
 

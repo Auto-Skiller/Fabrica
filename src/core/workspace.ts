@@ -346,6 +346,107 @@ export function getWorkspaceMap(tenantId: string = 'default_user'): WorkspaceMap
   return syncWorkspaceJson(tenantId)!;
 }
 
+export function listWorkspaceItemsFromJson(tenantId: string = 'default_user', subDir: string = ''): WorkspaceItem[] {
+  // Sanitize path against directory traversal
+  let targetPath = subDir.trim();
+  if (targetPath.includes('..')) {
+    throw new Error('Security Violation: Path traversal attempt blocked.');
+  }
+
+  if (targetPath) {
+    resolveUserPath(tenantId, targetPath);
+  }
+
+  const map = getWorkspaceMap(tenantId);
+  const pathMap = new Map<string, WorkspaceItem>();
+
+  const addItems = (list?: WorkspaceItem[]) => {
+    if (!Array.isArray(list)) return;
+    for (const item of list) {
+      if (item && item.path && !pathMap.has(item.path)) {
+        pathMap.set(item.path, item);
+      }
+    }
+  };
+
+  if (map.sources) {
+    addItems(map.sources.all);
+    addItems(map.sources.discovery_and_scoping);
+    addItems(map.sources.deep_research);
+    addItems(map.sources.data_analysis);
+    addItems(map.sources.strategic_synthesis);
+  }
+  if (map.deliverables) {
+    addItems(map.deliverables.all);
+    addItems(map.deliverables.executions);
+    addItems(map.deliverables.reviews);
+    addItems(map.deliverables.completed);
+  }
+  addItems(map.pendings);
+  addItems(map.action_items);
+
+  const items = Array.from(pathMap.values());
+
+  if (!targetPath || targetPath === 'workspace' || targetPath === '/') {
+    return items;
+  }
+
+  const normSubDir = targetPath.replace(/\\/g, '/').replace(/\/$/, '');
+
+  return items.filter(item => {
+    const normItemPath = item.path.replace(/\\/g, '/');
+    return normItemPath === normSubDir || normItemPath.startsWith(normSubDir + '/');
+  });
+}
+
+export function createWorkspaceItem(
+  tenantId: string = 'default_user',
+  params: {
+    path: string;
+    content?: string;
+    type?: string;
+    level?: WorkspaceItemLevel;
+    description?: string;
+    when_to_use?: string;
+    triggers?: string[];
+    isImport?: boolean;
+    flagged_as_action?: boolean;
+  }
+): { path: string; size: number; item: WorkspaceItem } {
+  const { path: relPath, content = '', type, level, description, when_to_use, triggers, isImport = false, flagged_as_action = false } = params;
+
+  const writeRes = writeUserFile(tenantId, relPath, content, isImport);
+
+  const filename = path.basename(relPath);
+
+  const item: WorkspaceItem = {
+    name: filename,
+    path: relPath,
+    isDirectory: false,
+    type: type || (isImport ? 'imported' : relPath.startsWith('workspace/Sources') ? 'source' : relPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file'),
+    level: level || { maturity: isImport ? 'draft' : 'production', readability: 'high' },
+    description: description || `Workspace file: ${filename}`,
+    when_to_use: when_to_use || `Referenced when processing ${filename} in mission or workspace tasks`,
+    triggers: triggers || [filename, isImport ? 'import' : 'file'],
+    size: writeRes.size,
+    modified_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    flagged_as_action
+  };
+
+  if (flagged_as_action) {
+    flagWorkspaceAction(tenantId, item);
+  } else {
+    syncWorkspaceJson(tenantId);
+  }
+
+  return {
+    path: writeRes.path,
+    size: writeRes.size,
+    item
+  };
+}
+
 export function getWorkspaceArtifactsFromIndex(
   tenantId: string = 'default_user',
   existingMission?: { sources?: Array<{ path: string; processed: boolean }>; deliverables?: Array<{ path: string; processed: boolean }> }
