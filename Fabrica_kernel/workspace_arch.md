@@ -154,8 +154,22 @@ Stored at: `workspaces/<tenant_id>/workspace.json`
       {
         "name": "market_research.pdf",
         "path": "workspace/Sources/Discovery & Scoping/market_research.pdf",
+        "isDirectory": false,
+        "type": "source",
+        "level": {
+          "maturity": "production",
+          "readability": "high"
+        },
+        "description": "Market research intelligence input document",
+        "when_to_use": "Referenced during initial scoping and competitive assessment tasks",
+        "triggers": [
+          "market_research.pdf",
+          "research",
+          "source"
+        ],
         "size": 1048576,
-        "modified_at": "2026-08-01T12:00:00.000Z"
+        "modified_at": "2026-08-01T12:00:00.000Z",
+        "flagged_as_action": false
       }
     ],
     "deep_research": [],
@@ -170,8 +184,22 @@ Stored at: `workspaces/<tenant_id>/workspace.json`
       {
         "name": "final_report.md",
         "path": "workspace/Deliverables/Completed/final_report.md",
+        "isDirectory": false,
+        "type": "deliverable",
+        "level": {
+          "maturity": "production",
+          "readability": "high"
+        },
+        "description": "Completed strategic synthesis report deliverable",
+        "when_to_use": "Referenced when outputting final mission deliverables and review artifacts",
+        "triggers": [
+          "final_report.md",
+          "report",
+          "deliverable"
+        ],
         "size": 4096,
-        "modified_at": "2026-08-01T15:30:00.000Z"
+        "modified_at": "2026-08-01T15:30:00.000Z",
+        "flagged_as_action": true
       }
     ],
     "all": []
@@ -181,9 +209,39 @@ Stored at: `workspaces/<tenant_id>/workspace.json`
     {
       "id": "wksp_a_1772467800000_1x9z",
       "path": "workspace/Deliverables/Completed/final_report.md",
-      "action": "created",
+      "action": "flagged",
+      "type": "deliverable",
+      "level": {
+        "maturity": "production",
+        "readability": "high"
+      },
+      "description": "Completed strategic synthesis report deliverable",
+      "when_to_use": "Referenced when outputting final mission deliverables and review artifacts",
+      "triggers": ["final_report.md", "action"],
       "details": { "size": 4096 },
       "timestamp": "2026-08-01T15:30:00.000Z"
+    }
+  ],
+  "action_items": [
+    {
+      "name": "final_report.md",
+      "path": "workspace/Deliverables/Completed/final_report.md",
+      "isDirectory": false,
+      "type": "deliverable",
+      "level": {
+        "maturity": "production",
+        "readability": "high"
+      },
+      "description": "Completed strategic synthesis report deliverable",
+      "when_to_use": "Referenced when outputting final mission deliverables and review artifacts",
+      "triggers": [
+        "final_report.md",
+        "report",
+        "deliverable"
+      ],
+      "size": 4096,
+      "modified_at": "2026-08-01T15:30:00.000Z",
+      "flagged_as_action": true
     }
   ],
   "updated_at": "2026-08-01T16:10:00.000Z"

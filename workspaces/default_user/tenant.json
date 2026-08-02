@@ -18,6 +18,168 @@
   },
   "logs": [
     {
+      "id": "evt_1785689969563_hmf7d",
+      "timestamp": "2026-08-02T16:59:29.563Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689964588_6a7hw",
+      "timestamp": "2026-08-02T16:59:24.588Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689959560_h6r5k",
+      "timestamp": "2026-08-02T16:59:19.560Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689954561_3z9dz",
+      "timestamp": "2026-08-02T16:59:14.561Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689949576_vpq6f",
+      "timestamp": "2026-08-02T16:59:09.576Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689944558_6ll8u",
+      "timestamp": "2026-08-02T16:59:04.558Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689939558_hbl6r",
+      "timestamp": "2026-08-02T16:58:59.558Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689934558_ws77c",
+      "timestamp": "2026-08-02T16:58:54.558Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689929573_nu702",
+      "timestamp": "2026-08-02T16:58:49.573Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785689924570_a5lsk",
+      "timestamp": "2026-08-02T16:58:44.570Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650295725_h5eo1",
+      "timestamp": "2026-08-02T05:58:15.725Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650290726_1biow",
+      "timestamp": "2026-08-02T05:58:10.726Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650285720_pcb3s",
+      "timestamp": "2026-08-02T05:58:05.720Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650280719_j18m2",
+      "timestamp": "2026-08-02T05:58:00.719Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650275735_fyb37",
+      "timestamp": "2026-08-02T05:57:55.735Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650272097_q7g6s",
+      "timestamp": "2026-08-02T05:57:52.097Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650267096_kc012",
+      "timestamp": "2026-08-02T05:57:47.096Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
+      "id": "evt_1785650262116_n38m4",
+      "timestamp": "2026-08-02T05:57:42.117Z",
+      "type": "system",
+      "event": "Workspace Synced",
+      "details": {
+        "syncedFilesCount": 7
+      }
+    },
+    {
       "id": "evt_1785623101618_xvpfu",
       "timestamp": "2026-08-01T22:25:01.618Z",
       "type": "system",
@@ -1969,5 +2131,5 @@
       "details": "Unified audit event stream initialized in tenant.json."
     }
   ],
-  "last_event_at": "2026-08-01T22:25:01.618Z"
+  "last_event_at": "2026-08-02T16:59:29.563Z"
 }

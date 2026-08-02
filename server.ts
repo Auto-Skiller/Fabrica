@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import { exec } from 'child_process';
 import { authMiddleware } from './src/api/middlewares/auth.middleware.js';
 import { errorMiddleware } from './src/api/middlewares/error.middleware.js';
 
@@ -15,7 +16,24 @@ import { syncMissionsJson } from './src/core/missions.js';
 import { syncTenantWorkspace } from './src/core/workspace.js';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
+
+let isBuildingFrontend = false;
+function triggerFrontendBuildIfNeeded() {
+  const outDir = path.join(process.cwd(), 'frontend-next', 'out');
+  if (!fs.existsSync(outDir) && !isBuildingFrontend) {
+    isBuildingFrontend = true;
+    console.log('[Fabrica Engine] Initializing frontend build...');
+    exec('npm run build:frontend', (err) => {
+      isBuildingFrontend = false;
+      if (err) {
+        console.error('[Fabrica Engine] Frontend build error:', err.message);
+      } else {
+        console.log('[Fabrica Engine] Frontend build complete!');
+      }
+    });
+  }
+}
 
 // ── Global Body Parsers ────────────────────────────────────────────────────────
 app.use(express.json({ limit: '50mb' }));
@@ -42,6 +60,7 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   const outDir = path.join(process.cwd(), 'frontend-next', 'out');
   if (!fs.existsSync(outDir)) {
+    triggerFrontendBuildIfNeeded();
     return res.status(503).send('<html><head><meta http-equiv="refresh" content="3"></head><body style="font-family:sans-serif;padding:2rem;text-align:center;"><h2>Frontend is building...</h2><p>This page will automatically refresh once the build completes.</p></body></html>');
   }
   express.static(outDir, { extensions: ['html'] })(req, res, () => {
@@ -74,6 +93,7 @@ app.listen(PORT, '0.0.0.0', () => {
     ensureUserHarness('default_user');
     syncTenantWorkspace('default_user');
     syncMissionsJson('default_user');
+    triggerFrontendBuildIfNeeded();
   } catch (err: any) {
     console.error(`[Daemon Sync] Error in initial setup: ${err.message}`);
   }

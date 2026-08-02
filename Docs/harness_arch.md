@@ -1,269 +1,255 @@
-# Harness & Agent Process Architecture (`harness_arch.md`)
+# Harness & Agent Architecture Audit (`harness_arch.md`)
 
-This document provides a complete, production-grade architectural audit and logic walkthrough for the Autonomous Harness, Pi Daemon Process Management, Skill Registry, and Agent Execution Subsystem.
+This document provides a production-grade, end-to-end architectural audit and logic walkthrough for the **Autonomous Harness**, **Agent Chat Interface**, **Pi Daemon Process Engine**, **System Prompts & Skills**, **Session & Log Management**, and **Realtime State Sync** across the frontend, backend microservices, and CLI agent runner.
 
 ---
 
-## 1. Subsystem Overview & Execution Lifecycle
+## 1. System High-Level Topology & Flow Architecture
 
-The Harness Subsystem acts as the continuous autonomous engine of the platform. It manages isolated background `pi` CLI agent daemon processes, handles recurring heartbeat cycles, routes AI prompts, manages skill files in `.pi/skills/`, and persists execution logs.
+The platform architecture connects the **Next.js Dashboard Frontend**, **Express Backend Services**, **User Workspace File Stores**, and **Pi CLI Agent Daemons**:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Dashboard UI (page.tsx)                           │
-│  - Autonomy Power Button (Glowing Green/Yellow Pulse)                       │
-│  - Heartbeat Interval Dropdown (1m, 2m, 5m, 15m, 30m, 1h, 4h, 1D)          │
-│  - Auto-Processing Indicator Signals (Green/Red LED)                       │
-│  - Skills & Extensions Drawer (SkillsAndExtensions.tsx)                      │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTP API Calls (frontend-next/components/harness/api.ts)
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       Harness Express API Routes                            │
-│                      (src/api/routes/harness.routes.ts)                     │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Core Harness Engine                               │
-│                          (src/core/harness.ts)                              │
-│  - Active Daemon Process Map (activeDaemons: Map<tenantId, ChildProcess>)   │
-│  - Environment & Exec Options Resolver (getPiExecutionOptions)             │
-│  - Background Heartbeat Loop Engine                                          │
-│  - Skill Manager (.pi/skills/ & .pi/extensions/)                           │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ File System Persistence
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                   Tenant Storage (workspaces/<tenant_id>/)                  │
-│  ├── harness.json  (Daemon status, heartbeat interval, config, logs)        │
-│  ├── .pi/skills/   (SKILL.md files & executable skill modules)              │
-│  └── .pi/extensions/ (System tool extensions & MCP modules)                 │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                FRONTEND DASHBOARD (page.tsx)                            │
+│ ┌──────────────────────┐  ┌──────────────────────┐  ┌─────────────────────────────────┐ │
+│ │ Agent Chat Component │  │ Sessions & Models    │  │ Autonomy & Heartbeat Manager    │ │
+│ │  - Input Textarea    │  │  - Session Switcher  │  │  - Autonomy Dropdown (Director) │ │
+│ │  - Format Renderer   │  │  - Model Dropdown    │  │  - Pulse Timer (e.g. 20s)       │ │
+│ │  - Send/Stop Controls│  │  - Language Selector │  │  - Backlog & Review Queues      │ │
+│ └──────────┬───────────┘  └──────────┬───────────┘  └────────────────┬────────────────┘ │
+└────────────│─────────────────────────│───────────────────────────────│──────────────────┘
+             │                         │                               │
+             ▼                         ▼                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                CLIENT API LAYER (api.ts)                                │
+│                     harnessApi.chatAgent / runHarnessAgent / stopAgent                  │
+└──────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                           │ HTTP JSON REST API
+                                           ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              EXPRESS API ROUTES & MIDDLEWARE                            │
+│                           (src/api/routes/harness.routes.ts)                            │
+│    /api/harness/run    /api/harness/stop     /api/harness/sessions    /api/harness/state │
+└──────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                CORE HARNESS ENGINE (src/core/harness.ts)                │
+│ ┌───────────────────────────┐ ┌───────────────────────────┐ ┌──────────────────────────┐ │
+│ │ Daemon Registry           │ │ System Prompts Loader     │ │ Key Pool & BYOK Sync     │ │
+│ │ activePiDaemons: Map      │ │ Fabrica_kernel + AGENTS.md│ │ syncPiUserAuthKeys       │ │
+│ └─────────────┬─────────────┘ └─────────────┬─────────────┘ └────────────┬─────────────┘ │
+└───────────────│─────────────────────────────│────────────────────────────│──────────────┘
+                │                             │                            │
+                ▼                             ▼                            ▼
+┌──────────────────────────────────────────────┐ ┌────────────────────────────────────────┐
+│           PI CLI RUNNER PROCESS              │ │           TENANT FILE STORAGE          │
+│         (node_modules/.bin/pi)               │ │        (workspaces/<tenant_id>/)        │
+│  Flags: -p --mode json --session-id <id>     │ │  ├── harness.json (State, Model, Qs)   │
+│         --model <provider/model>             │ │  ├── AGENTS.md (Custom Directives)     │
+│         --skill <path> --extension <path>    │ │  ├── .pi/agent/ (auth, models, jsonl)  │
+│         --append-system-prompt <combined>    │ │  └── workspace/ (Sources, Deliverables)│
+└──────────────────────────────────────────────┘ └────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Component Architecture (`components_arch`)
+## 2. Comprehensive Subsystem Audit (16 Core Components)
 
-Located in `frontend-next/components/harness/` and `frontend-next/app/dashboard/`:
+### 2.1 Agent Chat (Input and Output)
+- **Frontend Input (`page.tsx`)**:
+  - Rendered via `<textarea id="agent-chat-textarea">` with mouse drag mechanics (`isDraggingChatInput`, `chatInputHeight`).
+  - Accepts user text, file drops, and extra context items (`selectedExtraSources`).
+  - Triggered via `Enter` key (without `Shift`) or the **Send** button, executing `handleSendPrompt()`.
+- **Frontend Output (`page.tsx`)**:
+  - Message list rendered from `chatHistory` state (`sender: 'user' | 'agent'`).
+  - Structured formatting via `renderFormattedText()`, handling markdown titles, nested bullet lists (`parseInlineMarkdown`), and syntax-highlighted code blocks with an interactive **Copy Code** button (`📋 COPY CODE`).
+- **Backend Flow (`harness.routes.ts` & `harness.ts`)**:
+  - Endpoint `POST /api/harness/run` delegates to `runPiAgent()`.
+  - Spawns the CLI agent process, streaming JSON events (`turn_end`, `agent_end`).
+  - Parses input/output token counts (`usage.inputTokens`, `usage.outputTokens`) and records process execution logs (`piProcessLogs`).
 
-### A. Data Types & Interfaces (`frontend-next/components/harness/types.ts`)
+### 2.2 System Prompts & `AGENTS.md`
+- **Kernel Prompts Architecture**:
+  - Located in `Fabrica_kernel/system_prompts/` (e.g., `01_identity.md`, `02_laws.md`, `03_behaviors.md`, `04_infrastructure.md`, `05_capabilities.md`, `06_modes.md`, `07_app_guide.md`).
+- **Tenant Prompt Overrides**:
+  - Located at `workspaces/<tenant_id>/AGENTS.md`. Users can edit this file in the UI via the System Prompt Modal.
+- **Assembly Engine (`loadKernelSystemPrompts`)**:
+  - Merges all kernel markdown files, appends `AGENTS.md` directives, and dynamically injects **Realtime Harness Directives**:
+    - Output Language setting
+    - Autonomy Mode & Heartbeat Interval
+    - Active Model selection
+    - Active Backlogs & Review Queues
+    - Suggestion Cards
+  - Passed to the CLI agent via `--append-system-prompt`.
 
-- **`PiModel`**: Available AI model definition (`id`, `name`, `provider`, `contextWindow`, `description`).
-- **`PiDaemonState`**: Current state of background agent process:
-  - `status: 'idle' | 'running' | 'paused' | 'error' | 'stopped'`
-  - `pid?: number`: Operating system Process ID of background `pi` process.
-  - `autonomyEnabled: boolean`: Whether automatic background cycles are toggled on.
-  - `heartbeatInterval: string`: Active interval duration (`1m`, `2m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`).
-  - `lastHeartbeatAt?: string`: Timestamp of last automated execution.
-  - `nextHeartbeatAt?: string`: Projected timestamp for next trigger.
-  - `activeTasksCount: number`: Number of concurrently running prompts.
-  - `currentTask?: string`: Description of task currently processing.
-- **`HarnessExecutionConfig`**:
-  - `model: string`: Selected model identifier (e.g., `gemini-2.5-flash`).
-  - `provider: string`: AI Provider (`google`, `anthropic`, `openai`, `deepseek`).
-  - `temperature: number`: Sampling temperature (0.0 to 1.0).
-  - `maxTokens: number`: Output token boundary.
-  - `systemPrompt?: string`: Active system instructions override.
-  - `cliFlags: string[]`: Array of extra flags passed to `pi` process.
-- **`HarnessSession`**:
-  - `sessionId: string`: Unique session identifier.
-  - `startedAt: string`: ISO timestamp.
-  - `status: string`: Session state.
-  - `promptCount: number`: Total user/agent messages in session.
-- **`HarnessLogEntry`**:
-  - `id: string`: Unique log entry ID.
-  - `timestamp: string`: ISO 8601 timestamp.
-  - `level: 'info' | 'warn' | 'error' | 'debug' | 'agent'`: Severity level.
-  - `message: string`: Text output or stdout/stderr stream from agent process.
-  - `source?: string`: Subsystem origin (`daemon`, `cli`, `heartbeat`).
-- **`SkillsAndExtensionsProps`**: Modal/Drawer interface props for Skill management.
+### 2.3 Skills Subsystem
+- **Dual-Layer Resolution**:
+  1. **Kernel Skills**: Static platform capabilities in `Fabrica_kernel/skills/`.
+  2. **Workspace Skills**: User-defined custom skills in `workspaces/<tenant_id>/.pi/skills/`.
+- **CLI Registration**: Passed dynamically as `--skill <directory_path>`.
+- **UI Management (`SkillsAndExtensions.tsx`)**:
+  - Frontmatter YAML parser (`parseSkillMd`) extracts metadata attributes (`what`, `when`, `why`, `triggers`, `inputs`, `outputs`) and markdown instructions.
+  - Interactive file tree view (`buildFileTree`, `DirectoryTreeView`) allowing creation, editing, renaming, and deletion of skill files.
 
-### B. Model Registry (`frontend-next/components/harness/pi-models.ts`)
+### 2.4 Extensions Subsystem (Integrations)
+- **CLI Extension Registration**: Loads custom TypeScript/JavaScript extensions from `workspaces/<tenant_id>/.pi/extensions/` via CLI flag `--extension <path>`.
+- **Integrations Catalog (`PRESET_INTEGRATION_CATEGORIES`)**:
+  - **Storage & PM**: GitHub, Google Drive, Google Sheets, Notion, Jira, Linear.
+  - **Messaging**: Telegram, Slack, Discord, WhatsApp.
+  - **Customer Interaction**: Gmail, WhatsApp Client, Messenger, Discord Community, Instagram, Facebook.
+  - **Automations**: n8n, Zapier.
+  - **Business & Commerce**: Odoo, Shopify, Stripe.
+  - **Creative & Voice**: Higgsfield, Blender, Twilio.
+- **OAuth & Credentials Binding**: Integrates directly with authorization handlers in `frontend-next/components/harness/user-harness.ts` and modal drawers.
 
-- **`PI_MODELS` Array**:
-  - Includes Google Gemini 2.5 Flash / Pro, Anthropic Claude 3.5 Sonnet, OpenAI GPT-4o, and DeepSeek R1.
-- **`DEFAULT_HARNESS_CONFIG`**: Default options preset (`model: 'gemini-2.5-flash'`, `provider: 'google'`, `temperature: 0.7`, `maxTokens: 4096`).
+### 2.5 Context Progress Bar
+- **Token Tracking**: Computes total input/output tokens used across active session history and attached context payload vs the 1,000,000 maximum context window (`1M TPB`).
+- **Visual Display**: Situated in the Agent Chat header (`page.tsx`). Calculates ratio `percentUsed = (usedTokens / 1000000) * 100`.
+- **Status Colors**:
+  - `> 50% Remaining`: Green (`#10b981`) - Healthy Optimal Balance
+  - `< 25% Remaining`: Orange (`#f59e0b`) - Low Quota Alert
+  - `< 10% Remaining`: Red (`#ef4444`) - Critical Quota Notice
 
-### C. Client API Wrapper (`frontend-next/components/harness/api.ts`)
+### 2.6 Model Switcher (Agent Section vs. Account & API Section)
+- **Agent Section Switcher**:
+  - Dynamic dropdown in chat header bound to `chatModel`.
+  - Queries available models via `harnessApi.getPiModels()` (`listPiModels()`), grouping models by provider (Google AI Studio, OpenRouter, Anthropic Direct, Fabrica System Pool).
+  - Persisted in local storage (`pb_chat_model`) and written to `harness.json`.
+- **Account & API Section Switcher**:
+  - Credentials and model billing manager window.
+  - Manages API keys per provider (`geminiApiKey`, `openrouterApiKey`, `anthropicApiKey`).
+  - Supports switching between **BYOK (Bring Your Own Key)** mode and **System Key Pool** allocation mode.
 
-- **`harnessApi` Methods**:
-  - `getStatus()`: `GET /api/harness/status` — Retrieves real-time daemon status & state.
-  - `startDaemon(config)`: `POST /api/harness/start` — Boots background daemon process.
-  - `stopDaemon()`: `POST /api/harness/stop` — Safely sends SIGTERM/SIGKILL to daemon.
-  - `restartDaemon()`: `POST /api/harness/restart` — Reboots daemon process.
-  - `execPrompt(prompt, extraFlags)`: `POST /api/harness/exec` — Dispatches prompt for execution.
-  - `updateConfig(updates)`: `POST /api/harness/config` — Updates `harness.json` configuration.
-  - `getLogs()`: `GET /api/harness/logs` — Fetches process execution logs.
-  - `clearLogs()`: `POST /api/harness/logs/clear` — Clears stored log history.
-  - `listSkills()`: `GET /api/harness/skills` — Returns array of skills in `.pi/skills/`.
-  - `installSkill(name, content)`: `POST /api/harness/skills/install` — Writes `SKILL.md` file.
-  - `uninstallSkill(name)`: `POST /api/harness/skills/uninstall` — Deletes skill directory.
+### 2.7 Sessions Subsystem (List, Add, Switcher, Delete)
+- **File System Storage**: Encapsulated as JSON Lines files in `workspaces/<tenant_id>/.pi/agent/sessions/<sessionId>.jsonl`.
+- **Sessions List**:
+  - Backend `listPiSessions()` scans `.jsonl` logs, calculating `messageCount`, `tokensUsed`, `createdAt`, `updatedAt`, and turn history.
+  - UI renders a dropdown/drawer list sorted by latest active sessions.
+- **Add Session (`+ New Session`)**:
+  - Calls `harnessApi.createPiSession(tenantId, name)`.
+  - Backend `createPiSession()` writes initial `{ type: "session_start" }` header and returns a fresh `sessionId`.
+- **Session Switcher**: Selecting a session updates `activeSessionId` and populates `chatHistory` with saved logs.
+- **Delete Session**: Calls `harnessApi.deletePiSession(sessionId)`, unlinking the `.jsonl` log file.
 
-### D. Skill Manager UI (`frontend-next/components/harness/SkillsAndExtensions.tsx`)
+### 2.8 Output Language Dropdown
+- **Language Selector**: Header dropdown offering `EN` (English), `FR` (French), and `AR` (Arabic).
+- **Sync Architecture**:
+  - Executing `handleAgentLangChange()` sets state `agentLang`, saves to `localStorage.setItem('fabrica_agent_lang', lang)`, and dispatches `fabrica:agent-lang-change` across open tabs.
+  - Calls `harnessApi.updateHarnessState({ agent_lang: lang, output_language: lang })` to update `harness.json`.
+  - Enforces DOM direction (`dir="rtl"` for Arabic) and appends critical prompt directives: `[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in <Language>.]`.
 
-- Renders a dual-tabbed panel for **Skills** and **Extensions**.
-- Reads skills directly from `.pi/skills/` via `harnessApi.listSkills()`.
-- Supports inline markdown editing of `SKILL.md` files.
-- Includes quick-search filtering, creation modal, and active enablement toggle switches.
+### 2.9 Web Search Toggle
+- **Control State**: Toggle button in Agent header bound to `webSearchEnabled` (saved in `harness.json`).
+- **API Dispatch**: Passed as `webSearchEnabled` parameter in `harnessApi.runHarnessAgent()`.
+- **Agent Logic**: Instructs the CLI runner to enable live web search and search grounding tools when evaluating prompts.
 
-### E. Dashboard Header Integration (`frontend-next/app/dashboard/page.tsx`)
+### 2.10 Send / Stop Button
+- **State Machine**:
+  - **Idle State (`!isAgentRunning`)**: Button displays "SEND" (or prompt arrow), invoking `handleSendPrompt()`.
+  - **Running State (`isAgentRunning`)**: Button switches to "STOP" (red square badge), invoking `harnessApi.stopAgent(tenantId, sessionId)`.
+- **Backend Process Interruption**:
+  - `stopPiAgent()` retrieves the running process from `activePiDaemons` and `activePiChildProcesses`, dispatching `SIGTERM` followed by `SIGKILL` to safely kill the daemon child process.
 
-- **Autonomy Button**:
-  - Displays glowing green-yellow pulse effect when active (`autonomyEnabled: true`).
-  - Includes dual LED status indicators: Green (Processing Active) and Red (Error / Stopped).
-  - Toggles daemon state via `harnessApi.startDaemon()` / `harnessApi.stopDaemon()`.
-- **Heartbeat Interval Select**:
-  - Positioned adjacent to the autonomy button.
-  - Options: `1 min`, `2 min`, `5 min`, `15 min`, `30 min`, `1 h`, `4 h`, `1 D`.
-  - Persists changes instantly to backend via `harnessApi.updateConfig({ heartbeatInterval })`.
+### 2.11 Suggestions Cards
+- **Tag Extraction**:
+  - Backend `parsePiJsonOutput()` scans agent output using regex `/\[SUGGEST:\s*([^\]|]+?)(?:\s*\|\s*([^\]]+?))?\]/gi` or parses JSON `suggestions` arrays.
+  - Populates `suggestions` list returned to client and updates `harness.json`.
+- **UI Cards Render**:
+  - Displayed as interactive card chips below the chat input.
+  - Clicking a suggestion populates `chatInput` and immediately triggers `handleSendPrompt()`.
+
+### 2.12 Context Window & File Attachment
+- **Context Inspection Panel**:
+  - Displays loaded raw datasets (`rawDataList`), system components (`systemComponents`), active missions summary, and pending file imports (`pendingImports`).
+- **Multi-File & Folder Ingestion**:
+  - Supports drag-and-drop (`handleFileDrop`) and manual selection (`handleFileSelect`).
+  - Recursive directory traversal via `traverseFileSystemEntry()` converts nested files into raw data or system component entities.
+- **Extra Sources Attachment (`selectedExtraSources`)**:
+  - Attaches outputs from Analytics, Deep Research, Brainstorming, and System Build missions into the prompt payload context.
+
+### 2.13 Autonomy Dropdown
+- **Autonomy Levels**:
+  - `autonomous`: **DIRECTOR** (Full Auto - Heartbeat timer continuously evaluates context and advances missions).
+  - `semi-autonomous`: **SEMI-AUTO** (Requires user confirmation before advancing execution phases).
+  - `manual`: **WORKER** (Manual mode - Agent acts strictly upon explicit chat prompt requests).
+- **Persistence**: Saved via `handleAutonomyChange()` to `harness.json` (`autonomy`).
+
+### 2.14 Heartbeat Timer
+- **Autonomous Pulse Loop**:
+  - Managed via `useEffect` in `page.tsx` running when `isAutonomyOn` and `autonomyLevel === 'autonomous'`.
+  - Configured by `autonomyInterval` (default: 20 seconds).
+- **Execution Checklist**:
+  1. Verifies API key/credit availability (`setHeartbeatStatus('no_key')`).
+  2. Verifies workspace context exists (`setHeartbeatStatus('no_context')`).
+  3. Formulates prompt `[AUTONOMOUS AGENT HEARTBEAT CYCLE]` summarizing active missions, pending missions, system components, pending file imports, and recent actions.
+  4. Dispatches to `api.chatAgent()`. Parses `ACTION: ADVANCE_MISSION id="..." targetStatus="..."` to advance mission phases automatically and clear pending import queues.
+
+### 2.15 Backlogs Subsystem
+- **State & Storage**:
+  - Maintained in `harnessData.backlog` / `harnessData.backlogs` within `harness.json`.
+- **Backlog Drawer UI**:
+  - Displays prioritized audit items, strategy backlog tasks, and system optimizations.
+  - Filterable by priority (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+  - Updated in real time via `harnessApi.updateHarnessState({ backlog })`.
+
+### 2.16 Reviews Subsystem & QA State
+- **State & Storage**:
+  - Maintained in `harnessData.review` / `harnessData.review_queues` within `harness.json`.
+- **QA Evaluation Matrix**:
+  - Handled via `handleSaveQaState()` in `page.tsx`.
+  - Appends assessment events into mission `workflow_history`.
+  - Automatically updates mission phase classes (`DRAFT` -> `PLANNING` -> `EXECUTION` -> `DONE`) and updates `harness.json`.
 
 ---
 
-## 3. Routes Architecture (`routes_arch`)
+## 3. Express API Routes Matrix
 
 Located in `src/api/routes/harness.routes.ts`:
 
 | Method | Endpoint | Description | Request Payload | Response Schema |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/harness/status` | Fetches active daemon status & stats | Query: `?tenantId=...` | `{ ok: true, state: PiDaemonState }` |
-| `POST` | `/api/harness/start` | Boots background daemon process | `{ config: HarnessConfig }` | `{ ok: true, state: PiDaemonState }` |
-| `POST` | `/api/harness/stop` | Terminates daemon child process | `{} ` | `{ ok: true, state: PiDaemonState }` |
-| `POST` | `/api/harness/restart` | Reboots daemon child process | `{ config?: HarnessConfig }` | `{ ok: true, state: PiDaemonState }` |
-| `POST` | `/api/harness/exec` | Executes single agent prompt | `{ prompt: string, flags?: string[] }` | `{ ok: true, result: ExecutionResult }` |
-| `POST` | `/api/harness/config` | Updates harness configuration | `{ heartbeatInterval?, model?, ... }` | `{ ok: true, config: HarnessConfig }` |
-| `GET` | `/api/harness/logs` | Returns stdout/stderr log stream | Query: `?tenantId=...` | `{ ok: true, logs: HarnessLogEntry[] }` |
-| `POST` | `/api/harness/logs/clear` | Clears all log entries | `{} ` | `{ ok: true }` |
-| `GET` | `/api/harness/skills` | Lists all skills in `.pi/skills/` | Query: `?tenantId=...` | `{ ok: true, skills: SkillItem[] }` |
-| `POST` | `/api/harness/skills/install` | Creates or updates skill directory | `{ name: string, content: string }` | `{ ok: true, skill: SkillItem }` |
-| `POST` | `/api/harness/skills/uninstall` | Removes skill directory from disk | `{ name: string }` | `{ ok: true }` |
+| `POST` | `/api/harness/run` | Main execution entry point for agent prompts | `{ prompt, sessionId, model, customKey, agentLang, webSearchEnabled }` | `PiAgentResponse` |
+| `GET` | `/api/harness/daemons` | Lists active daemon processes for tenant | Query: `?tenantId=...` | `{ ok: true, daemons: PiDaemonProcessInfo[] }` |
+| `POST` | `/api/harness/stop` | Terminates active agent daemon child process | `{ sessionId? }` | `{ ok: boolean }` |
+| `GET` | `/api/harness/sessions` | Retrieves session history list for tenant | Query: `?tenantId=...` | `{ ok: true, sessions: PiSessionItem[] }` |
+| `POST` | `/api/harness/sessions/create` | Spawns a new session `.jsonl` log file | `{ name? }` | `{ ok: true, session: PiSessionItem }` |
+| `POST` | `/api/harness/sessions/delete` | Deletes session file from storage | `{ sessionId: string }` | `{ ok: boolean }` |
+| `GET` | `/api/harness/models` | Queries available LLM models list | None | `{ ok: true, models: PiModelItem[] }` |
+| `GET` | `/api/harness/logs` | Returns process execution logs stream | Query: `?tenantId=...` | `{ ok: true, logs: PiProcessLogItem[] }` |
+| `GET` | `/api/harness/config` | Returns tenant harness configuration | Query: `?tenantId=...` | `{ ok: true, config: HarnessConfig }` |
+| `GET` | `/api/harness/state` | Reads realtime harness state | Query: `?tenantId=...` | `{ ok: true, harness: Record<string, any> }` |
+| `POST` | `/api/harness/state` | Updates realtime harness state | `{ updates: Record<string, any> }` | `{ ok: true, harness: Record<string, any> }` |
 
 ---
 
-## 4. Core Architecture (`core_arch`)
+## 4. Tenant File System Directory Structure
 
-Located in `src/core/harness.ts`:
-
-### A. Core Memory State & Process Registry
-
-```typescript
-// In-memory mapping of active daemon processes indexed by tenant ID
-const activeDaemons = new Map<string, {
-  process: ChildProcess | null;
-  timer: NodeJS.Timeout | null;
-  state: PiDaemonState;
-  config: HarnessConfig;
-}>();
-```
-
-### B. Helper & Lifecycle Functions
-
-- **`getPiExecutionOptions(tenantId)`**:
-  - Resolves workspace root: `workspaces/<tenant_id>/`.
-  - Ensures required directories (`.pi/skills/`, `.pi/extensions/`) exist.
-  - Constructs environment variables (`GEMINI_API_KEY`, `PATH`, workspace `CWD`).
-  - Assembles CLI flags (`--workspace`, `--skills-dir`).
-- **`syncPiUserAuthKeys(tenantId, customKey?, customProvider?)`**:
-  - Syncs user-side BYOK API keys into `workspaces/<tenant_id>/.pi/agent/auth.json`.
-  - Generates or updates `workspaces/<tenant_id>/.pi/agent/models.json` mapping model providers to environment variables (`GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`, `DEEPSEEK_API_KEY`, `XAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `TOGETHER_API_KEY`, `FIREWORKS_API_KEY`, `PERPLEXITY_API_KEY`).
-  - Ensures raw user BYOK keys are decrypted at runtime into `auth.json` so the `pi` agent CLI can authenticate, while server-side platform system keys remain strictly isolated.
-- **`ensureUserHarness(tenantId)`**:
-  - Guarantees `harness.json` exists in `workspaces/<tenant_id>/`.
-  - Creates `.pi/agent/`, `.pi/skills/`, and `.pi/extensions/` directories if not present.
-  - Automatically triggers `syncPiUserAuthKeys(tenantId)`.
-- **`getHarnessState(tenantId)`**: Reads `harness.json` and parses runtime state.
-- **`saveHarnessState(tenantId, state, config, logs)`**: Atomically writes updated state to `harness.json`.
-- **`startPiDaemon(tenantId, config)`**:
-  - Checks if daemon already running for tenant.
-  - Initializes background heartbeat timer based on `config.heartbeatInterval` (`parseIntervalMs`).
-  - Spawns background process or handles scheduled trigger execution.
-  - Updates `state.status = 'running'` and `state.autonomyEnabled = true`.
-- **`stopPiDaemon(tenantId)`**:
-  - Clears heartbeat timer (`clearInterval`).
-  - Kills active child process (`process.kill('SIGTERM')`).
-  - Sets `state.status = 'stopped'` and `state.autonomyEnabled = false`.
-- **`executeHarnessTask(tenantId, prompt, flags)`**:
-  - Executes isolated command via `child_process.exec` using `pi` executable.
-  - Captures `stdout` and `stderr` streams.
-  - Appends execution log entry to `harness.json`.
-  - Returns `ExecutionResult` object (`{ success, stdout, stderr, exitCode, executionTimeMs }`).
-- **`getAvailableSkills(tenantId)`**:
-  - Reads directories under `workspaces/<tenant_id>/.pi/skills/`.
-  - Parses `SKILL.md` frontmatter metadata (name, description, triggers).
-  - Returns array of installed skills.
-- **`installSkill(tenantId, name, content)`**:
-  - Creates folder `workspaces/<tenant_id>/.pi/skills/<name>/`.
-  - Writes `SKILL.md` file with specified markdown content.
-- **`uninstallSkill(tenantId, name)`**: Recursively deletes `workspaces/<tenant_id>/.pi/skills/<name>/`.
-
----
-
-## 5. User Tenant Persistence Architecture (`user_arch`)
-
-Located in `workspaces/<tenant_id>/`:
-
-### A. Configuration & State File: `harness.json`
-
-```json
-{
-  "tenantId": "default_user",
-  "state": {
-    "status": "running",
-    "pid": 48210,
-    "autonomyEnabled": true,
-    "heartbeatInterval": "5m",
-    "lastHeartbeatAt": "2026-08-01T16:10:00.000Z",
-    "nextHeartbeatAt": "2026-08-01T16:15:00.000Z",
-    "activeTasksCount": 0
-  },
-  "config": {
-    "model": "gemini-2.5-flash",
-    "provider": "google",
-    "temperature": 0.7,
-    "maxTokens": 4096,
-    "heartbeatInterval": "5m",
-    "cliFlags": ["--verbose"]
-  },
-  "logs": [
-    {
-      "id": "log_1772467800000_1a",
-      "timestamp": "2026-08-01T16:10:00.000Z",
-      "level": "info",
-      "message": "Heartbeat cycle completed. 0 backlog items pending.",
-      "source": "heartbeat"
-    }
-  ]
-}
-```
-
-### B. Directory Hierarchy Under Tenant Root:
+Tenant data is completely isolated within `workspaces/<tenant_id>/`:
 
 ```
 workspaces/<tenant_id>/
-├── harness.json                # Harness state, config, and logs
-└── .pi/                        # Agent configuration folder
-    ├── agent/                  # Agent credentials & models config
+├── harness.json                # Harness state (model, autonomy, language, backlog, review, suggestions)
+├── tenant.json                 # Tenant identity, plan, settings, and unified audit logs
+├── missions.json               # Active & historical mission blueprints
+├── workspace.json              # File index mapping Sources, Deliverables, Actions, and Pendings
+├── AGENTS.md                   # Custom user system prompt directives
+└── .pi/                        # Agent runtime configuration
+    ├── agent/                  # Provider credentials, model mappings, and session logs
     │   ├── auth.json           # User BYOK provider API keys
-    │   ├── models.json         # Supported provider environment variables mapping
-    │   └── sessions/           # Agent execution session history
-    ├── skills/                 # User skills directory
-    │   ├── web_search/
-    │   │   └── SKILL.md
-    │   └── data_extraction/
-    │       └── SKILL.md
-    └── extensions/             # User extensions directory
-        ├── custom_tool.ts
-        └── mcp_config.json
+    │   ├── models.json         # Provider environment variable configurations
+    │   └── sessions/           # Session turn logs (*.jsonl)
+    ├── skills/                 # Workspace-specific custom skills
+    └── extensions/             # Workspace-specific custom extension scripts
 ```
 
 ---
 
-## 6. Supported Provider Environment Variables Reference Table
+## 5. Environment Variables & API Key Mapping Reference Table
 
-The harness synchronizes user BYOK credentials into `.pi/agent/auth.json` and configures execution environment variables dynamically for the `pi` CLI runner:
+The harness synchronizes user BYOK credentials into `.pi/agent/auth.json` and dynamically assigns runtime environment variables when calling the `pi` CLI process:
 
-| Provider Key | Primary Env Var | Secondary / Alias Env Var | Provider Identifier |
+| Provider Key | Primary Env Var | Secondary / Alias Env Var | Provider Identifier Prefix |
 | :--- | :--- | :--- | :--- |
 | **google** / **gemini** | `GEMINI_API_KEY` | `GOOGLE_GENERATIVE_AI_API_KEY` | `google/` |
 | **openrouter** | `OPENROUTER_API_KEY` | - | `openrouter/` |

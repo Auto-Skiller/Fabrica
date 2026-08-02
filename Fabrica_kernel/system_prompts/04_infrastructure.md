@@ -76,7 +76,7 @@ workspaces/<tenant_id>/
 ├── tenant.json                     # Tenant profile, user preferences, telemetry metrics, & audit logs
 ├── harness.json                    # Live daemon state, selected model, suggestions, autonomy, & harness options
 ├── missions.json                   # Single mission states & pipeline execution blueprints file
-├── workspace.json                  # Single index map for Sources and Deliverables storage
+├── workspace.json                  # Single index map for Sources, Deliverables, Pendings, Actions, and Action Items storage
 │
 ├── missions/{missionId}/           # Ephemeral scratchpad space (code runs, temp files, draft steps) - working area of active mission executions
 └── workspace/                      # Central storage of inputs/outputs and all storages
@@ -141,7 +141,7 @@ User configuration and state persist across sign-out and re-login sessions and m
 - `workspace/Sources/` is the **permanent repository for inputs, research, analytics, and plans** (`Discovery & Scoping`, `Deep Research & Intelligence Gathering`, `Data Analysis & Pattern Extraction`, `Strategic Synthesis & Decision Support`).
 - `workspace/Deliverables/` is the **repository for execution outputs, reviews, and completed release assets** (`Executions`, `Reviews`, `Completed`).
 - **STRICT RULE**: The Agent reads inputs from `workspace/Sources/` and generates working code, assets, or scripts into `workspace/Deliverables/Executions/`.
-- **Single Mapping Index**: `workspaces/<tenant_id>/workspace.json` indexes and maps all items in `workspace/Sources/` and `workspace/Deliverables/`.
+- **Single Mapping Index**: `workspaces/<tenant_id>/workspace.json` indexes and maps all items in `workspace/Sources/` and `workspace/Deliverables/`, along with `pendings`, `actions`, and `action_items` (items flagged as requiring execution action, with attributes `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`).
 - **Permitted Operations**:
   1. `READ` / `VIEW`: Inspecting sources or deliverables.
   2. `LIST`: Listing directory contents.

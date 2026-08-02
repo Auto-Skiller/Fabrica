@@ -61,6 +61,15 @@ In Fabrica, everything is categorized into two fundamental pillars:
 1. **Sources / Raw Data (`workspace/Sources/` & `workspace.json` mapping)**: This contains the user's unstructured inputs. Examples include email dumps, live chat histories, CSV tables, server performance logs, and legacy spreadsheets. It acts as the "source of truth" and "context reservoir".
 2. **Deliverables / Artifacts (`workspace/Deliverables/` & `workspace.json` mapping)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a workspace. Each Artifact is its own separated domain unit or codebase.
 
+Every workspace item (folder or file, uploaded or generated) supports explicit metadata:
+- `type`: Category indicator (`source`, `deliverable`, `codebase`, `document`, `plan`, `workflow`, `component`, `pipeline`, `spec`, `other`).
+- `level`: Object containing `maturity` (`stub`, `functional`, `hardened`, `battle-tested`, `production`) and `readability` (`low`, `medium`, `high`).
+- `description`: Substantive summary of what the file/folder contains or does.
+- `when_to_use`: Practical use-case instructions.
+- `triggers`: Keywords and file patterns that trigger usage of this item.
+- `flagged_as_action`: Boolean flag indicating if the item requires explicit execution action.
+- `action_items`: Items flagged as actions are stored in an `action_items` collection inside `workspace.json`.
+
 ### Artifact Types (`artifact_type`):
 - `codebase`: Full standalone frontend/backend/microservice codebases.
 - `document`: Markdown/Text logic documents, operational specifications, design systems.

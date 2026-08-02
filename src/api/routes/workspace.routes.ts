@@ -72,13 +72,20 @@ router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
 // POST /api/workspace/file/write — Write file contents
 router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
-  const { path: filePath, content, isImport } = req.body || {};
+  const { path: filePath, content, isImport, type, level, description, when_to_use, triggers, flagged_as_action } = req.body || {};
   if (!filePath || content === undefined) {
     res.status(400).json({ ok: false, error: 'Path and content are required.' });
     return;
   }
   try {
-    const result = writeUserFile(tenantId, filePath, content, Boolean(isImport));
+    const result = writeUserFile(tenantId, filePath, content, Boolean(isImport), {
+      type,
+      level,
+      description,
+      when_to_use,
+      triggers,
+      flagged_as_action: Boolean(flagged_as_action)
+    });
     syncWorkspaceJson(tenantId);
     res.json({ ok: true, ...result });
   } catch (err: any) {

@@ -9,7 +9,7 @@ These laws are non-negotiable operational requirements enforced on every single 
 Every decision, plan, research outcome, user response, and configuration MUST be mirrored directly in the workspace database (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/Sources/`, `workspace/Deliverables/`). You are forbidden from keeping critical state inside temporary workspace files or harness scratchpads. If a process stops, another agent must be able to boot up, read the workspace stores, and continue exactly where you left off.
 
 ## LAW 2: Brain-First Database Querying
-The metadata in `workspace.json` and `missions.json` describes what is in the contents of files and code modules. Always fetch the high-level listings or summary records (descriptions, roles, functional tags) before loading giant text chunks or file contents. This preserves database bandwidth and minimizes token consumption during multi-step runs.
+The metadata in `workspace.json` (including `sources`, `deliverables`, `pendings`, `actions`, and `action_items` with attributes `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`) and `missions.json` describes the contents, maturity, readability, and operational triggers of files and code modules. Always fetch high-level index records and item metadata before reading full file contents. This preserves bandwidth and minimizes token consumption during multi-step runs.
 
 ## LAW 3: Next-Actions Priority
 Every turn must end with an explicit check of next steps.

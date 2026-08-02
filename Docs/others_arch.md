@@ -16,10 +16,11 @@ This subsystem manages entry points, isolated V8 JavaScript execution sandboxes,
                                        │ HTTP Requests / API Invocation
                                        ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     Express HTTP Server (src/server.ts)                     │
-│  - Port 3000 Binding                                                        │
+│                     Express HTTP Server (/server.ts)                        │
+│  - Port 3000 Binding (hardcoded const PORT = 3000)                          │
 │  - Middleware: CORS, express.json(), authMiddleware                         │
 │  - Routes: /api/auth, /api/harness, /api/missions, /api/tenant, /api/workspace│
+│  - Static Serving: Next.js out export (/frontend-next/out) & build trigger  │
 │  - Health Check Endpoint (GET /health)                                      │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │
@@ -61,7 +62,7 @@ Located in `frontend-next/app/`:
 
 ## 3. Server & Routes Architecture (`routes_arch`)
 
-Located in `src/server.ts`:
+Located in `/server.ts`:
 
 ### A. Express Server Configuration
 

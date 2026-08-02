@@ -92,7 +92,7 @@ Fabrica/
 │   ├── tenant.json                    # Tenant profile, user preferences, telemetry metrics, & audit logs
 │   ├── harness.json                   # Live daemon state, selected model, suggestions, autonomy, & harness options
 │   ├── missions.json                  # Light JSON database tracking all active & past missions
-│   └── workspace.json                 # File index mapping all workspace Sources, Deliverables, & phase storage
+│   └── workspace.json                 # Single index mapping Sources, Deliverables, Pendings, Actions, & Action Items (items flagged as actions with type, level, description, when_to_use, triggers, & flagged_as_action attributes)
 ├── src/                               # Enterprise Core Domain Engines & API Routes
 │   ├── api/
 │   │   ├── middlewares/               # Express auth & error middlewares

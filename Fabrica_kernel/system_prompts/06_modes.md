@@ -138,7 +138,7 @@ When running multi-round loops (EFFORT >= MEDIUM):
 ## 4. MULTI-TURN PERSISTENCE & REAL-TIME SYNCHRONIZATION
 
 During every turn of mission execution, the agent MUST maintain strict state synchronization:
-1. **State Indexing**: Update `missions.json`, `workspace.json`, `harness.json`, and `tenant.json` immediately upon completing task steps.
+1. **State Indexing**: Update `missions.json`, `workspace.json` (preserving/indexing `sources`, `deliverables`, `pendings`, `actions`, and `action_items` with metadata fields `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`), `harness.json`, and `tenant.json` immediately upon completing task steps.
 2. **Disk Storage**: Store scoping, research, analytics, and plans in `workspace/Sources/` and generated code, assets, and reviews in `workspace/Deliverables/`. Maintain active execution scratchpads under `missions/{missionId}/`.
 3. **Real-time Event Logging**: Append progress events and telemetry to `tenant.json` and `harness.json`.
 

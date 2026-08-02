@@ -59,9 +59,10 @@ The application utilizes a classic three-panel responsive layout with a compact 
 - **Quick Injections Panel**: High-density 2-card prompt suggestion panel rendered under chat controls. Uses a compact 2-column grid (`gridTemplateColumns: 'repeat(2, 1fr)'`) with stacked title and description text, truncation, and zero horizontal overflow.
 
 ### PANEL C: Right Section (Sources & Deliverables Management - 50/50 Split)
-- **Purpose**: Explicitly designed to manage data inputs, scoping parameters, research, strategic plans, execution outputs, reviews, and completed release deliverables.
+- **Purpose**: Explicitly designed to manage data inputs, scoping parameters, research, strategic plans, execution outputs, reviews, completed release deliverables, and flagged action items with full metadata support (`type`, `level`, `description`, `when_to_use`, `triggers`, `flagged_as_action`).
 - **Dual Section Layout**:
   - Fully expanded flex-stretch container dividing **Sources** (`Discovery & Scoping`, `Deep Research`, `Data Analysis`, `Strategic Synthesis`) and **Deliverables** (`Executions`, `Reviews`, `Completed`) into equal 50% width columns.
+  - **Action Items Tracking**: Dedicated `action_items` index collection in `workspace.json` tracks items requiring execution action.
   - **Vertical Divider Line**: A crisp `1.5px solid var(--border-soft)` vertical separator line spans continuously between the left (Sources) and right (Deliverables) sub-sections in both the top action header and the main body list container.
   - **Sub-section Controls**:
     - **Sources (Left 50%)**: Contains source sub-section filter, semantic search input, import button, and list/graph view toggles.

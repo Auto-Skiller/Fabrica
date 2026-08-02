@@ -204,10 +204,15 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   };
 
   const allScannedItems = [...scanDir(sourcesDir), ...scanDir(deliverablesDir)];
+  const scannedPathsSet = new Set(allScannedItems.map(i => i.path));
   const flaggedItems = allScannedItems.filter(item => item.flagged_as_action);
   const actionItemsMap = new Map<string, WorkspaceItem>();
+
   for (const item of existingActionItems) {
-    if (item && item.path) actionItemsMap.set(item.path, item);
+    if (item && item.path) {
+      const scanned = allScannedItems.find(s => s.path === item.path);
+      actionItemsMap.set(item.path, scanned || item);
+    }
   }
   for (const item of flaggedItems) {
     actionItemsMap.set(item.path, item);
@@ -266,10 +271,21 @@ export function flagWorkspaceAction(tenantId: string = 'default_user', pathOrIte
       flagged_as_action: true
     };
   } else {
-    targetItem = { ...pathOrItem, flagged_as_action: true };
+    targetItem = {
+      ...pathOrItem,
+      type: pathOrItem.type || 'action',
+      level: pathOrItem.level || { maturity: 'production', readability: 'high' },
+      description: pathOrItem.description || `Item flagged as action: ${pathOrItem.name}`,
+      when_to_use: pathOrItem.when_to_use || `Requires explicit execution action for ${pathOrItem.name}`,
+      triggers: pathOrItem.triggers || [pathOrItem.name, 'action'],
+      flagged_as_action: true
+    };
   }
 
-  if (!map.action_items.some(a => a.path === targetItem.path)) {
+  const existingIdx = map.action_items.findIndex(a => a.path === targetItem.path);
+  if (existingIdx >= 0) {
+    map.action_items[existingIdx] = targetItem;
+  } else {
     map.action_items.push(targetItem);
   }
 
@@ -609,7 +625,20 @@ export function readUserFile(tenantId: string, relativePath: string): { content:
   };
 }
 
-export function writeUserFile(tenantId: string, relativePath: string, content: string, isImport: boolean = false): { path: string; size: number } {
+export function writeUserFile(
+  tenantId: string,
+  relativePath: string,
+  content: string,
+  isImport: boolean = false,
+  options?: {
+    type?: string;
+    level?: WorkspaceItemLevel;
+    description?: string;
+    when_to_use?: string;
+    triggers?: string[];
+    flagged_as_action?: boolean;
+  }
+): { path: string; size: number } {
   const targetPath = resolveUserPath(tenantId, relativePath);
   const parentDir = path.dirname(targetPath);
   fs.mkdirSync(parentDir, { recursive: true });
@@ -620,6 +649,13 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
   const size = Buffer.byteLength(content, 'utf8');
   const filename = path.basename(normPath);
 
+  const itemType = options?.type || (isImport ? 'imported' : normPath.startsWith('workspace/Sources') ? 'source' : normPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file');
+  const itemLevel = options?.level || { maturity: isImport ? 'draft' : 'production', readability: 'high' };
+  const itemDesc = options?.description || `Workspace file: ${filename}`;
+  const itemWhen = options?.when_to_use || `Referenced when processing ${filename} in mission or workspace tasks`;
+  const itemTriggers = options?.triggers || [filename, 'file'];
+  const isAction = options?.flagged_as_action || false;
+
   // Flag new imported or workspace item in pendings
   if (normPath.startsWith('workspace/') || isImport) {
     flagWorkspacePending(tenantId, {
@@ -627,14 +663,15 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
       name: filename,
       path: normPath,
       isDirectory: false,
-      type: isImport ? 'imported' : normPath.startsWith('workspace/Sources') ? 'source' : normPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file',
-      level: { maturity: 'production', readability: 'high' },
-      description: `Workspace file: ${filename}`,
-      when_to_use: `Reference for ${filename}`,
-      triggers: [filename, 'file'],
+      type: itemType,
+      level: itemLevel,
+      description: itemDesc,
+      when_to_use: itemWhen,
+      triggers: itemTriggers,
       size,
       modified_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      flagged_as_action: isAction
     });
   }
 
@@ -642,9 +679,30 @@ export function writeUserFile(tenantId: string, relativePath: string, content: s
     id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
     path: normPath,
     action: isImport ? 'imported' : 'created',
+    type: itemType,
+    level: itemLevel,
+    description: itemDesc,
+    when_to_use: itemWhen,
+    triggers: itemTriggers,
     details: { size },
     timestamp: new Date().toISOString()
   });
+
+  if (isAction) {
+    flagWorkspaceAction(tenantId, {
+      name: filename,
+      path: normPath,
+      isDirectory: false,
+      type: itemType,
+      level: itemLevel,
+      description: itemDesc,
+      when_to_use: itemWhen,
+      triggers: itemTriggers,
+      size,
+      modified_at: new Date().toISOString(),
+      flagged_as_action: true
+    });
+  }
 
   appendTenantAuditLog(tenantId, {
     type: 'user',
