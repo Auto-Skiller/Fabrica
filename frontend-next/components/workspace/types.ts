@@ -22,26 +22,6 @@ export interface WorkspaceItem {
 export type WorkspaceSourceItem = WorkspaceItem;
 export type WorkspaceDeliverableItem = WorkspaceItem;
 
-export interface WorkspacePendingItem extends WorkspaceItem {
-  id: string;
-  created_at: string;
-}
-
-export interface WorkspaceActionItem {
-  id: string;
-  name?: string;
-  path: string;
-  action: 'imported' | 'created' | 'updated' | 'deleted' | 'moved' | 'processed' | 'flagged';
-  type?: string;
-  level?: WorkspaceItemLevel;
-  description?: string;
-  when_to_use?: string;
-  triggers?: string[];
-  details?: Record<string, any>;
-  timestamp: string;
-  item?: WorkspaceItem;
-}
-
 export interface WorkspaceMap {
   sources: {
     discovery_and_scoping: WorkspaceSourceItem[];
@@ -56,8 +36,6 @@ export interface WorkspaceMap {
     completed: WorkspaceDeliverableItem[];
     all: WorkspaceDeliverableItem[];
   };
-  pendings: WorkspacePendingItem[];
-  actions: WorkspaceActionItem[];
   action_items: WorkspaceItem[];
   updated_at: string;
 }

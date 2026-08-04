@@ -6,8 +6,7 @@ import {
   updateMission,
   deleteMission,
   getMissionSchema,
-  getMissionsData,
-  clearMissionPending
+  getMissionsData
 } from '../../core/missions.js';
 
 const router = Router();
@@ -24,18 +23,6 @@ router.get('/data', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const storeData = getMissionsData(tenantId);
   res.json({ ok: true, ...storeData });
-});
-
-// POST /api/missions/clear-pending — Clear a pending mission flag
-router.post('/clear-pending', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
-  const { id } = req.body || {};
-  if (!id) {
-    res.status(400).json({ ok: false, error: 'Mission ID is required.' });
-    return;
-  }
-  clearMissionPending(tenantId, id);
-  res.json({ ok: true });
 });
 
 // POST /api/missions/create — Create new mission

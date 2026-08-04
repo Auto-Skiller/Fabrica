@@ -9,6 +9,7 @@ interface Props {
   toolboxes: ToolboxesYaml;
   onRefresh?: () => void;
   showToast?: (message: string, type: 'success' | 'info' | 'error') => void;
+  initialTab?: 'skills' | 'extensions';
 }
 
 export interface SkillMetadata {
@@ -934,13 +935,19 @@ function WorkspaceSkillCard({
   );
 }
 
-export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, showToast }: Props) {
+export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, showToast, initialTab }: Props) {
   const triggerToast = (msg: string, type: 'success' | 'info' | 'error' = 'error') => {
     if (showToast) showToast(msg, type);
     else alert(msg);
   };
 
-  const [activeTab, setActiveTab] = useState<'skills' | 'extensions'>('skills');
+  const [activeTab, setActiveTab] = useState<'skills' | 'extensions'>(initialTab || 'skills');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'built-in' | 'workspace'>('all');
 

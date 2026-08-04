@@ -50,27 +50,8 @@ export interface MissionSchema {
   };
 }
 
-export interface MissionPendingItem {
-  id: string;
-  title: string;
-  objective: string;
-  type: string;
-  status: string;
-  created_at: string;
-}
-
-export interface MissionActionItem {
-  id: string;
-  mission_id: string;
-  action: 'created' | 'updated' | 'deleted' | 'moved' | 'processed';
-  details?: Record<string, any>;
-  timestamp: string;
-}
-
 export interface MissionsStoreData {
   missions: Mission[];
-  pendings: MissionPendingItem[];
-  actions: MissionActionItem[];
 }
 
 export interface MissionArtifactItem {
@@ -153,15 +134,11 @@ export function saveMissionToStore(tenantId: string = 'default_user', mission: M
   const userRoot = getTenantRoot(tenantId);
   const singleMissionsPath = path.join(userRoot, 'missions.json');
   let missions: Mission[] = [];
-  let pendings: MissionPendingItem[] = [];
-  let actions: MissionActionItem[] = [];
 
   if (fs.existsSync(singleMissionsPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
       missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-      pendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
-      actions = Array.isArray(parsed.actions) ? parsed.actions : [];
     } catch (_) {}
   }
 
@@ -185,7 +162,7 @@ export function saveMissionToStore(tenantId: string = 'default_user', mission: M
     fs.mkdirSync(mTempDir, { recursive: true });
   }
 
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions }, null, 2), 'utf8');
 }
 
 export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: string }) {
@@ -221,15 +198,11 @@ export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
   }
 
   let existingMissions: Mission[] = [];
-  let existingPendings: MissionPendingItem[] = [];
-  let existingActions: MissionActionItem[] = [];
 
   if (fs.existsSync(singleMissionsPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
       existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-      existingPendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
-      existingActions = Array.isArray(parsed.actions) ? parsed.actions : [];
     } catch (_) {}
   }
 
@@ -250,7 +223,7 @@ export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
 
   fs.writeFileSync(
     singleMissionsPath,
-    JSON.stringify({ missions: updatedMissions, pendings: existingPendings, actions: existingActions }, null, 2),
+    JSON.stringify({ missions: updatedMissions }, null, 2),
     'utf8'
   );
 
@@ -258,53 +231,6 @@ export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
 }
 
 export const syncMissionsDb = syncMissionsJson;
-
-// ── Pending & Actions Helper Store Operations ──────────────────────────────────
-
-export function flagMissionPending(tenantId: string = 'default_user', pending: MissionPendingItem) {
-  const userRoot = getTenantRoot(tenantId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  let missions: Mission[] = [];
-  let pendings: MissionPendingItem[] = [];
-  let actions: MissionActionItem[] = [];
-
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-      pendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
-      actions = Array.isArray(parsed.actions) ? parsed.actions : [];
-    } catch (_) {}
-  }
-
-  if (!pendings.some(p => p.id === pending.id)) {
-    pendings.push(pending);
-  }
-
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
-}
-
-export function recordMissionAction(tenantId: string = 'default_user', action: MissionActionItem) {
-  const userRoot = getTenantRoot(tenantId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  let missions: Mission[] = [];
-  let pendings: MissionPendingItem[] = [];
-  let actions: MissionActionItem[] = [];
-
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-      pendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
-      actions = Array.isArray(parsed.actions) ? parsed.actions : [];
-    } catch (_) {}
-  }
-
-  actions.unshift(action);
-  if (actions.length > 100) actions = actions.slice(0, 100);
-
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
-}
 
 export function getMissionsData(tenantId: string = 'default_user'): MissionsStoreData {
   const userRoot = getTenantRoot(tenantId);
@@ -315,36 +241,11 @@ export function getMissionsData(tenantId: string = 'default_user'): MissionsStor
     try {
       const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
       return {
-        missions: Array.isArray(parsed.missions) ? parsed.missions : [],
-        pendings: Array.isArray(parsed.pendings) ? parsed.pendings : [],
-        actions: Array.isArray(parsed.actions) ? parsed.actions : []
+        missions: Array.isArray(parsed.missions) ? parsed.missions : []
       };
     } catch (_) {}
   }
-  return { missions: [], pendings: [], actions: [] };
-}
-
-export function clearMissionPending(tenantId: string = 'default_user', missionId: string) {
-  const userRoot = getTenantRoot(tenantId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      const missions = Array.isArray(parsed.missions) ? parsed.missions : [];
-      const pendings = (parsed.pendings || []).filter((p: any) => p.id !== missionId);
-      const actions = Array.isArray(parsed.actions) ? parsed.actions : [];
-
-      actions.unshift({
-        id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        mission_id: missionId,
-        action: 'processed',
-        details: { id: missionId },
-        timestamp: new Date().toISOString()
-      });
-
-      fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions, pendings, actions }, null, 2), 'utf8');
-    } catch (_) {}
-  }
+  return { missions: [] };
 }
 
 // ── Missions CRUD Helpers ─────────────────────────────────────────────────────
@@ -377,24 +278,6 @@ export function createMission(
 
   syncMissionWorkspaceArtifacts(newMission);
 
-  // Flag new pending mission & log action (no auto triggering)
-  flagMissionPending(tenantId, {
-    id,
-    title: newMission.title,
-    objective: newMission.objective,
-    type: newMission.type,
-    status: 'pending_processing',
-    created_at: newMission.created_at || new Date().toISOString()
-  });
-
-  recordMissionAction(tenantId, {
-    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    mission_id: id,
-    action: 'created',
-    details: { title: newMission.title, type: newMission.type, objective: newMission.objective },
-    timestamp: new Date().toISOString()
-  });
-
   appendTenantAuditLog(tenantId, {
     type: 'mission',
     event: 'Mission Created',
@@ -415,7 +298,6 @@ export function updateMission(
   if (!target) return null;
 
   const isMoved = (updates.phase && updates.phase !== target.phase) || (updates.status && updates.status !== target.status);
-  const actionType: 'moved' | 'updated' = isMoved ? 'moved' : 'updated';
 
   const newPhase = updates.phase || target.phase;
   const newStatus = updates.status || target.status;
@@ -453,14 +335,6 @@ export function updateMission(
   syncMissionWorkspaceArtifacts(updated);
   syncWorkspaceJson(tenantId);
 
-  recordMissionAction(tenantId, {
-    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    mission_id: missionId,
-    action: actionType,
-    details: updates,
-    timestamp: new Date().toISOString()
-  });
-
   return updated;
 }
 
@@ -488,26 +362,7 @@ export function deleteMission(tenantId: string = 'default_user', missionId: stri
   const filteredMissions = missions.filter(m => m.id !== missionId);
   const singleMissionsPath = path.join(userRoot, 'missions.json');
 
-  let pendings: MissionPendingItem[] = [];
-  let actions: MissionActionItem[] = [];
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      pendings = (parsed.pendings || []).filter((p: any) => p.id !== missionId);
-      actions = parsed.actions || [];
-    } catch (_) {}
-  }
-
-  actions.unshift({
-    id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    mission_id: missionId,
-    action: 'deleted',
-    details: { id: missionId },
-    timestamp: new Date().toISOString()
-  });
-  if (actions.length > 100) actions = actions.slice(0, 100);
-
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: filteredMissions, pendings, actions }, null, 2), 'utf8');
+  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: filteredMissions }, null, 2), 'utf8');
   syncWorkspaceJson(tenantId);
   return true;
 }

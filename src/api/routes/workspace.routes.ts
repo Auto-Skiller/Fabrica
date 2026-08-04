@@ -7,7 +7,6 @@ import {
   deleteUserFile,
   getWorkspaceMap,
   syncWorkspaceJson,
-  clearWorkspacePending,
   flagWorkspaceAction,
   listWorkspaceItemsFromJson,
   createWorkspaceItem
@@ -91,18 +90,6 @@ router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
   } catch (err: any) {
     res.status(400).json({ ok: false, error: err.message });
   }
-});
-
-// POST /api/workspace/clear-pending — Clear pending workspace import/item
-router.post('/clear-pending', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
-  const { path: itemPath } = req.body || {};
-  if (!itemPath) {
-    res.status(400).json({ ok: false, error: 'Path/ID is required.' });
-    return;
-  }
-  clearWorkspacePending(tenantId, itemPath);
-  res.json({ ok: true });
 });
 
 // POST /api/workspace/flag-action — Flag an item (file/folder) as action item

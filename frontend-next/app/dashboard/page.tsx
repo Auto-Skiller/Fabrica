@@ -2737,6 +2737,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
 
   // Layout improvement states
   const [isToolsWindowOpen, setIsToolsWindowOpen] = useState<boolean>(false);
+  const [toolsWindowTab, setToolsWindowTab] = useState<'skills' | 'extensions'>('skills');
   const [isAgentsMdWindowOpen, setIsAgentsMdWindowOpen] = useState<boolean>(false);
   const [isAutonomyHoverOpen, setIsAutonomyHoverOpen] = useState<boolean>(false);
   const [autonomyPos, setAutonomyPos] = useState<{ bottom: number; left: number } | null>(null);
@@ -4544,34 +4545,6 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         const keyToUse = activeKey === 'backend' ? undefined : activeKey;
         const tenantKey = user?.id || activeEntity || 'default_user';
 
-        // Fetch missions data and workspace map to retrieve pendings & actions
-        let mPendings: any[] = [];
-        let mActions: any[] = [];
-        let wPendings: any[] = [];
-        let wActions: any[] = [];
-
-        try {
-          const mRes = await fetch(`/api/missions/data?tenantId=${encodeURIComponent(tenantKey)}`);
-          const mData = await mRes.json();
-          if (mData && mData.ok) {
-            mPendings = mData.pendings || [];
-            mActions = mData.actions || [];
-          }
-        } catch (e) {
-          console.warn('Failed to fetch missions data:', e);
-        }
-
-        try {
-          const wRes = await fetch(`/api/workspace/map?tenantId=${encodeURIComponent(tenantKey)}`);
-          const wData = await wRes.json();
-          if (wData && wData.ok && wData.map) {
-            wPendings = wData.map.pendings || [];
-            wActions = wData.map.actions || [];
-          }
-        } catch (e) {
-          console.warn('Failed to fetch workspace map:', e);
-        }
-        
         const missionsSummary = (missions || []).slice(0, 10).map((m: any) => {
           const id = m.id || m.name;
           const title = m.title || m.name || m.id;
@@ -4587,47 +4560,26 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
           return `• Session ${idx + 1} (${s.name || s.id}): ${lastMsg}`;
         }).join('\n');
 
-        const pendingMissionsSummary = mPendings.map((p: any) => `• Pending Mission [ID: ${p.id}] "${p.title}" (Objective: ${p.objective || 'N/A'}) Added at: ${p.addedAt}`).join('\n');
-        const missionActionsSummary = mActions.slice(-5).map((a: any) => `• Mission Action [${a.action.toUpperCase()}] ID: ${a.id} "${a.title || ''}" at ${a.timestamp}`).join('\n');
-
-        const pendingImportsSummary = wPendings.map((p: any) => `• Pending Imported Item: ${p.path} (Size: ${p.size || 0} bytes) Added at: ${p.addedAt}`).join('\n');
-        const workspaceActionsSummary = wActions.slice(-5).map((a: any) => `• Workspace Action [${a.action.toUpperCase()}] Path: ${a.path} at ${a.timestamp}`).join('\n');
-
         const heartbeatPrompt = `[AUTONOMOUS AGENT HEARTBEAT CYCLE - ${timeStr}]
 You are Fabrica's Autonomous AI Agent running in DIRECTOR (Full Auto) mode.
-Evaluate current workspace state, pending items, recent actions, and session logs, then decide if any mission or system needs your direct intervention.
-
-AUTONOMY CONFIGURATION:
-- Auto Missions Processing: ${autoMissionsProcessing ? 'ENABLED (ON)' : 'DISABLED (OFF)'}
-- Auto Imports Processing: ${autoImportsProcessing ? 'ENABLED (ON)' : 'DISABLED (OFF)'}
+Evaluate current workspace state and session logs, then decide if any mission or system needs your direct intervention.
 
 CURRENT WORKSPACE CONTEXT:
 - Active Tenant/Entity: ${tenantKey}
 - Company Objective: ${boardContent || 'Build & optimize business software microservices'}
 - Active Missions (${missions?.length || 0}):
 ${missionsSummary || 'None'}
-- PENDING MISSIONS (New Unprocessed Missions: ${mPendings.length}):
-${pendingMissionsSummary || 'None pending'}
-- RECENT MISSION ACTIONS (Edits/Removals: ${mActions.length}):
-${missionActionsSummary || 'None recent'}
 - System Components (${systemComponents?.length || 0}):
 ${systemsSummary || 'None'}
 - Raw Data Sources (${rawDataList?.length || 0}):
 ${rawDataSummary || 'None'}
-- PENDING IMPORTS (New Imported Files/Items: ${wPendings.length}):
-${pendingImportsSummary || 'None pending'}
-- RECENT WORKSPACE ACTIONS (File writes/moves/deletions: ${wActions.length}):
-${workspaceActionsSummary || 'None recent'}
 - Recent Session Logs (Last 2 Sessions):
 ${lastSessionsSummary || 'None'}
 
 AGENT DIRECTIVES:
-1. Examine active missions, pending missions, and pending imports.
-2. If Auto Missions Processing is ENABLED and there are pending missions, evaluate and process them (e.g. advance ready missions or draft execution plans).
-3. If Auto Imports Processing is ENABLED and there are pending imports, inspect and analyze the newly imported data or system components.
-4. Note recent actions (edits, removals, moves) to maintain up-to-date accurate awareness of the workspace without hallucinating outdated files or missions.
-5. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
-6. Keep your response brief, professional, and clear.`;
+1. Examine active missions and system state.
+2. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
+3. Keep your response brief, professional, and clear.`;
 
         const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang, activeSessionId, tenantKey, true);
 
@@ -4647,36 +4599,6 @@ AGENT DIRECTIVES:
                 type: 'success',
                 isOpen: true
               });
-            }
-          }
-
-          // Clear processed pending missions if autoMissionsProcessing was active
-          if (autoMissionsProcessing && mPendings.length > 0) {
-            for (const pItem of mPendings) {
-              try {
-                await fetch('/api/missions/clear-pending', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tenantId: tenantKey, id: pItem.id })
-                });
-              } catch (e) {
-                console.warn(`Failed to clear pending mission ${pItem.id}:`, e);
-              }
-            }
-          }
-
-          // Clear processed pending imports if autoImportsProcessing was active
-          if (autoImportsProcessing && wPendings.length > 0) {
-            for (const pItem of wPendings) {
-              try {
-                await fetch('/api/workspace/clear-pending', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ tenantId: tenantKey, path: pItem.path })
-                });
-              } catch (e) {
-                console.warn(`Failed to clear pending workspace import ${pItem.path}:`, e);
-              }
             }
           }
 
@@ -7913,12 +7835,12 @@ ${isDirector ? `
         
         {/* ============ LEFT COLUMN: RUNTIME & AGENT CHAT ============ */}
         <aside className="col lside">
-          <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '3px' }}>
               {/* Header */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px' }}>
-                {/* Line 1: Tabs on left, Model selector on right */}
+                {/* Line 1: Header title on left, Context bar & Model selector on right */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, padding: '0px' }}>
                     {/* Real PI Agent Context Window Usage Meter Bar in Header */}
                     {(() => {
                       const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
@@ -7971,7 +7893,7 @@ ${isDirector ? `
                     })()}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingLeft: '3px', paddingRight: '3px', paddingTop: '0px', paddingBottom: '0px' }}>
                     {/* Model Selector */}
                     <select
                       value={chatModel}
@@ -7986,7 +7908,7 @@ ${isDirector ? `
                         fontWeight: 800,
                         outline: 'none',
                         cursor: 'pointer',
-                        padding: '1px 4px',
+                        padding: '1px 0px',
                         maxWidth: '85px',
                         height: '22px',
                         textTransform: 'uppercase',
@@ -8011,7 +7933,7 @@ ${isDirector ? `
                               alignItems: 'center',
                               gap: '3px',
                               height: '22px',
-                              padding: '1px 5px',
+                              padding: '1px 2px',
                               borderRadius: '4px',
                               background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
                               color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--accent)',
@@ -8175,335 +8097,8 @@ ${isDirector ? `
                 </div>
               </div>
 
-              {/* Switchable Left Panel Content: Agent vs Context */}
-              {leftTab === 'context' ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', overflow: 'hidden', minHeight: 0, paddingRight: '2px' }}>
-                  {/* Context Top Banner */}
-                  <div style={{
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '5px',
-                    padding: '6px 8px',
-                    boxShadow: 'var(--shadow-sm)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '3px',
-                    flexShrink: 0
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '10px' }}>📄</span>
-                        <h2 style={{ margin: 0, fontSize: '8.5px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text)', letterSpacing: '0.03em' }}>
-                          Workspace Directives (AGENTS.md)
-                        </h2>
-                      </div>
-                      <span style={{
-                        fontSize: '6px',
-                        fontWeight: 900,
-                        color: '#10b981',
-                        background: 'rgba(16, 185, 129, 0.08)',
-                        border: '1px solid rgba(16, 185, 129, 0.2)',
-                        borderRadius: '8px',
-                        padding: '1px 5px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        textTransform: 'uppercase'
-                      }}>
-                        <span style={{ width: '3.5px', height: '3.5px', borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: '0 0 4px #10b981' }}></span>
-                        LIVE CONTEXT
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '7px', color: 'var(--muted)', lineHeight: '1.25' }}>
-                      Scanned on every turn to enforce directory rules, storage protocols, & architecture boundaries.
-                    </p>
-                  </div>
-
-                  {/* Controls & Mode Bar */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '4px',
-                    background: 'var(--surface-alt)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '4px',
-                    padding: '3px 6px',
-                    flexShrink: 0
-                  }}>
-                    {/* Stats & Path */}
-                    <span style={{ fontSize: '6px', fontFamily: 'var(--mono)', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {agentsMdContent ? agentsMdContent.split('\n').length : 0} lines · {(agentsMdContent?.length || 0).toLocaleString()} chars
-                    </span>
-
-                    {/* Actions */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(agentsMdContent);
-                          setToast({ message: 'Copied AGENTS.md to clipboard!', type: 'success', isOpen: true });
-                        }}
-                        title="Copy Markdown"
-                        style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          color: 'var(--text)',
-                          fontSize: '6.5px',
-                          padding: '2px 4px',
-                          borderRadius: '3px',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📋 Copy
-                      </button>
-                      <button
-                        onClick={handleSaveAgentsMd}
-                        disabled={isSavingAgentsMd}
-                        style={{
-                          background: 'linear-gradient(135deg, var(--accent), #b86235)',
-                          border: 'none',
-                          color: '#fff',
-                          fontSize: '6.5px',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          fontWeight: 900,
-                          cursor: 'pointer',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px',
-                          opacity: isSavingAgentsMd ? 0.7 : 1
-                        }}
-                      >
-                        {isSavingAgentsMd ? '⚙️ Saving...' : '💾 Save'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Editor Content Box */}
-                  <div style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minHeight: 0,
-                    background: 'var(--surface)',
-                    border: '1.5px solid var(--border-soft)',
-                    borderRadius: '5px',
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}>
-                    <textarea
-                      value={agentsMdContent}
-                      onChange={(e) => setAgentsMdContent(e.target.value)}
-                      placeholder="# Agent Directives & Architecture Rules..."
-                      spellCheck={false}
-                      style={{
-                        flex: 1,
-                        width: '100%',
-                        height: '100%',
-                        border: 'none',
-                        outline: 'none',
-                        padding: '8px',
-                        fontFamily: 'var(--mono)',
-                        fontSize: '7.5px',
-                        lineHeight: '1.45',
-                        color: 'var(--text)',
-                        background: 'transparent',
-                        resize: 'none',
-                        tabSize: 2
-                      }}
-                    />
-                  </div>
-
-                  {/* Quick Presets Bar */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    overflowX: 'auto',
-                    paddingBottom: '2px',
-                    flexShrink: 0
-                  }}>
-                    <span style={{ fontSize: '6px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                      Directives:
-                    </span>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Custom Directive\n- Always validate typescript types before compiling.');
-                        setToast({ message: 'Added Type Validation directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Type Validation
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json and sync workspace artifacts.');
-                        setToast({ message: 'Added Storage Directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Storage Protocol
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Security Directive\n- Enforce strict RLS policies and never expose private keys.');
-                        setToast({ message: 'Added Security Directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Security Isolation
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## UI & Design Directive\n- Maintain clean light themes with generous spacing and high contrast layout.');
-                        setToast({ message: 'Added UI & Design directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + UI & Design
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Testing Directive\n- Automatically verify backend endpoints and component states before completion.');
-                        setToast({ message: 'Added Testing directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Auto Testing
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Performance Directive\n- Optimize bundle sizes, memoize expensive renders, and minimize redundant API payloads.');
-                        setToast({ message: 'Added Performance directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Performance
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Resilience Directive\n- Enforce robust try-catch guards with fallback UI indicators.');
-                        setToast({ message: 'Added Error Resilience directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Error Resilience
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Clean Architecture Directive\n- Maintain modular code separation across components, hooks, core engines, and API routes.');
-                        setToast({ message: 'Added Architecture directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Architecture
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgentsMdContent(prev => prev + '\n\n## Audit Directive\n- Log state transitions, mission progress, and telemetry events in tenant.json.');
-                        setToast({ message: 'Added Audit Logging directive snippet!', type: 'info', isOpen: true });
-                      }}
-                      style={{
-                        fontSize: '6px',
-                        fontWeight: 700,
-                        background: 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: 'var(--text)',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Audit Logging
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Main Agent Interface */
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              {/* Main Agent Interface */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                     {/* Chat Messages */}
                     <div
@@ -9039,7 +8634,6 @@ ${isDirector ? `
                     </div>
             </div>
             </div>
-          )}
         </section>
       </aside>
 
@@ -9064,7 +8658,7 @@ ${isDirector ? `
             <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '6px', padding: '4px 10px', minHeight: '36px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
               
               {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto', padding: '0px' }}>
                 {minCenter ? (
                   <div
                     onClick={() => toggleMissionsVertical(false)}
@@ -9223,7 +8817,7 @@ ${isDirector ? `
               </div>
 
               {/* Right Group: Persistent Actions (Theme, Language, Logs, Account & API) + Minimize Toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingLeft: '5px', paddingRight: '5px', paddingTop: '0px', paddingBottom: '0px' }}>
                 {/* Theme Icon */}
                 <button 
                   className="theme-toggle" 
@@ -10490,7 +10084,7 @@ ${isDirector ? `
             <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0 }}>
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--surface-alt)' }}>
                 {/* DELIVERABLES CONTENT BODY */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '8px', overflowY: 'auto' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, padding: '0px', overflowY: 'auto' }}>
                   {yourDataSystemsView === 'graph' ? (
                     <div style={{ padding: '16px', textAlign: 'center', fontSize: '11px', color: 'var(--muted)' }}>
                       Dependency Graph is no longer used. Please switch to List or Artifact view.
@@ -11128,6 +10722,7 @@ ${isDirector ? `
                 <SkillsAndExtensions
                   entityName={activeEntity}
                   toolboxes={toolboxes}
+                  initialTab={toolsWindowTab}
                   onRefresh={fetchWorkspaceData}
                   showToast={(message, type) => setToast({ message, type, isOpen: true })}
                 />
@@ -12146,7 +11741,7 @@ ${isDirector ? `
           minWidth: '340px',
           maxWidth: '340px',
           height: '38px',
-          padding: '4px 12px 4px 16px',
+          padding: '0px 10px',
           boxSizing: 'border-box',
           flexShrink: 0,
           borderRight: '1px solid var(--border-soft)'
@@ -12159,34 +11754,35 @@ ${isDirector ? `
             }}
             className="mini accent"
             style={{
-              padding: '1px 4px',
+              padding: '1px 7px 1px 5px',
               fontSize: '7px',
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
               gap: '2px',
-              background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-              border: 'none',
+              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              border: '1px solid #cd7b4b',
               color: '#fff',
               height: '16px',
               flexShrink: 0,
               cursor: 'pointer',
-              borderRadius: '3px',
+              borderRadius: '9px',
               transition: 'all 0.15s'
             }}
             title="Click to open Workspace Context (AGENTS.md) directives window"
           >
-            <span>Context</span>
+            <span>📄 Context</span>
           </button>
 
-          {/* Unified Capabilities Button (Skills & Integrations) */}
+          {/* Skills Button */}
           <button
             onClick={() => {
-              setIsToolsWindowOpen(prev => !prev);
+              setToolsWindowTab('skills');
+              setIsToolsWindowOpen(true);
             }}
             className="mini accent"
             style={{
-              padding: '1px 4px',
+              padding: '1px 5px',
               fontSize: '7px',
               fontWeight: 800,
               display: 'flex',
@@ -12196,20 +11792,47 @@ ${isDirector ? `
               border: 'none',
               color: '#fff',
               height: '16px',
-              marginLeft: '0',
               flexShrink: 0,
               cursor: 'pointer',
               borderRadius: '3px',
               transition: 'all 0.15s'
             }}
-            title="Click to open Skills & Integrations explorer."
+            title="Click to open Skills explorer."
           >
-            <span>{dtxt.toolsBtn}</span>
+            <span>🛠️ Skills</span>
           </button>
 
-          {/* Autonomy Switcher — expands to fill remaining empty space in 340px left container */}
+          {/* Integrations Button */}
+          <button
+            onClick={() => {
+              setToolsWindowTab('extensions');
+              setIsToolsWindowOpen(true);
+            }}
+            className="mini accent"
+            style={{
+              padding: '1px 5px',
+              fontSize: '7px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+              border: 'none',
+              color: '#fff',
+              height: '16px',
+              flexShrink: 0,
+              cursor: 'pointer',
+              borderRadius: '3px',
+              transition: 'all 0.15s'
+            }}
+            title="Click to open Integrations explorer."
+          >
+            <span>🔌 Integrations</span>
+          </button>
+
+          {/* Autonomy Switcher — compact size button */}
           <div
-            style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}
+            style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}
             onMouseEnter={(e) => handleAutonomyMouseEnter(e.currentTarget.getBoundingClientRect())}
             onMouseLeave={handleAutonomyMouseLeave}
           >
@@ -12226,56 +11849,37 @@ ${isDirector ? `
               }}
               title="Click to toggle Autonomy ON/OFF. Hover to select mode."
               style={{
-                height: '24px',
-                width: '100%',
-                flex: 1,
+                height: '20px',
                 padding: '0 6px',
-                fontSize: '8.5px',
+                fontSize: '8px',
                 fontWeight: 900,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '4px',
+                justifyContent: 'center',
+                gap: '3px',
                 background: !isAutonomyOn
-                  ? 'linear-gradient(135deg, #475569, #334155)'
+                  ? 'linear-gradient(135deg, #ef4444, #dc2626)'
                   : autonomyLevel === 'autonomous'
                   ? 'linear-gradient(135deg, #10b981, #059669)'
                   : 'linear-gradient(135deg, #f59e0b, #d97706)',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '3px',
                 color: '#fff',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 whiteSpace: 'nowrap'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <span style={{ fontSize: '10px' }}>🤖</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <span style={{ fontSize: '9px' }}>🤖</span>
                 <span style={{
-                  fontSize: '8px',
-                  padding: '1px 4px',
+                  fontSize: '7.5px',
+                  padding: '1px 3px',
                   borderRadius: '2px',
                   background: 'rgba(0,0,0,0.25)',
                   fontWeight: 900
                 }}>
                   {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
-                </span>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-                background: 'rgba(0,0,0,0.3)',
-                padding: '1px 4px',
-                borderRadius: '3px',
-                fontSize: '7.5px'
-              }}>
-                <span title={`Auto Missions: ${autoMissionsProcessing ? 'ON (Active)' : 'OFF (Paused)'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
-                  <span style={{ fontSize: '6px', color: autoMissionsProcessing ? '#4ade80' : '#ef4444' }}>●</span>🎯
-                </span>
-                <span title={`Auto Imports: ${autoImportsProcessing ? 'ON (Active)' : 'OFF (Paused)'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
-                  <span style={{ fontSize: '6px', color: autoImportsProcessing ? '#4ade80' : '#ef4444' }}>●</span>📦
                 </span>
               </div>
             </button>
@@ -12359,60 +11963,6 @@ ${isDirector ? `
                   </div>
                   <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
                 </button>
-
-                <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '6px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ fontSize: '8px', fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: '2px' }}>⚡ Auto Processing Toggles</div>
-                  
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextVal = !autoMissionsProcessing;
-                      setAutoMissionsProcessing(nextVal);
-                      harnessApi.updateHarnessState({ auto_missions_processing: nextVal }).catch(() => {});
-                      setToast({
-                        message: `Auto Missions Processing set to ${nextVal ? 'ON' : 'OFF'}`,
-                        type: 'info',
-                        isOpen: true
-                      });
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px',
-                      borderRadius: '4px', border: '1px solid var(--border-soft)',
-                      background: autoMissionsProcessing ? 'rgba(16,185,129,0.1)' : 'var(--surface-alt)',
-                      color: 'var(--text)', cursor: 'pointer', fontSize: '8px', fontWeight: 800
-                    }}
-                  >
-                    <span>🎯 Auto Missions Processing</span>
-                    <span style={{ fontSize: '8px', fontWeight: 900, color: autoMissionsProcessing ? '#10b981' : '#ef4444' }}>
-                      {autoMissionsProcessing ? '🟢 ON' : '🔴 OFF'}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const nextVal = !autoImportsProcessing;
-                      setAutoImportsProcessing(nextVal);
-                      harnessApi.updateHarnessState({ auto_imports_processing: nextVal }).catch(() => {});
-                      setToast({
-                        message: `Auto Imports Processing set to ${nextVal ? 'ON' : 'OFF'}`,
-                        type: 'info',
-                        isOpen: true
-                      });
-                    }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px',
-                      borderRadius: '4px', border: '1px solid var(--border-soft)',
-                      background: autoImportsProcessing ? 'rgba(16,185,129,0.1)' : 'var(--surface-alt)',
-                      color: 'var(--text)', cursor: 'pointer', fontSize: '8px', fontWeight: 800
-                    }}
-                  >
-                    <span>📦 Auto Imports Processing</span>
-                    <span style={{ fontSize: '8px', fontWeight: 900, color: autoImportsProcessing ? '#10b981' : '#ef4444' }}>
-                      {autoImportsProcessing ? '🟢 ON' : '🔴 OFF'}
-                    </span>
-                  </button>
-                </div>
               </div>
             )}
           </div>

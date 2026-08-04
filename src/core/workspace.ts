@@ -37,26 +37,6 @@ export interface WorkspaceItem {
 export type WorkspaceSourceItem = WorkspaceItem;
 export type WorkspaceDeliverableItem = WorkspaceItem;
 
-export interface WorkspacePendingItem extends WorkspaceItem {
-  id: string;
-  created_at: string;
-}
-
-export interface WorkspaceActionItem {
-  id: string;
-  name?: string;
-  path: string;
-  action: 'imported' | 'created' | 'updated' | 'deleted' | 'moved' | 'processed' | 'flagged';
-  type?: string;
-  level?: WorkspaceItemLevel;
-  description?: string;
-  when_to_use?: string;
-  triggers?: string[];
-  details?: Record<string, any>;
-  timestamp: string;
-  item?: WorkspaceItem;
-}
-
 export interface WorkspaceMap {
   sources: {
     discovery_and_scoping: WorkspaceSourceItem[];
@@ -71,8 +51,6 @@ export interface WorkspaceMap {
     completed: WorkspaceDeliverableItem[];
     all: WorkspaceDeliverableItem[];
   };
-  pendings: WorkspacePendingItem[];
-  actions: WorkspaceActionItem[];
   action_items: WorkspaceItem[];
   updated_at: string;
 }
@@ -119,15 +97,11 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   }
 
   const existingMetadataMap = new Map<string, Partial<WorkspaceItem>>();
-  let existingPendings: WorkspacePendingItem[] = [];
-  let existingActions: WorkspaceActionItem[] = [];
   let existingActionItems: WorkspaceItem[] = [];
 
   if (fs.existsSync(workspaceJsonPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(workspaceJsonPath, 'utf8'));
-      existingPendings = Array.isArray(parsed.pendings) ? parsed.pendings : [];
-      existingActions = Array.isArray(parsed.actions) ? parsed.actions : [];
       existingActionItems = Array.isArray(parsed.action_items) ? parsed.action_items : [];
 
       const collectMetadata = (list: any[]) => {
@@ -145,7 +119,6 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
       if (parsed.deliverables) {
         collectMetadata(parsed.deliverables.all);
       }
-      collectMetadata(existingPendings);
       collectMetadata(existingActionItems);
     } catch (_) {}
   }
@@ -232,8 +205,6 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
       completed: scanDir(path.join(deliverablesDir, 'Completed')),
       all: scanDir(deliverablesDir)
     },
-    pendings: existingPendings,
-    actions: existingActions,
     action_items: Array.from(actionItemsMap.values()),
     updated_at: new Date().toISOString()
   };
@@ -252,7 +223,6 @@ export function flagWorkspaceAction(tenantId: string = 'default_user', pathOrIte
   const workspaceJsonPath = path.join(userRoot, 'workspace.json');
   let map = getWorkspaceMap(tenantId);
   if (!map.action_items) map.action_items = [];
-  if (!map.actions) map.actions = [];
 
   let targetItem: WorkspaceItem;
   if (typeof pathOrItem === 'string') {
@@ -289,63 +259,6 @@ export function flagWorkspaceAction(tenantId: string = 'default_user', pathOrIte
     map.action_items.push(targetItem);
   }
 
-  recordWorkspaceAction(tenantId, {
-    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    path: targetItem.path,
-    action: 'flagged',
-    type: targetItem.type,
-    level: targetItem.level,
-    description: targetItem.description,
-    when_to_use: targetItem.when_to_use,
-    triggers: targetItem.triggers,
-    timestamp: new Date().toISOString(),
-    item: targetItem
-  });
-
-  try {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
-  } catch (_) {}
-}
-
-export function flagWorkspacePending(tenantId: string = 'default_user', item: WorkspacePendingItem) {
-  const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
-  let map = getWorkspaceMap(tenantId);
-  if (!map.pendings) map.pendings = [];
-  if (!map.pendings.some(p => p.path === item.path || p.id === item.id)) {
-    map.pendings.push(item);
-  }
-  try {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
-  } catch (_) {}
-}
-
-export function recordWorkspaceAction(tenantId: string = 'default_user', action: WorkspaceActionItem) {
-  const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
-  let map = getWorkspaceMap(tenantId);
-  if (!map.actions) map.actions = [];
-  map.actions.unshift(action);
-  if (map.actions.length > 100) map.actions = map.actions.slice(0, 100);
-  try {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
-  } catch (_) {}
-}
-
-export function clearWorkspacePending(tenantId: string = 'default_user', pendingIdOrPath: string) {
-  const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
-  let map = getWorkspaceMap(tenantId);
-  if (map.pendings) {
-    map.pendings = map.pendings.filter(p => p.id !== pendingIdOrPath && p.path !== pendingIdOrPath);
-  }
-  if (!map.actions) map.actions = [];
-  map.actions.unshift({
-    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    path: pendingIdOrPath,
-    action: 'processed',
-    timestamp: new Date().toISOString()
-  });
   try {
     fs.writeFileSync(workspaceJsonPath, JSON.stringify(map, null, 2), 'utf8');
   } catch (_) {}
@@ -398,7 +311,6 @@ export function listWorkspaceItemsFromJson(tenantId: string = 'default_user', su
     addItems(map.deliverables.reviews);
     addItems(map.deliverables.completed);
   }
-  addItems(map.pendings);
   addItems(map.action_items);
 
   const items = Array.from(pathMap.values());
@@ -656,38 +568,6 @@ export function writeUserFile(
   const itemTriggers = options?.triggers || [filename, 'file'];
   const isAction = options?.flagged_as_action || false;
 
-  // Flag new imported or workspace item in pendings
-  if (normPath.startsWith('workspace/') || isImport) {
-    flagWorkspacePending(tenantId, {
-      id: `wksp_p_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: filename,
-      path: normPath,
-      isDirectory: false,
-      type: itemType,
-      level: itemLevel,
-      description: itemDesc,
-      when_to_use: itemWhen,
-      triggers: itemTriggers,
-      size,
-      modified_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      flagged_as_action: isAction
-    });
-  }
-
-  recordWorkspaceAction(tenantId, {
-    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    path: normPath,
-    action: isImport ? 'imported' : 'created',
-    type: itemType,
-    level: itemLevel,
-    description: itemDesc,
-    when_to_use: itemWhen,
-    triggers: itemTriggers,
-    details: { size },
-    timestamp: new Date().toISOString()
-  });
-
   if (isAction) {
     flagWorkspaceAction(tenantId, {
       name: filename,
@@ -734,14 +614,6 @@ export function moveUserFile(tenantId: string, srcRelativePath: string, destRela
   let size = 0;
   try { size = fs.statSync(destPath).size; } catch (_) {}
 
-  recordWorkspaceAction(tenantId, {
-    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    path: normDest,
-    action: 'moved',
-    details: { src: normSrc, dest: normDest, size },
-    timestamp: new Date().toISOString()
-  });
-
   return { src: normSrc, dest: normDest, size };
 }
 
@@ -758,15 +630,6 @@ export function deleteUserFile(tenantId: string, relativePath: string): boolean 
   } else {
     fs.unlinkSync(targetPath);
   }
-
-  clearWorkspacePending(tenantId, normPath);
-
-  recordWorkspaceAction(tenantId, {
-    id: `wksp_a_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-    path: normPath,
-    action: 'deleted',
-    timestamp: new Date().toISOString()
-  });
 
   return true;
 }
