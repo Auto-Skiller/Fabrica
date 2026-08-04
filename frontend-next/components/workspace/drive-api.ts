@@ -148,12 +148,13 @@ export async function importDriveFileToWorkspace(fileId: string, mimeType: strin
   }
 
   const cleanFileName = fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.md') ? fileName : (mimeType === 'application/vnd.google-apps.spreadsheet' ? `${fileName}.csv` : `${fileName}.txt`);
-  const relativePath = `workspace/Sources/${targetCategory}/${cleanFileName}`;
+  const relativePath = `workspace/${targetCategory}/${cleanFileName}`;
 
   const res = await workspaceApi.createWorkspaceItem({
     path: relativePath,
     content,
     type: 'imported',
+    source_type: 'Imported',
     level: { maturity: 'draft', readability: 'high' },
     description: `Google Drive imported file: ${fileName}`,
     when_to_use: `Referenced as imported source data for ${fileName}`,

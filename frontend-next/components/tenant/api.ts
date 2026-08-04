@@ -20,4 +20,13 @@ export const tenantApi = {
   applyRoadmap: (tenantId: string = 'default_user', missions: any[] = [], pillars: any[] = []) => Promise.resolve({ ok: true }),
   getPiContext: (tenantId?: string, targetId?: string) => tenantApi.getTenantProfile(tenantId).then(res => ({ ok: true, context: res.profile?.context || {} })).catch(() => ({ ok: false, context: {} })),
   createContextKey: (tenantId: string = 'default_user', keyName?: string, val?: any) => Promise.resolve({ ok: true }),
+  getEcosystem: () => Promise.resolve({ entities: [], totals: { entities: 0, missions: 0, toolboxes_active: 0, inbox_raw: 0 } }),
+  getProjects: (tenantId: string = 'default_user') => tenantApi.getTenantProfile(tenantId).then(res => ({ ok: true, projects: res.profile?.projects || [] })).catch(() => ({ ok: false, projects: [] })),
+  createProject: (projectName: string, tenantId: string = 'default_user') => tenantApi.getTenantProfile(tenantId).then(res => {
+    const existing = res.profile?.projects || [];
+    const updated = [...existing, { name: projectName, created_at: new Date().toISOString() }];
+    return tenantApi.updateTenantProfile({ tenantId, projects: updated }).then(() => ({ ok: true, projects: updated, projectName }));
+  }).catch(() => ({ ok: false, projects: [], projectName })),
+  updateBoard: (tenantId: string = 'default_user', boardContent: string) => tenantApi.updateTenantProfile({ tenantId, board: boardContent }),
+  getProvidersConfig: () => Promise.resolve({ gemini: true, openai: false, anthropic: false, groq: false, deepseek: false }),
 };

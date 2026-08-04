@@ -97,8 +97,14 @@ export function getMissionSchema(missionType: string = 'standard'): MissionSchem
     phase_selection: "multi_or_single",
     storage_paths: {
       scratchpad: "missions/{missionId}/",
-      sources: "workspace/Sources/",
-      deliverables: "workspace/Deliverables/",
+      workspace: "workspace/",
+      discovery_and_scoping: "workspace/Discovery & Scoping/",
+      deep_research: "workspace/Deep Research & Intelligence Gathering/",
+      data_analysis: "workspace/Data Analysis & Pattern Extraction/",
+      strategic_synthesis: "workspace/Strategic Synthesis & Decision Support/",
+      executions: "workspace/Executions/",
+      reviews: "workspace/Reviews/",
+      completed: "workspace/Completed/",
       state_index: "missions.json",
       workspace_index: "workspace.json",
       event_stream: "logs.json"
@@ -122,12 +128,21 @@ export function ensureMissionWorkspaceDirs(tenantId: string, missionType: string
   const baseDir = path.join(userRoot, 'missions', missionId);
   fs.mkdirSync(baseDir, { recursive: true });
 
-  const sourcesDir = path.join(userRoot, 'workspace', 'Sources');
-  const deliverablesDir = path.join(userRoot, 'workspace', 'Deliverables');
-  fs.mkdirSync(sourcesDir, { recursive: true });
-  fs.mkdirSync(deliverablesDir, { recursive: true });
+  const workspaceDir = path.join(userRoot, 'workspace');
+  const dirs = [
+    'Discovery & Scoping',
+    'Deep Research & Intelligence Gathering',
+    'Data Analysis & Pattern Extraction',
+    'Strategic Synthesis & Decision Support',
+    'Executions',
+    'Reviews',
+    'Completed'
+  ];
+  for (const d of dirs) {
+    fs.mkdirSync(path.join(workspaceDir, d), { recursive: true });
+  }
 
-  return { baseDir, sourcesDir, deliverablesDir, normType };
+  return { baseDir, workspaceDir, normType };
 }
 
 export function saveMissionToStore(tenantId: string = 'default_user', mission: Mission) {
@@ -169,21 +184,22 @@ export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: 
   if (!mission || !mission.id) return null;
   const tenantId = mission.user_id || 'default_user';
   const mType = mission.type || 'standard';
-  const { baseDir, sourcesDir, deliverablesDir } = ensureMissionWorkspaceDirs(tenantId, mType, mission.id);
+  const { baseDir, workspaceDir } = ensureMissionWorkspaceDirs(tenantId, mType, mission.id);
 
   try {
-    const { sources, deliverables } = scanWorkspaceArtifacts(tenantId, mission as Mission);
+    const { workspaceFiles, sources, deliverables } = scanWorkspaceArtifacts(tenantId, mission as Mission);
     const updatedMission: Mission = {
       ...(mission as Mission),
       sources,
-      deliverables
+      deliverables,
+      workspace_files: workspaceFiles
     };
     saveMissionToStore(tenantId, updatedMission);
   } catch (err) {
     console.warn(`[MissionsCore] Failed syncing mission workspace artifacts:`, err);
   }
 
-  return { baseDir, sourcesDir, deliverablesDir };
+  return { baseDir, workspaceDir };
 }
 
 // ── Single missions.json Persistence Store ─────────────────────────────────────
@@ -304,11 +320,11 @@ export function updateMission(
 
   // Moving a mission through pipeline stages triggers file moving operations and workspace.json item stage update
   if (isMoved && target.deliverables && target.deliverables.length > 0) {
-    let destSubDir = 'workspace/Deliverables/Executions';
+    let destSubDir = 'workspace/Executions';
     if (newStatus === 'completed' || newPhase === 'review') {
-      destSubDir = newStatus === 'completed' ? 'workspace/Deliverables/Completed' : 'workspace/Deliverables/Reviews';
+      destSubDir = newStatus === 'completed' ? 'workspace/Completed' : 'workspace/Reviews';
     } else if (newPhase === 'discovery' || newPhase === 'blueprint') {
-      destSubDir = 'workspace/Sources/Discovery & Scoping';
+      destSubDir = 'workspace/Discovery & Scoping';
     }
 
     for (const deliv of target.deliverables) {

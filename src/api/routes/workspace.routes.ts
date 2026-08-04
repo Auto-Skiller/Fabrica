@@ -7,7 +7,6 @@ import {
   deleteUserFile,
   getWorkspaceMap,
   syncWorkspaceJson,
-  flagWorkspaceAction,
   listWorkspaceItemsFromJson,
   createWorkspaceItem
 } from '../../core/workspace.js';
@@ -29,7 +28,7 @@ router.get('/files', (req: AuthenticatedRequest, res: Response) => {
 // POST /api/workspace/create — Create/Import workspace item
 router.post('/create', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
-  const { path: filePath, content, type, level, description, when_to_use, triggers, isImport, flagged_as_action } = req.body || {};
+  const { path: filePath, content, type, source_type, level, description, when_to_use, triggers, isImport } = req.body || {};
   if (!filePath) {
     res.status(400).json({ ok: false, error: 'Path is required.' });
     return;
@@ -39,12 +38,12 @@ router.post('/create', (req: AuthenticatedRequest, res: Response) => {
       path: filePath,
       content: content || '',
       type,
+      source_type,
       level,
       description,
       when_to_use,
       triggers,
-      isImport: Boolean(isImport),
-      flagged_as_action: Boolean(flagged_as_action)
+      isImport: Boolean(isImport)
     });
     res.json({ ok: true, ...result });
   } catch (err: any) {
@@ -71,7 +70,7 @@ router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
 // POST /api/workspace/file/write — Write file contents
 router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
-  const { path: filePath, content, isImport, type, level, description, when_to_use, triggers, flagged_as_action } = req.body || {};
+  const { path: filePath, content, isImport, type, source_type, level, description, when_to_use, triggers } = req.body || {};
   if (!filePath || content === undefined) {
     res.status(400).json({ ok: false, error: 'Path and content are required.' });
     return;
@@ -79,29 +78,17 @@ router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = writeUserFile(tenantId, filePath, content, Boolean(isImport), {
       type,
+      source_type,
       level,
       description,
       when_to_use,
-      triggers,
-      flagged_as_action: Boolean(flagged_as_action)
+      triggers
     });
     syncWorkspaceJson(tenantId);
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(400).json({ ok: false, error: err.message });
   }
-});
-
-// POST /api/workspace/flag-action — Flag an item (file/folder) as action item
-router.post('/flag-action', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
-  const { path: itemPath, item } = req.body || {};
-  if (!itemPath && !item) {
-    res.status(400).json({ ok: false, error: 'itemPath or item is required.' });
-    return;
-  }
-  flagWorkspaceAction(tenantId, item || itemPath);
-  res.json({ ok: true });
 });
 
 // POST /api/workspace/file/move — Move file or directory
