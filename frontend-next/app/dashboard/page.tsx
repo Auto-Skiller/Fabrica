@@ -12761,95 +12761,8 @@ ${isDirector ? `
                             setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
                             setNewStandardTaskInput('');
                           }
-                        }}
-                        style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '3px 6px' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (newStandardTaskInput.trim()) {
-                            setNewStandardTasks([...newStandardTasks, newStandardTaskInput.trim()]);
-                            setNewStandardTaskInput('');
-                          }
-                        }}
-                        style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', borderRadius: '4px', padding: '0 8px', fontSize: '8.5px', fontWeight: 800, cursor: 'pointer' }}
-                      >
-                        ＋ Add Task
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ================= MODE 2: FULL PIPELINE MISSION ================= */}
-              {launcherModelType === 'full_pipeline' && (
-                <div style={{
-                  background: 'rgba(16, 185, 129, 0.04)',
-                  border: '1.5px solid rgba(16, 185, 129, 0.25)',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#10b981', textTransform: 'uppercase' }}>
-                        🚀 End-to-End Full Pipeline Architecture
-                      </span>
-                      <span style={{ fontSize: '7.5px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
-                        4 MAIN PHASES (DRAFTING ➔ PLANNING ➔ EXECUTION ➔ DELIVERING)
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Pipeline Overview Box */}
-                  <div style={{ fontSize: '8.5px', color: 'var(--text-bright)', background: 'var(--surface-alt)', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-soft)', lineHeight: 1.4 }}>
-                    Executes the full pipeline from <b>Idea to Production-Grade Deliverable</b>. Integrates specialized skills, automated verification feedback loops, and user approval gates.
-                  </div>
-
-                  {/* 4 PHASES BREAKDOWN & CONFIGURATION TREE */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    
-                    {/* PHASE 1: DRAFTING */}
-                    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#ec4899', background: 'rgba(236, 72, 153, 0.15)', padding: '1px 5px', borderRadius: '3px' }}>PHASE 1</span>
-                          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)' }}>Drafting Phase (Non-Loop Phase)</span>
-                        </div>
-                      </div>
-
-                      {/* Sub-loop 1.1 */}
-                      <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#ec4899' }}>🔄 1.1 Discovery & Scoping (Loop)</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span>Gate:</span>
-                              <input
-                                type="checkbox"
-                                checked={approvalGates['discovery_scoping'] !== false}
-                                onChange={(e) => setApprovalGates({ ...approvalGates, discovery_scoping: e.target.checked })}
-                              />
-                            </label>
-                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span>Effort:</span>
-                              <select
-                                value={loopEfforts['discovery_scoping'] || 'Medium'}
-                                onChange={(e) => setLoopEfforts({ ...loopEfforts, discovery_scoping: e.target.value as any })}
-                                style={{ background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '3px', fontSize: '7.5px', color: 'var(--text)' }}
-                              >
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                                <option value="Deep">Deep</option>
-                              </select>
-                            </label>
-                          </div>
-                        </div>
-                        <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.3 }}>
-                          • Agent engages in interactive Q&A/brainstorming ➔ Debates strategy & trade-offs ➔ Stores parameters in <b>Sources/Discovery & Scoping</b>.
+                        }                        <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.3 }}>
+                          • Agent engages in interactive Q&A/brainstorming ➔ Debates strategy & trade-offs ➔ Stores parameters in <b>Discovery & Scoping</b>.
                         </span>
                       </div>
                     </div>
@@ -12893,7 +12806,7 @@ ${isDirector ? `
                             </div>
                           </div>
                           <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
-                            Operates on <i>Sources/Discovery & Scoping</i> ➔ Web scrapers & ArXiv papers ➔ Outputs into <b>Sources/Deep Research & Intelligence Gathering</b>.
+                            Operates on <i>Discovery & Scoping</i> ➔ Web scrapers & ArXiv papers ➔ Outputs into <b>Deep Research & Intelligence Gathering</b>.
                           </span>
                         </div>
 
@@ -12911,18 +12824,26 @@ ${isDirector ? `
                             </label>
                           </div>
                           <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
-                            Operates on <i>Discovery + Research</i> ➔ Computes key metrics & anomalies ➔ Outputs into <b>Sources/Data Analysis & Pattern Extraction</b>.
+                            Operates on <i>Discovery + Research</i> ➔ Computes key metrics & anomalies ➔ Outputs into <b>Data Analysis & Pattern Extraction</b>.
                           </span>
                         </div>
 
                         {/* 2.3 Strategic Synthesis */}
                         <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#8b5cf6' }}>📄 2.3 Strategic Synthesis & Decision Support (Non-Loop)</span>
-                            <label style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span>Gate:</span>
-                              <input
-                                type="checkbox"
+                            <span style={{ fontSize: '8.5px', fontWeight: 80                        <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                          Final production deliverable in <b>Reviews</b>. <i>If Accepted ➔ <b>Completed</b>. If Feedback ➔ Re-loops to Executions.</i>
+                        </span>
+                      </div>
+                    </div>{approvalGates['review'] !== false}
+                              onChange={(e) => setApprovalGates({ ...approvalGates, review: e.target.checked })}
+                            />
+                          </label>
+                        </div>
+                        <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                          Final production deliverable in <b>Reviews</b>. <i>If Accepted ➔ <b>Completed</b>. If Feedback ➔ Re-loops to Executions.</i>
+                        </span>
+                      </div>                      type="checkbox"
                                 checked={approvalGates['strategic_synthesis'] !== false}
                                 onChange={(e) => setApprovalGates({ ...approvalGates, strategic_synthesis: e.target.checked })}
                               />
