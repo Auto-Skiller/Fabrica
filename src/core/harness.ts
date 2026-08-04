@@ -350,14 +350,8 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   const workspaceJsonPath = path.join(userRoot, 'workspace.json');
   if (!fs.existsSync(workspaceJsonPath)) {
     fs.writeFileSync(workspaceJsonPath, JSON.stringify({
-      discovery_and_scoping: [],
-      deep_research: [],
-      data_analysis: [],
-      strategic_synthesis: [],
-      executions: [],
-      reviews: [],
-      completed: [],
-      action_items: [],
+      sources: {},
+      deliverables: {},
       last_synced_at: new Date().toISOString()
     }, null, 2), 'utf8');
   }
@@ -368,18 +362,22 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   }
 
   const workspaceDir = path.join(userRoot, 'workspace');
-  const workspaceFolders = [
+  const sourcesDir = path.join(workspaceDir, 'Sources');
+  const deliverablesDir = path.join(workspaceDir, 'Deliverables');
+
+  const sourceDirs = [
     'Discovery & Scoping',
     'Deep Research & Intelligence Gathering',
     'Data Analysis & Pattern Extraction',
-    'Strategic Synthesis & Decision Support',
-    'Executions',
-    'Reviews',
-    'Completed'
+    'Strategic Synthesis & Decision Support'
   ];
+  const deliverableDirs = ['Executions', 'Reviews', 'Completed'];
 
-  for (const folder of workspaceFolders) {
-    fs.mkdirSync(path.join(workspaceDir, folder), { recursive: true });
+  for (const sd of sourceDirs) {
+    fs.mkdirSync(path.join(sourcesDir, sd), { recursive: true });
+  }
+  for (const dd of deliverableDirs) {
+    fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
   }
 
   const missionsDir = path.join(userRoot, 'missions');

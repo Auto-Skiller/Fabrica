@@ -139,7 +139,7 @@ export async function exportToGitHub(params: {
  */
 export async function importGitHubFileToWorkspace(downloadUrl: string, fileName: string, targetCategory: string = 'Discovery & Scoping', token?: string): Promise<{ ok: boolean; path: string }> {
   const content = await downloadGitHubFile(downloadUrl, token);
-  const relativePath = `workspace/${targetCategory}/${fileName}`;
+  const relativePath = `workspace/Sources/${targetCategory}/${fileName}`;
 
   const res = await workspaceApi.createWorkspaceItem({
     path: relativePath,

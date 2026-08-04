@@ -23,22 +23,14 @@ export type WorkspaceSourceItem = WorkspaceItem;
 export type WorkspaceDeliverableItem = WorkspaceItem;
 
 export interface WorkspaceMap {
-  discovery_and_scoping: WorkspaceSourceItem[];
-  deep_research: WorkspaceSourceItem[];
-  data_analysis: WorkspaceSourceItem[];
-  strategic_synthesis: WorkspaceSourceItem[];
-  executions: WorkspaceDeliverableItem[];
-  reviews: WorkspaceDeliverableItem[];
-  completed: WorkspaceDeliverableItem[];
-  all?: WorkspaceItem[];
-  sources?: {
+  sources: {
     discovery_and_scoping: WorkspaceSourceItem[];
     deep_research: WorkspaceSourceItem[];
     data_analysis: WorkspaceSourceItem[];
     strategic_synthesis: WorkspaceSourceItem[];
     all: WorkspaceSourceItem[];
   };
-  deliverables?: {
+  deliverables: {
     executions: WorkspaceDeliverableItem[];
     reviews: WorkspaceDeliverableItem[];
     completed: WorkspaceDeliverableItem[];

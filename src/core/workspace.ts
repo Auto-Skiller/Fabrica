@@ -38,22 +38,14 @@ export type WorkspaceSourceItem = WorkspaceItem;
 export type WorkspaceDeliverableItem = WorkspaceItem;
 
 export interface WorkspaceMap {
-  discovery_and_scoping: WorkspaceSourceItem[];
-  deep_research: WorkspaceSourceItem[];
-  data_analysis: WorkspaceSourceItem[];
-  strategic_synthesis: WorkspaceSourceItem[];
-  executions: WorkspaceDeliverableItem[];
-  reviews: WorkspaceDeliverableItem[];
-  completed: WorkspaceDeliverableItem[];
-  all?: WorkspaceItem[];
-  sources?: {
+  sources: {
     discovery_and_scoping: WorkspaceSourceItem[];
     deep_research: WorkspaceSourceItem[];
     data_analysis: WorkspaceSourceItem[];
     strategic_synthesis: WorkspaceSourceItem[];
     all: WorkspaceSourceItem[];
   };
-  deliverables?: {
+  deliverables: {
     executions: WorkspaceDeliverableItem[];
     reviews: WorkspaceDeliverableItem[];
     completed: WorkspaceDeliverableItem[];
@@ -86,18 +78,22 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   const workspaceJsonPath = path.join(userRoot, 'workspace.json');
   const workspaceDir = path.join(userRoot, 'workspace');
 
-  const workspaceFolders = [
+  const sourcesDir = path.join(workspaceDir, 'Sources');
+  const deliverablesDir = path.join(workspaceDir, 'Deliverables');
+
+  const sourceDirs = [
     'Discovery & Scoping',
     'Deep Research & Intelligence Gathering',
     'Data Analysis & Pattern Extraction',
-    'Strategic Synthesis & Decision Support',
-    'Executions',
-    'Reviews',
-    'Completed'
+    'Strategic Synthesis & Decision Support'
   ];
+  const deliverableDirs = ['Executions', 'Reviews', 'Completed'];
 
-  for (const folder of workspaceFolders) {
-    fs.mkdirSync(path.join(workspaceDir, folder), { recursive: true });
+  for (const sd of sourceDirs) {
+    fs.mkdirSync(path.join(sourcesDir, sd), { recursive: true });
+  }
+  for (const dd of deliverableDirs) {
+    fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
   }
 
   const existingMetadataMap = new Map<string, Partial<WorkspaceItem>>();
@@ -117,14 +113,6 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
         }
       };
 
-      collectMetadata(parsed.discovery_and_scoping);
-      collectMetadata(parsed.deep_research);
-      collectMetadata(parsed.data_analysis);
-      collectMetadata(parsed.strategic_synthesis);
-      collectMetadata(parsed.executions);
-      collectMetadata(parsed.reviews);
-      collectMetadata(parsed.completed);
-      collectMetadata(parsed.all);
       if (parsed.sources) {
         collectMetadata(parsed.sources.all);
       }
@@ -158,9 +146,11 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
 
         const defaultType = isDir
           ? 'directory'
-          : relPath.startsWith('workspace/Executions') || relPath.startsWith('workspace/Reviews') || relPath.startsWith('workspace/Completed')
+          : relPath.startsWith('workspace/Sources')
+          ? 'source'
+          : relPath.startsWith('workspace/Deliverables')
           ? 'deliverable'
-          : 'source';
+          : 'file';
 
         const item: WorkspaceItem = {
           name: entry.name,
@@ -186,16 +176,8 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
     return results;
   };
 
-  const discovery_and_scoping = scanDir(path.join(workspaceDir, 'Discovery & Scoping'));
-  const deep_research = scanDir(path.join(workspaceDir, 'Deep Research & Intelligence Gathering'));
-  const data_analysis = scanDir(path.join(workspaceDir, 'Data Analysis & Pattern Extraction'));
-  const strategic_synthesis = scanDir(path.join(workspaceDir, 'Strategic Synthesis & Decision Support'));
-  const executions = scanDir(path.join(workspaceDir, 'Executions'));
-  const reviews = scanDir(path.join(workspaceDir, 'Reviews'));
-  const completed = scanDir(path.join(workspaceDir, 'Completed'));
-  const allWorkspaceItems = scanDir(workspaceDir);
-
-  const allScannedItems = allWorkspaceItems;
+  const allScannedItems = [...scanDir(sourcesDir), ...scanDir(deliverablesDir)];
+  const scannedPathsSet = new Set(allScannedItems.map(i => i.path));
   const flaggedItems = allScannedItems.filter(item => item.flagged_as_action);
   const actionItemsMap = new Map<string, WorkspaceItem>();
 
@@ -210,26 +192,18 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   }
 
   const workspaceMap: WorkspaceMap = {
-    discovery_and_scoping,
-    deep_research,
-    data_analysis,
-    strategic_synthesis,
-    executions,
-    reviews,
-    completed,
-    all: allWorkspaceItems,
     sources: {
-      discovery_and_scoping,
-      deep_research,
-      data_analysis,
-      strategic_synthesis,
-      all: [...discovery_and_scoping, ...deep_research, ...data_analysis, ...strategic_synthesis]
+      discovery_and_scoping: scanDir(path.join(sourcesDir, 'Discovery & Scoping')),
+      deep_research: scanDir(path.join(sourcesDir, 'Deep Research & Intelligence Gathering')),
+      data_analysis: scanDir(path.join(sourcesDir, 'Data Analysis & Pattern Extraction')),
+      strategic_synthesis: scanDir(path.join(sourcesDir, 'Strategic Synthesis & Decision Support')),
+      all: scanDir(sourcesDir)
     },
     deliverables: {
-      executions,
-      reviews,
-      completed,
-      all: [...executions, ...reviews, ...completed]
+      executions: scanDir(path.join(deliverablesDir, 'Executions')),
+      reviews: scanDir(path.join(deliverablesDir, 'Reviews')),
+      completed: scanDir(path.join(deliverablesDir, 'Completed')),
+      all: scanDir(deliverablesDir)
     },
     action_items: Array.from(actionItemsMap.values()),
     updated_at: new Date().toISOString()
@@ -324,16 +298,19 @@ export function listWorkspaceItemsFromJson(tenantId: string = 'default_user', su
     }
   };
 
-  addItems(map.discovery_and_scoping);
-  addItems(map.deep_research);
-  addItems(map.data_analysis);
-  addItems(map.strategic_synthesis);
-  addItems(map.executions);
-  addItems(map.reviews);
-  addItems(map.completed);
-  addItems(map.all);
-  if (map.sources) addItems(map.sources.all);
-  if (map.deliverables) addItems(map.deliverables.all);
+  if (map.sources) {
+    addItems(map.sources.all);
+    addItems(map.sources.discovery_and_scoping);
+    addItems(map.sources.deep_research);
+    addItems(map.sources.data_analysis);
+    addItems(map.sources.strategic_synthesis);
+  }
+  if (map.deliverables) {
+    addItems(map.deliverables.all);
+    addItems(map.deliverables.executions);
+    addItems(map.deliverables.reviews);
+    addItems(map.deliverables.completed);
+  }
   addItems(map.action_items);
 
   const items = Array.from(pathMap.values());
@@ -370,13 +347,11 @@ export function createWorkspaceItem(
 
   const filename = path.basename(relPath);
 
-  const isDeliverable = relPath.startsWith('workspace/Executions') || relPath.startsWith('workspace/Reviews') || relPath.startsWith('workspace/Completed');
-
   const item: WorkspaceItem = {
     name: filename,
     path: relPath,
     isDirectory: false,
-    type: type || (isImport ? 'imported' : isDeliverable ? 'deliverable' : 'source'),
+    type: type || (isImport ? 'imported' : relPath.startsWith('workspace/Sources') ? 'source' : relPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file'),
     level: level || { maturity: isImport ? 'draft' : 'production', readability: 'high' },
     description: description || `Workspace file: ${filename}`,
     when_to_use: when_to_use || `Referenced when processing ${filename} in mission or workspace tasks`,
@@ -411,26 +386,7 @@ export function getWorkspaceArtifactsFromIndex(
     (existingMission.deliverables || []).forEach(d => processedMap.set(d.path, d.processed));
   }
 
-  const allSourcesList = [
-    ...(map.discovery_and_scoping || []),
-    ...(map.deep_research || []),
-    ...(map.data_analysis || []),
-    ...(map.strategic_synthesis || []),
-    ...(map.sources?.all || [])
-  ];
-  const sourceItemsMap = new Map<string, WorkspaceItem>();
-  allSourcesList.forEach(item => { if (item?.path) sourceItemsMap.set(item.path, item); });
-
-  const allDeliverablesList = [
-    ...(map.executions || []),
-    ...(map.reviews || []),
-    ...(map.completed || []),
-    ...(map.deliverables?.all || [])
-  ];
-  const deliverableItemsMap = new Map<string, WorkspaceItem>();
-  allDeliverablesList.forEach(item => { if (item?.path) deliverableItemsMap.set(item.path, item); });
-
-  const sources = Array.from(sourceItemsMap.values()).map(item => ({
+  const sources = (map.sources?.all || []).map(item => ({
     name: item.name,
     path: item.path,
     isDirectory: item.isDirectory,
@@ -444,7 +400,7 @@ export function getWorkspaceArtifactsFromIndex(
     modified_at: item.modified_at
   }));
 
-  const deliverables = Array.from(deliverableItemsMap.values()).map(item => ({
+  const deliverables = (map.deliverables?.all || []).map(item => ({
     name: item.name,
     path: item.path,
     isDirectory: item.isDirectory,
@@ -465,15 +421,7 @@ export function getWorkspaceArtifactsFromIndex(
 
 export function listCloudStorageObjects(tenantId: string = 'default_user', folderPrefix: string = ''): StorageObject[] {
   const map = getWorkspaceMap(tenantId);
-  const allFiles = map.all || [
-    ...(map.discovery_and_scoping || []),
-    ...(map.deep_research || []),
-    ...(map.data_analysis || []),
-    ...(map.strategic_synthesis || []),
-    ...(map.executions || []),
-    ...(map.reviews || []),
-    ...(map.completed || [])
-  ];
+  const allFiles = [...map.sources.all, ...map.deliverables.all];
 
   return allFiles
     .filter(f => !folderPrefix || f.path.startsWith(folderPrefix))
@@ -488,7 +436,7 @@ export function listCloudStorageObjects(tenantId: string = 'default_user', folde
 
 export function syncTenantWorkspace(tenantId: string = 'default_user'): SyncResult {
   const map = syncWorkspaceJson(tenantId);
-  const syncedFilesCount = map ? (map.all?.length || 0) : 0;
+  const syncedFilesCount = map ? (map.sources.all.length + map.deliverables.all.length) : 0;
 
   appendTenantAuditLog(tenantId, {
     type: 'system',
@@ -613,8 +561,7 @@ export function writeUserFile(
   const size = Buffer.byteLength(content, 'utf8');
   const filename = path.basename(normPath);
 
-  const isDeliverable = normPath.startsWith('workspace/Executions') || normPath.startsWith('workspace/Reviews') || normPath.startsWith('workspace/Completed');
-  const itemType = options?.type || (isImport ? 'imported' : isDeliverable ? 'deliverable' : 'source');
+  const itemType = options?.type || (isImport ? 'imported' : normPath.startsWith('workspace/Sources') ? 'source' : normPath.startsWith('workspace/Deliverables') ? 'deliverable' : 'file');
   const itemLevel = options?.level || { maturity: isImport ? 'draft' : 'production', readability: 'high' };
   const itemDesc = options?.description || `Workspace file: ${filename}`;
   const itemWhen = options?.when_to_use || `Referenced when processing ${filename} in mission or workspace tasks`;
