@@ -171,8 +171,6 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
   // Consolidated into EXACTLY 2 main tabs: 'account' and 'tokens'
   const [activeTab, setActiveTab] = useState<'account' | 'tokens'>('account');
   const [showPaymentSection, setShowPaymentSection] = useState<boolean>(false);
-  const [showHeaderTierPopover, setShowHeaderTierPopover] = useState<boolean>(false);
-
   const isEnterprise = selectedPlan === 'enterprise' || userTierData?.plan === 'enterprise';
   const isPowerUser = selectedPlan === 'pro' || selectedPlan === 'power' || selectedPlan === 'growth' || userTierData?.plan === 'pro';
   const isFreeTier = !isEnterprise && !isPowerUser;
@@ -209,6 +207,17 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
       fetchFreeModels();
     }
   }, [isOpen, activeTab]);
+
+  // Enforce tier-specific allowed execution methods
+  useEffect(() => {
+    if (isFreeTier && tokenBillingMode !== 'pool') {
+      setTokenBillingMode('pool');
+    } else if (isPowerUser && tokenBillingMode !== 'managed' && tokenBillingMode !== 'paug') {
+      setTokenBillingMode('managed');
+    } else if (isEnterprise && tokenBillingMode !== 'managed' && tokenBillingMode !== 'paug' && tokenBillingMode !== 'byok') {
+      setTokenBillingMode('managed');
+    }
+  }, [selectedPlan, userTierData, isFreeTier, isPowerUser, isEnterprise, tokenBillingMode]);
 
   if (!isOpen) return null;
 
@@ -272,77 +281,21 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                 <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {dtxt.accountModalTitle || 'Account, Workspace & API Credentials'}
                 </b>
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <span
-                    onMouseEnter={() => setShowHeaderTierPopover(true)}
-                    onMouseLeave={() => setShowHeaderTierPopover(false)}
-                    style={{
-                      fontSize: '8px',
-                      fontWeight: 800,
-                      color: '#8b5cf6',
-                      background: 'rgba(139, 92, 246, 0.15)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px'
-                    }}
-                  >
-                    {selectedPlan ? `${selectedPlan.toUpperCase()} TIER` : 'FREE SHARED TIER'} ℹ️
-                  </span>
-
-                  {showHeaderTierPopover && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        marginTop: '6px',
-                        width: '270px',
-                        background: 'var(--surface)',
-                        border: '1.5px solid #8b5cf6',
-                        borderRadius: '8px',
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-                        padding: '12px',
-                        zIndex: 9999,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        pointerEvents: 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                          📊 Tier & Quota Overview
-                        </span>
-                        <span style={{ fontSize: '7.5px', color: '#10b981', fontWeight: 800 }}>ACTIVE</span>
-                      </div>
-
-                      {(() => {
-                        const q = getQuotaMetrics(userTierData);
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
-                              <span style={{ color: 'var(--muted)', fontWeight: 700 }}>MONTHLY QUOTA:</span>
-                              <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q?.percentUsed ?? 0}% ({(Number(q?.usedTokensThisMonth) || 0).toLocaleString()} / {(Number(q?.monthlyQuotaTokens) || 0).toLocaleString()})</span>
-                            </div>
-                            <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
-                              <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                              <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>TOKEN ALERTS:</span>
-                              <span style={{ fontSize: '7.5px', fontWeight: 800, color: q.statusColor }}>
-                                {q.percentUsed > 90 ? '🚨 CRITICAL ALERT (<10% REMAINING)' : q.percentUsed > 75 ? '⚠️ QUOTA WARNING' : '✓ HEALTHY ALLOCATION'}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
+                <span
+                  style={{
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    color: '#8b5cf6',
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {selectedPlan ? `${selectedPlan.toUpperCase()} TIER` : 'FREE SHARED TIER'}
+                </span>
               </div>
               <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
                 {dtxt.accountModalDesc || 'Manage your workspace profile, subscription billing, BYOK keys & User Harness model routing'}
@@ -470,8 +423,19 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--muted)' }}>Tenant Space ID:</span>
-                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--accent-2)', fontSize: '8.5px' }}>{user?.id ? user.id : (activeEntity || 'sandbox-default-local')}</span>
+                    <span style={{ color: 'var(--muted)', fontWeight: 700 }}>Tenant Space ID:</span>
+                    <span style={{
+                      fontFamily: 'var(--mono)',
+                      color: '#6366f1',
+                      background: 'rgba(99, 102, 241, 0.12)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontSize: '8.5px',
+                      fontWeight: 800
+                    }}>
+                      {user?.id ? user.id : (activeEntity || 'sandbox-default-local')}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', alignItems: 'center' }}>
                     <span style={{ color: 'var(--muted)' }}>Current Subscription:</span>
@@ -597,578 +561,73 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
           {activeTab === 'tokens' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
-              {/* Plan 1.6-B: Visual Method Selector Strip (4 Method Cards) */}
-              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '2px' }}>
-                {/* Card 1: FREE */}
-                <div
-                  onClick={() => setTokenBillingMode('pool')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: tokenBillingMode === 'pool' ? '2px solid #10b981' : '1px solid var(--border-soft)',
-                    background: tokenBillingMode === 'pool' ? 'rgba(16, 185, 129, 0.12)' : 'var(--surface-alt)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'pool' ? '#10b981' : 'var(--text)' }}>🏊 FREE</span>
-                    {tokenBillingMode === 'pool' && <span style={{ fontSize: '7px', background: '#10b981', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
-                  </div>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>System Key Pool • 500k Free Tokens</span>
-                </div>
-
-                {/* Card 2: CREDIT */}
-                <div
-                  onClick={() => setTokenBillingMode('managed')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: tokenBillingMode === 'managed' ? '2px solid #f59e0b' : '1px solid var(--border-soft)',
-                    background: tokenBillingMode === 'managed' ? 'rgba(245, 158, 11, 0.12)' : 'var(--surface-alt)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'managed' ? '#f59e0b' : 'var(--text)' }}>🪙 CREDIT</span>
-                    {tokenBillingMode === 'managed' && <span style={{ fontSize: '7px', background: '#f59e0b', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
-                  </div>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Managed LLM Balance • Auto Routed</span>
-                </div>
-
-                {/* Card 3: PAUS */}
-                <div
-                  onClick={() => setTokenBillingMode('paug')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: tokenBillingMode === 'paug' ? '2px solid #8b5cf6' : '1px solid var(--border-soft)',
-                    background: tokenBillingMode === 'paug' ? 'rgba(139, 92, 246, 0.12)' : 'var(--surface-alt)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'paug' ? '#8b5cf6' : 'var(--text)' }}>⚡ PAUS</span>
-                    {tokenBillingMode === 'paug' && <span style={{ fontSize: '7px', background: '#8b5cf6', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
-                  </div>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Pay-As-You-Search • Metered Infra</span>
-                </div>
-
-                {/* Card 4: BYOK */}
-                <div
-                  onClick={() => setTokenBillingMode('byok')}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: tokenBillingMode === 'byok' ? '2px solid #06b6d4' : '1px solid var(--border-soft)',
-                    background: tokenBillingMode === 'byok' ? 'rgba(6, 182, 212, 0.12)' : 'var(--surface-alt)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'byok' ? '#06b6d4' : 'var(--text)' }}>🔑 BYOK</span>
-                    {tokenBillingMode === 'byok' && <span style={{ fontSize: '7px', background: '#06b6d4', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
-                  </div>
-                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Bring Your Own Keys • 6 Providers</span>
-                </div>
-              </div>
-              
-              {/* LEFT COLUMN: Model Intelligence & BYOK Credentials */}
+              {/* LEFT COLUMN: Model Intelligence & BYOK Credentials or Free Tier Claiming */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
-                {/* 1. User Harness Model Intelligence & Routing */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-soft)' }}>
+                {/* Active Execution Method Dropdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1.5px solid var(--border-soft)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ margin: 0, fontSize: '10px', fontWeight: 800, color: 'var(--accent-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      🤖 User Harness Model Intelligence & Routing
-                    </h4>
-                    <button
-                      className="mini"
-                      disabled={isFetchingModels || isRefreshingModelsLocal}
-                      onClick={() => {
-                        setIsRefreshingModelsLocal(true);
-                        loadRealModels(geminiApiKey, openrouterApiKey, anthropicApiKey, '', groqApiKey, deepseekApiKey);
-                        fetchFreeModels();
-                        setTimeout(() => {
-                          setIsRefreshingModelsLocal(false);
-                          setToast({ message: '🔄 Provider model endpoints & key statuses re-verified successfully!', type: 'success', isOpen: true });
-                        }, 600);
-                      }}
-                      style={{
-                        padding: '3px 8px',
-                        fontSize: '8px',
-                        background: (isFetchingModels || isRefreshingModelsLocal) ? 'var(--surface-alt)' : 'rgba(99, 102, 241, 0.15)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
-                        color: 'var(--accent)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontWeight: 800
-                      }}
-                    >
-                      {(isFetchingModels || isRefreshingModelsLocal) ? '🔄 Re-verifying...' : '🔄 Refresh Models'}
-                    </button>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      💳 Active Execution Method
+                    </span>
+                    <span style={{ fontSize: '7.5px', background: isFreeTier ? 'rgba(16, 185, 129, 0.12)' : isPowerUser ? 'rgba(245, 158, 11, 0.12)' : 'rgba(139, 92, 246, 0.12)', color: isFreeTier ? '#10b981' : isPowerUser ? '#f59e0b' : '#8b5cf6', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase' }}>
+                      {isFreeTier ? 'FREE TIER' : isPowerUser ? 'POWER TIER' : 'ENTERPRISE TIER'}
+                    </span>
                   </div>
 
-                  {fetchModelsError && (
-                    <span style={{ fontSize: '7.5px', color: 'var(--status-error)', display: 'block', padding: '1px 0' }}>
-                      ⚠️ {fetchModelsError}
-                    </span>
-                  )}
-
-                  {/* Token Billing & Routing Selection */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                      TOKEN BILLING & ROUTING METHOD
-                    </span>
-                    <select
-                      value={tokenBillingMode}
-                      onChange={(e) => {
-                        const mode = e.target.value as any;
-                        setTokenBillingMode(mode);
-                        if (mode === 'byok' && showOnlyFree) {
-                          if (selectedProvider !== 'google' && selectedProvider !== 'openrouter' && selectedProvider !== 'groq') {
-                            setSelectedProvider('google');
-                            handleModelChange('gemini-2.0-flash');
-                          }
-                        }
-                      }}
-                      style={{
-                        background: 'var(--surface-alt)',
-                        border: '1.5px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text)',
-                        fontSize: '9.5px',
-                        padding: '6px 8px',
-                        outline: 'none',
-                        width: '100%',
-                        fontWeight: 800
-                      }}
-                    >
-                      {isFreeTier ? (
-                        <>
-                          <option value="pool">🏊 Fabrica-Pool (System Key Pool — Free Allocation)</option>
-                          <option value="byok">🔑 BYOK (Bring Your Own API Keys)</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="managed">🪙 Managed Credits Balance (System Managed)</option>
-                          <option value="paug">⚡ PAUG Infrastructure (Pay-As-You-Go Metering)</option>
-                          <option value="byok">🔑 BYOK (Bring Your Own API Keys)</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  {/* ONLY FREE MODELS TOGGLE: Shows ONLY when TOKEN BILLING & ROUTING METHOD is set to BYOK */}
-                  {tokenBillingMode === 'byok' && (
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-alt)', padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '8.5px', fontWeight: 700, color: 'var(--text)' }}>
-                        <input
-                          type="checkbox"
-                          checked={showOnlyFree}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setShowOnlyFree(checked);
-                            if (checked) {
-                              if (selectedProvider !== 'google' && selectedProvider !== 'openrouter' && selectedProvider !== 'groq') {
-                                setSelectedProvider('google');
-                                handleModelChange('gemini-2.0-flash');
-                              }
-                            }
-                          }}
-                          style={{ width: '12px', height: '12px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                        />
-                        <span>{dtxt.onlyFreeModels || 'Only Free Models'}</span>
-                      </label>
-
-                      {showOnlyFree && (
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '8.5px', fontWeight: 700, color: 'var(--text)' }}>
-                          <input
-                            type="checkbox"
-                            checked={autoFreeFallback}
-                            onChange={(e) => setAutoFreeFallback(e.target.checked)}
-                            style={{ width: '12px', height: '12px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                          />
-                          <span>{dtxt.autoFreeFallback || 'Auto Free Fallback'}</span>
-                        </label>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Provider Selection (Hidden when Fabrica-Pool is selected) */}
-                  {tokenBillingMode !== 'pool' && (
-                    <>
-                      {(() => {
-                        const availableProviders = (tokenBillingMode === 'byok' && showOnlyFree)
-                          ? PI_AGENT_PROVIDERS.filter(p => p.id === 'google' || p.id === 'openrouter' || p.id === 'groq')
-                          : PI_AGENT_PROVIDERS;
-
-                        const currentProv = availableProviders.find(p => p.id === selectedProvider) || availableProviders[0];
-
-                        return (
-                          <>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                                SELECT PI AGENT PROVIDER
-                              </span>
-                              <select
-                                value={selectedProvider}
-                                onChange={(e) => {
-                                  const provId = e.target.value;
-                                  setSelectedProvider(provId);
-                                  const prov = availableProviders.find(p => p.id === provId);
-                                  if (prov && prov.models && prov.models.length > 0) {
-                                    handleModelChange(prov.models[0].id);
-                                  }
-                                }}
-                                style={{
-                                  background: 'var(--surface-alt)',
-                                  border: '1.5px solid var(--border-soft)',
-                                  borderRadius: '4px',
-                                  color: 'var(--text)',
-                                  fontSize: '9.5px',
-                                  padding: '6px 8px',
-                                  outline: 'none',
-                                  width: '100%',
-                                  fontWeight: 800
-                                }}
-                              >
-                                {availableProviders.map((prov) => (
-                                  <option key={prov.id} value={prov.id}>
-                                    {prov.name} — [{prov.badge}]
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {/* Selected Provider Info Banner */}
-                            <div style={{ background: 'var(--surface-alt)', border: `1px solid ${currentProv.badgeColor}`, borderRadius: '6px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)' }}>
-                                  {currentProv.name}
-                                </span>
-                                <span style={{ fontSize: '7px', fontWeight: 900, background: currentProv.badgeColor, color: '#fff', padding: '1px 5px', borderRadius: '3px' }}>
-                                  {currentProv.badge}
-                                </span>
-                              </div>
-                              <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
-                                {currentProv.description}
-                              </span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </>
-                  )}
-
-                  {/* Default Model Selection for Selected Provider / Billing Mode */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                      DEFAULT MODEL SELECTION
-                    </span>
-                    <select
-                      style={{
-                        background: 'var(--surface-alt)',
-                        border: '1.5px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text)',
-                        fontSize: '9.5px',
-                        padding: '6px 8px',
-                        outline: 'none',
-                        width: '100%',
-                        fontWeight: 800
-                      }}
-                      value={chatModel}
-                      onChange={(e) => handleModelChange(e.target.value)}
-                    >
-                      {tokenBillingMode === 'pool' ? (
-                        FABRICA_POOL_MODELS.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))
-                      ) : tokenBillingMode === 'byok' && showOnlyFree ? (
-                        (() => {
-                          if (selectedProvider === 'google') {
-                            return <option value="gemini-3.6-flash">Gemini 3.6 Flash (Free Tier)</option>;
-                          } else if (selectedProvider === 'openrouter') {
-                            return (
-                              <>
-                                <option value="openrouter/nvidia/nemotron-3-ultra-550b-a55b:free">Nvidia Nemotron 3 Ultra 550B (Free)</option>
-                                <option value="openrouter/nvidia/nemotron-3-super-120b-a12b:free">Nvidia Nemotron 3 Super 120B (Free)</option>
-                                <option value="openrouter/poolside/laguna-s-2.1:free">Poolside Laguna S 2.1 (Free)</option>
-                                <option value="openrouter/google/gemma-4-31b-it:free">Google Gemma 4 31B IT (Free)</option>
-                              </>
-                            );
-                          } else if (selectedProvider === 'groq') {
-                            return <option value="groq/llama-3.3-70b-versatile">Groq Llama 3.3 70B (Free Tier)</option>;
-                          }
-                          return renderModelOptions();
-                        })()
-                      ) : (
-                        renderModelOptions()
-                      )}
-                    </select>
-                  </div>
-
-                  {/* Active Model Intel - Adaptive to Selected Provider & Billing Mode */}
-                  {(() => {
-                    const currentProv = tokenBillingMode === 'pool'
-                      ? { name: 'Fabrica System Key Pool', badgeColor: '#10b981' }
-                      : (PI_AGENT_PROVIDERS.find(p => p.id === selectedProvider) || PI_AGENT_PROVIDERS[0]);
-                    const meta = modelMetadata[chatModel] || {};
-                    let rateLimit = meta.limit || (selectedProvider === 'groq' ? '1,500 RPM / 3M TPM' : '1,000 RPM / 2M TPM');
-                    let proxyCost = tokenBillingMode === 'pool' ? 'FREE (System Allocation)' : tokenBillingMode === 'managed' ? 'Managed Credits ($0.005/req)' : tokenBillingMode === 'paug' ? 'PAUG Metered' : 'BYOK Direct';
-                    let speed = selectedProvider === 'groq' ? '⚡ Groq LPU (~180ms)' : chatModel.includes('flash') ? '⚡ Ultra Fast (~320ms)' : '🧠 High Reasoning (~800ms)';
-
-                    return (
-                      <div style={{ background: 'rgba(245, 158, 11, 0.04)', border: '1px dashed rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <b style={{ fontSize: '8.5px', color: 'var(--text)' }}>🎯 Active Model Intel ({chatModel})</b>
-                          <span style={{ fontSize: '7px', color: currentProv.badgeColor, fontWeight: 800, textTransform: 'uppercase' }}>
-                            {currentProv.name}
-                          </span>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '7.5px' }}>
-                          <span style={{ color: 'var(--muted)' }}>
-                            <b>Rate Limits:</b> <span style={{ color: 'var(--text)', fontWeight: 700 }}>{rateLimit}</span>
-                          </span>
-                          <span style={{ color: 'var(--muted)' }}>
-                            <b>Proxy Cost:</b> <span style={{ color: '#10b981', fontWeight: 700 }}>{proxyCost}</span>
-                          </span>
-                          <span style={{ color: 'var(--muted)' }}>
-                            <b>Latency / Speed:</b> <span style={{ color: 'var(--text)', fontWeight: 700 }}>{speed}</span>
-                          </span>
-                          <span style={{ color: 'var(--muted)' }}>
-                            <b>Billing Source:</b> <span style={{ color: 'var(--accent)', fontWeight: 800 }}>{tokenBillingMode.toUpperCase()}</span>
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Configured API Key Field for Selected Provider / System Pool Verification */}
-                  <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                      CONFIGURED PROVIDER API KEY / CREDIT TOKEN
-                    </span>
-
-                    {tokenBillingMode === 'pool' ? (
-                      <div>
-                        {!(userTierData?.cardVerified || userTierData?.paymentVerified || userTierData?.hasVerifiedCard || (typeof window !== 'undefined' && localStorage.getItem('fabrica_card_verified') === 'true')) ? (
-                          <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1.5px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <b style={{ fontSize: '9px', color: '#ef4444', textTransform: 'uppercase' }}>
-                                🎁 Confirm Card to Collect 500,000 Free Tokens
-                              </b>
-                              <span style={{ fontSize: '7px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
-                                CARD REQUIRED ($0)
-                              </span>
-                            </div>
-                            <span style={{ fontSize: '8px', color: 'var(--muted)', lineHeight: 1.35 }}>
-                              Verify a payment card below to unlock your 500,000 free monthly Fabrica token allocation. No charge will be made.
-                            </span>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 0.8fr', gap: '6px' }}>
-                              <input
-                                type="text"
-                                value={cardNumber}
-                                onChange={(e) => {
-                                  let val = e.target.value.replace(/\D/g, '');
-                                  if (val.length > 16) val = val.substring(0, 16);
-                                  if (val.startsWith('3')) setCardBrand('Amex');
-                                  else if (val.startsWith('5')) setCardBrand('Mastercard');
-                                  else setCardBrand('Visa');
-                                  setCardNumber(val.replace(/(\d{4})(?=\d)/g, '$1 '));
-                                }}
-                                placeholder="4242 4242 4242 4242"
-                                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
-                              />
-                              <input
-                                type="text"
-                                value={cardExpiry}
-                                onChange={(e) => {
-                                  let val = e.target.value.replace(/\D/g, '');
-                                  if (val.length > 4) val = val.substring(0, 4);
-                                  if (val.length >= 2) setCardExpiry(val.substring(0, 2) + '/' + val.substring(2));
-                                  else setCardExpiry(val);
-                                }}
-                                placeholder="MM/YY"
-                                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
-                              />
-                              <input
-                                type="password"
-                                value={cardCvc}
-                                onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 4))}
-                                placeholder="CVC"
-                                style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
-                              />
-                            </div>
-
-                            <button
-                              disabled={isVerifyingCard}
-                              onClick={async () => {
-                                if (typeof window !== 'undefined') {
-                                  localStorage.setItem('fabrica_card_verified', 'true');
-                                }
-                                if (handleVerifyCardForFreeTier) {
-                                  await handleVerifyCardForFreeTier(cardNumber.replace(/\s/g, '').slice(-4), cardBrand);
-                                } else {
-                                  setIsVerifyingCard(true);
-                                  setTimeout(() => {
-                                    setIsVerifyingCard(false);
-                                    setToast({ message: 'Card verified! 500,000 Free Tokens activated!', type: 'success', isOpen: true });
-                                  }, 1000);
-                                }
-                              }}
-                              style={{
-                                background: 'linear-gradient(135deg, #10b981, #059669)',
-                                border: 'none',
-                                color: '#fff',
-                                fontSize: '8.5px',
-                                fontWeight: 900,
-                                padding: '6px 10px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                width: '100%'
-                              }}
-                            >
-                              {isVerifyingCard ? '⏳ Verifying Card...' : '💳 Confirm Card ($0 Charge) & Collect 500k Free Tokens'}
-                            </button>
-                          </div>
-                        ) : (
-                          <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: '6px', padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#10b981' }}>
-                              ✓ Fabrica System Pool Active (500,000 Free Tokens Claimed)
-                            </span>
-                            <span style={{ fontSize: '7.5px', background: '#10b981', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 900 }}>
-                              VERIFIED CARD
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ) : tokenBillingMode !== 'byok' ? (
-                      <div style={{ background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '12px' }}>⚡</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                          <b style={{ fontSize: '8.5px', color: 'var(--accent)' }}>
-                            No Personal Key Required ({tokenBillingMode === 'managed' ? 'Managed Credits' : 'PAUG Infra'})
-                          </b>
-                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
-                            Fabrica automatically routes and authenticates calls via system enterprise gateway endpoints.
-                          </span>
-                        </div>
-                      </div>
-                    ) : selectedProvider === 'google' ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={geminiApiKey ? '••••••••••••••••' : 'Paste your GEMINI_API_KEY...'}
-                          value={geminiApiKey}
-                          onChange={(e) => handleGeminiKeyChange(e.target.value)}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveGeminiKey(geminiApiKey)}>Save</button>
-                        {geminiApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearGeminiKey}>Clear</button>}
-                      </div>
-                    ) : selectedProvider === 'openrouter' ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={openrouterApiKey ? '••••••••••••••••' : 'Paste your OpenRouter Key...'}
-                          value={openrouterApiKey}
-                          onChange={(e) => handleOpenrouterKeyChange(e.target.value)}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveOpenRouterKey(openrouterApiKey)}>Save</button>
-                        {openrouterApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearOpenRouterKey}>Clear</button>}
-                      </div>
-                    ) : selectedProvider === 'anthropic' ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={anthropicApiKey ? '••••••••••••••••' : 'Paste your Anthropic Key...'}
-                          value={anthropicApiKey}
-                          onChange={(e) => handleAnthropicKeyChange(e.target.value)}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveAnthropicKey(anthropicApiKey)}>Save</button>
-                        {anthropicApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearAnthropicKey}>Clear</button>}
-                      </div>
-                    ) : selectedProvider === 'openai' ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={openaiApiKey ? '••••••••••••••••' : 'Paste your OpenAI API Key...'}
-                          value={openaiApiKey}
-                          onChange={(e) => {
-                            setOpenaiApiKey(e.target.value);
-                            localStorage.setItem('fabrica_openai_api_key', e.target.value);
-                          }}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'OpenAI API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
-                      </div>
-                    ) : selectedProvider === 'groq' ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={groqApiKey ? '••••••••••••••••' : 'Paste your Groq API Key...'}
-                          value={groqApiKey}
-                          onChange={(e) => {
-                            setGroqApiKey(e.target.value);
-                            localStorage.setItem('fabrica_groq_api_key', e.target.value);
-                          }}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'Groq API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="password"
-                          placeholder={deepseekApiKey ? '••••••••••••••••' : 'Paste your DeepSeek Key...'}
-                          value={deepseekApiKey}
-                          onChange={(e) => {
-                            setDeepseekApiKey(e.target.value);
-                            localStorage.setItem('fabrica_deepseek_api_key', e.target.value);
-                          }}
-                          style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
-                        />
-                        <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'DeepSeek API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
-                      </div>
+                  <select
+                    value={tokenBillingMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as 'pool' | 'managed' | 'paug' | 'byok';
+                      setTokenBillingMode(mode);
+                      if (typeof window !== 'undefined') {
+                        localStorage.setItem('fabrica_llm_method', mode);
+                      }
+                    }}
+                    style={{
+                      background: 'var(--surface-alt)',
+                      border: '1.5px solid #3b82f6',
+                      borderRadius: '6px',
+                      color: 'var(--text)',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '7px 9px',
+                      outline: 'none',
+                      width: '100%',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {isFreeTier && (
+                      <option value="pool">🏊 FREE Method (Fabrica System Key Pool)</option>
                     )}
+                    {isPowerUser && (
+                      <>
+                        <option value="managed">🪙 Credit Method (Managed LLM Credits)</option>
+                        <option value="paug">⚡ PAUS Method (Pay-As-You-Search / Metered Infra)</option>
+                      </>
+                    )}
+                    {isEnterprise && (
+                      <>
+                        <option value="managed">🪙 Credit Method (Managed LLM Credits)</option>
+                        <option value="paug">⚡ PAUS Method (Pay-As-You-Search / Metered Infra)</option>
+                        <option value="byok">🔑 BUOK Method (Bring Your Own API Keys)</option>
+                      </>
+                    )}
+                  </select>
+
+                  <div style={{ fontSize: '8px', color: 'var(--muted)', lineHeight: 1.35 }}>
+                    {tokenBillingMode === 'pool' && '🏊 Free allocation with 500k monthly tokens from the system key pool.'}
+                    {tokenBillingMode === 'managed' && '🪙 Automated LLM routing using your managed credit balance.'}
+                    {tokenBillingMode === 'paug' && '⚡ Pay-As-You-Search metered execution with priority multi-worker concurrency.'}
+                    {tokenBillingMode === 'byok' && '🔑 Direct API key routing for 6 major providers (Google, Anthropic, OpenAI, Groq, DeepSeek, OpenRouter).'}
                   </div>
                 </div>
 
-              </div>
-
-              {/* RIGHT COLUMN: Usage Quota & Token Alerts (and Tier-based dynamic cards) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                {/* 1. Usage Quota & Token Alerts Meter */}
+                {/* Usage Quota & Token Alerts Meter */}
                 {(() => {
                   const q = getQuotaMetrics(userTierData);
                   return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-soft)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '8px', border: '1.5px solid var(--border-soft)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase' }}>
@@ -1208,8 +667,459 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                     </div>
                   );
                 })()}
+                
+                {isFreeTier ? (
+                  /* FREE TIER: Only Card verification & Free Tokens Claiming */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '14px', borderRadius: '8px', border: '1.5px solid var(--border-soft)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, fontSize: '10px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        🎁 Free Tier Tokens & Card Verification
+                      </h4>
+                      <span style={{ fontSize: '7.5px', background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                        FREE ALLOCATION
+                      </span>
+                    </div>
 
-                {/* 2. Tier Dynamic Handling */}
+                    {!(userTierData?.cardVerified || userTierData?.paymentVerified || userTierData?.hasVerifiedCard || (typeof window !== 'undefined' && localStorage.getItem('fabrica_card_verified') === 'true')) ? (
+                      <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1.5px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <b style={{ fontSize: '9px', color: '#ef4444', textTransform: 'uppercase' }}>
+                            🎁 Confirm Card to Collect 500,000 Free Tokens
+                          </b>
+                          <span style={{ fontSize: '7px', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
+                            CARD REQUIRED ($0)
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '8px', color: 'var(--muted)', lineHeight: 1.35 }}>
+                          Verify a payment card below to unlock your 500,000 free monthly Fabrica token allocation. No charge will be made.
+                        </span>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 0.8fr', gap: '6px' }}>
+                          <input
+                            type="text"
+                            value={cardNumber}
+                            onChange={(e) => {
+                              let val = e.target.value.replace(/\D/g, '');
+                              if (val.length > 16) val = val.substring(0, 16);
+                              if (val.startsWith('3')) setCardBrand('Amex');
+                              else if (val.startsWith('5')) setCardBrand('Mastercard');
+                              else setCardBrand('Visa');
+                              setCardNumber(val.replace(/(\d{4})(?=\d)/g, '$1 '));
+                            }}
+                            placeholder="4242 4242 4242 4242"
+                            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                          />
+                          <input
+                            type="text"
+                            value={cardExpiry}
+                            onChange={(e) => {
+                              let val = e.target.value.replace(/\D/g, '');
+                              if (val.length > 4) val = val.substring(0, 4);
+                              if (val.length >= 2) setCardExpiry(val.substring(0, 2) + '/' + val.substring(2));
+                              else setCardExpiry(val);
+                            }}
+                            placeholder="MM/YY"
+                            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                          />
+                          <input
+                            type="password"
+                            value={cardCvc}
+                            onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').substring(0, 4))}
+                            placeholder="CVC"
+                            style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', fontFamily: 'var(--mono)' }}
+                          />
+                        </div>
+
+                        <button
+                          disabled={isVerifyingCard}
+                          onClick={async () => {
+                            if (typeof window !== 'undefined') {
+                              localStorage.setItem('fabrica_card_verified', 'true');
+                            }
+                            if (handleVerifyCardForFreeTier) {
+                              await handleVerifyCardForFreeTier(cardNumber.replace(/\s/g, '').slice(-4), cardBrand);
+                            } else {
+                              setIsVerifyingCard(true);
+                              setTimeout(() => {
+                                setIsVerifyingCard(false);
+                                setToast({ message: 'Card verified! 500,000 Free Tokens activated!', type: 'success', isOpen: true });
+                              }, 1000);
+                            }
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            border: 'none',
+                            color: '#fff',
+                            fontSize: '8.5px',
+                            fontWeight: 900,
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            width: '100%'
+                          }}
+                        >
+                          {isVerifyingCard ? '⏳ Verifying Card...' : '💳 Confirm Card ($0 Charge) & Collect 500k Free Tokens'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid #10b981', borderRadius: '6px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#10b981' }}>
+                          ✓ Fabrica System Pool Active (500,000 Free Tokens Claimed)
+                        </span>
+                        <span style={{ fontSize: '7.5px', background: '#10b981', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 900 }}>
+                          VERIFIED CARD
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : tokenBillingMode === 'byok' ? (
+                  /* BUOK / BYOK METHOD SELECTED: User Harness Model Intelligence & Routing */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-soft)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, fontSize: '10px', fontWeight: 800, color: 'var(--accent-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        🤖 User Harness Model Intelligence & Routing
+                      </h4>
+                      <button
+                        className="mini"
+                        disabled={isFetchingModels || isRefreshingModelsLocal}
+                        onClick={() => {
+                          setIsRefreshingModelsLocal(true);
+                          loadRealModels(geminiApiKey, openrouterApiKey, anthropicApiKey, '', groqApiKey, deepseekApiKey);
+                          fetchFreeModels();
+                          setTimeout(() => {
+                            setIsRefreshingModelsLocal(false);
+                            setToast({ message: '🔄 Provider model endpoints & key statuses re-verified successfully!', type: 'success', isOpen: true });
+                          }, 600);
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '8px',
+                          background: (isFetchingModels || isRefreshingModelsLocal) ? 'var(--surface-alt)' : 'rgba(99, 102, 241, 0.15)',
+                          border: '1px solid rgba(99, 102, 241, 0.3)',
+                          color: 'var(--accent)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 800
+                        }}
+                      >
+                        {(isFetchingModels || isRefreshingModelsLocal) ? '🔄 Re-verifying...' : '🔄 Refresh Models'}
+                      </button>
+                    </div>
+
+                    {fetchModelsError && (
+                      <span style={{ fontSize: '7.5px', color: 'var(--status-error)', display: 'block', padding: '1px 0' }}>
+                        ⚠️ {fetchModelsError}
+                      </span>
+                    )}
+
+                    {/* Active Method Badge Display */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        ACTIVE METHOD
+                      </span>
+                      <span style={{ fontSize: '8.5px', fontWeight: 900, color: tokenBillingMode === 'pool' ? '#10b981' : tokenBillingMode === 'managed' ? '#f59e0b' : tokenBillingMode === 'paug' ? '#8b5cf6' : '#06b6d4' }}>
+                        {tokenBillingMode === 'pool' ? '🏊 FREE (System Pool)' : tokenBillingMode === 'managed' ? '🪙 Credit Balance' : tokenBillingMode === 'paug' ? '⚡ PAUS Infrastructure' : '🔑 BUOK / BYOK Direct'}
+                      </span>
+                    </div>
+
+                    {/* ONLY FREE MODELS TOGGLE: Shows ONLY when TOKEN BILLING & ROUTING METHOD is set to BYOK */}
+                    {tokenBillingMode === 'byok' && (
+                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-alt)', padding: '5px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '8.5px', fontWeight: 700, color: 'var(--text)' }}>
+                          <input
+                            type="checkbox"
+                            checked={showOnlyFree}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setShowOnlyFree(checked);
+                              if (checked) {
+                                if (selectedProvider !== 'google' && selectedProvider !== 'openrouter' && selectedProvider !== 'groq') {
+                                  setSelectedProvider('google');
+                                  handleModelChange('gemini-2.0-flash');
+                                }
+                              }
+                            }}
+                            style={{ width: '12px', height: '12px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                          />
+                          <span>{dtxt.onlyFreeModels || 'Only Free Models'}</span>
+                        </label>
+
+                        {showOnlyFree && (
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '8.5px', fontWeight: 700, color: 'var(--text)' }}>
+                            <input
+                              type="checkbox"
+                              checked={autoFreeFallback}
+                              onChange={(e) => setAutoFreeFallback(e.target.checked)}
+                              style={{ width: '12px', height: '12px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                            />
+                            <span>{dtxt.autoFreeFallback || 'Auto Free Fallback'}</span>
+                          </label>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Provider Selection (Hidden when Fabrica-Pool is selected) */}
+                    {tokenBillingMode !== 'pool' && (
+                      <>
+                        {(() => {
+                          const availableProviders = (tokenBillingMode === 'byok' && showOnlyFree)
+                            ? PI_AGENT_PROVIDERS.filter(p => p.id === 'google' || p.id === 'openrouter' || p.id === 'groq')
+                            : PI_AGENT_PROVIDERS;
+
+                          const currentProv = availableProviders.find(p => p.id === selectedProvider) || availableProviders[0];
+
+                          return (
+                            <>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                                  SELECT PI AGENT PROVIDER
+                                </span>
+                                <select
+                                  value={selectedProvider}
+                                  onChange={(e) => {
+                                    const provId = e.target.value;
+                                    setSelectedProvider(provId);
+                                    const prov = availableProviders.find(p => p.id === provId);
+                                    if (prov && prov.models && prov.models.length > 0) {
+                                      handleModelChange(prov.models[0].id);
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'var(--surface-alt)',
+                                    border: '1.5px solid var(--border-soft)',
+                                    borderRadius: '4px',
+                                    color: 'var(--text)',
+                                    fontSize: '9.5px',
+                                    padding: '6px 8px',
+                                    outline: 'none',
+                                    width: '100%',
+                                    fontWeight: 800
+                                  }}
+                                >
+                                  {availableProviders.map((prov) => (
+                                    <option key={prov.id} value={prov.id}>
+                                      {prov.name} — [{prov.badge}]
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* Selected Provider Info Banner */}
+                              <div style={{ background: 'var(--surface-alt)', border: `1px solid ${currentProv.badgeColor}`, borderRadius: '6px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text)' }}>
+                                    {currentProv.name}
+                                  </span>
+                                  <span style={{ fontSize: '7px', fontWeight: 900, background: currentProv.badgeColor, color: '#fff', padding: '1px 5px', borderRadius: '3px' }}>
+                                    {currentProv.badge}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                                  {currentProv.description}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+
+                    {/* Default Model Selection for Selected Provider / Billing Mode */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        DEFAULT MODEL SELECTION
+                      </span>
+                      <select
+                        style={{
+                          background: 'var(--surface-alt)',
+                          border: '1.5px solid var(--border-soft)',
+                          borderRadius: '4px',
+                          color: 'var(--text)',
+                          fontSize: '9.5px',
+                          padding: '6px 8px',
+                          outline: 'none',
+                          width: '100%',
+                          fontWeight: 800
+                        }}
+                        value={chatModel}
+                        onChange={(e) => handleModelChange(e.target.value)}
+                      >
+                        {tokenBillingMode === 'pool' ? (
+                          FABRICA_POOL_MODELS.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))
+                        ) : tokenBillingMode === 'byok' && showOnlyFree ? (
+                          (() => {
+                            if (selectedProvider === 'google') {
+                              return <option value="gemini-3.6-flash">Gemini 3.6 Flash (Free Tier)</option>;
+                            } else if (selectedProvider === 'openrouter') {
+                              return (
+                                <>
+                                  <option value="openrouter/nvidia/nemotron-3-ultra-550b-a55b:free">Nvidia Nemotron 3 Ultra 550B (Free)</option>
+                                  <option value="openrouter/nvidia/nemotron-3-super-120b-a12b:free">Nvidia Nemotron 3 Super 120B (Free)</option>
+                                  <option value="openrouter/poolside/laguna-s-2.1:free">Poolside Laguna S 2.1 (Free)</option>
+                                  <option value="openrouter/google/gemma-4-31b-it:free">Google Gemma 4 31B IT (Free)</option>
+                                </>
+                              );
+                            } else if (selectedProvider === 'groq') {
+                              return <option value="groq/llama-3.3-70b-versatile">Groq Llama 3.3 70B (Free Tier)</option>;
+                            }
+                            return renderModelOptions();
+                          })()
+                        ) : (
+                          renderModelOptions()
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Active Model Intel - Adaptive to Selected Provider & Billing Mode */}
+                    {(() => {
+                      const currentProv = tokenBillingMode === 'pool'
+                        ? { name: 'Fabrica System Key Pool', badgeColor: '#10b981' }
+                        : (PI_AGENT_PROVIDERS.find(p => p.id === selectedProvider) || PI_AGENT_PROVIDERS[0]);
+                      const meta = modelMetadata[chatModel] || {};
+                      let rateLimit = meta.limit || (selectedProvider === 'groq' ? '1,500 RPM / 3M TPM' : '1,000 RPM / 2M TPM');
+                      let proxyCost = tokenBillingMode === 'pool' ? 'FREE (System Allocation)' : tokenBillingMode === 'managed' ? 'Managed Credits ($0.005/req)' : tokenBillingMode === 'paug' ? 'PAUG Metered' : 'BYOK Direct';
+                      let speed = selectedProvider === 'groq' ? '⚡ Groq LPU (~180ms)' : chatModel.includes('flash') ? '⚡ Ultra Fast (~320ms)' : '🧠 High Reasoning (~800ms)';
+
+                      return (
+                        <div style={{ background: 'rgba(245, 158, 11, 0.04)', border: '1px dashed rgba(245, 158, 11, 0.3)', borderRadius: '6px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <b style={{ fontSize: '8.5px', color: 'var(--text)' }}>🎯 Active Model Intel ({chatModel})</b>
+                            <span style={{ fontSize: '7px', color: currentProv.badgeColor, fontWeight: 800, textTransform: 'uppercase' }}>
+                              {currentProv.name}
+                            </span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '7.5px' }}>
+                            <span style={{ color: 'var(--muted)' }}>
+                              <b>Rate Limits:</b> <span style={{ color: 'var(--text)', fontWeight: 700 }}>{rateLimit}</span>
+                            </span>
+                            <span style={{ color: 'var(--muted)' }}>
+                              <b>Proxy Cost:</b> <span style={{ color: '#10b981', fontWeight: 700 }}>{proxyCost}</span>
+                            </span>
+                            <span style={{ color: 'var(--muted)' }}>
+                              <b>Latency / Speed:</b> <span style={{ color: 'var(--text)', fontWeight: 700 }}>{speed}</span>
+                            </span>
+                            <span style={{ color: 'var(--muted)' }}>
+                              <b>Billing Source:</b> <span style={{ color: 'var(--accent)', fontWeight: 800 }}>{tokenBillingMode.toUpperCase()}</span>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Configured API Key Field for Selected Provider / System Pool Verification */}
+                    <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                        CONFIGURED PROVIDER API KEY / CREDIT TOKEN
+                      </span>
+
+                      {tokenBillingMode !== 'byok' ? (
+                        <div style={{ background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px' }}>⚡</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                            <b style={{ fontSize: '8.5px', color: 'var(--accent)' }}>
+                              No Personal Key Required ({tokenBillingMode === 'managed' ? 'Managed Credits' : 'PAUG Infra'})
+                            </b>
+                            <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>
+                              Fabrica automatically routes and authenticates calls via system enterprise gateway endpoints.
+                            </span>
+                          </div>
+                        </div>
+                      ) : selectedProvider === 'google' ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={geminiApiKey ? '••••••••••••••••' : 'Paste your GEMINI_API_KEY...'}
+                            value={geminiApiKey}
+                            onChange={(e) => handleGeminiKeyChange(e.target.value)}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveGeminiKey(geminiApiKey)}>Save</button>
+                          {geminiApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearGeminiKey}>Clear</button>}
+                        </div>
+                      ) : selectedProvider === 'openrouter' ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={openrouterApiKey ? '••••••••••••••••' : 'Paste your OpenRouter Key...'}
+                            value={openrouterApiKey}
+                            onChange={(e) => handleOpenrouterKeyChange(e.target.value)}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveOpenRouterKey(openrouterApiKey)}>Save</button>
+                          {openrouterApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearOpenRouterKey}>Clear</button>}
+                        </div>
+                      ) : selectedProvider === 'anthropic' ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={anthropicApiKey ? '••••••••••••••••' : 'Paste your Anthropic Key...'}
+                            value={anthropicApiKey}
+                            onChange={(e) => handleAnthropicKeyChange(e.target.value)}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => handleSaveAnthropicKey(anthropicApiKey)}>Save</button>
+                          {anthropicApiKey && <button className="mini" style={{ fontSize: '8px', padding: '0 8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }} onClick={handleClearAnthropicKey}>Clear</button>}
+                        </div>
+                      ) : selectedProvider === 'openai' ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={openaiApiKey ? '••••••••••••••••' : 'Paste your OpenAI API Key...'}
+                            value={openaiApiKey}
+                            onChange={(e) => {
+                              setOpenaiApiKey(e.target.value);
+                              localStorage.setItem('fabrica_openai_api_key', e.target.value);
+                            }}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'OpenAI API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
+                        </div>
+                      ) : selectedProvider === 'groq' ? (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={groqApiKey ? '••••••••••••••••' : 'Paste your Groq API Key...'}
+                            value={groqApiKey}
+                            onChange={(e) => {
+                              setGroqApiKey(e.target.value);
+                              localStorage.setItem('fabrica_groq_api_key', e.target.value);
+                            }}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'Groq API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="password"
+                            placeholder={deepseekApiKey ? '••••••••••••••••' : 'Paste your DeepSeek Key...'}
+                            value={deepseekApiKey}
+                            onChange={(e) => {
+                              setDeepseekApiKey(e.target.value);
+                              localStorage.setItem('fabrica_deepseek_api_key', e.target.value);
+                            }}
+                            style={{ flex: 1, background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '4px', color: 'var(--text)', fontSize: '8.5px', padding: '4px 6px', outline: 'none' }}
+                          />
+                          <button className="mini accent" style={{ fontSize: '8px', padding: '0 8px' }} onClick={() => setToast({ message: 'DeepSeek API key saved successfully!', type: 'success', isOpen: true })}>Save</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+              </div>
+
+              {/* RIGHT COLUMN: Tier-based dynamic cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* 1. Tier Dynamic Handling */}
                 {(() => {
                   const isEnterprise = selectedPlan === 'enterprise' || userTierData?.plan === 'enterprise';
                   const isPowerUser = selectedPlan === 'pro' || selectedPlan === 'power' || selectedPlan === 'growth' || userTierData?.plan === 'pro';
@@ -1312,43 +1222,7 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                         </>
                       ) : null}
 
-                      {/* 3. BYOK Multi-Provider Keys Status - VISIBLE FOR ALL TIERS */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255, 255, 255, 0.02)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-soft)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h4 style={{ margin: 0, fontSize: '10px', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            🔑 BYOK Multi-Provider Keys Status
-                          </h4>
-                          <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>6 PROVIDERS READY</span>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>Google AI Studio</span>
-                            <span style={{ fontSize: '7px', color: geminiApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{geminiApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>OpenRouter</span>
-                            <span style={{ fontSize: '7px', color: openrouterApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{openrouterApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>Anthropic Claude</span>
-                            <span style={{ fontSize: '7px', color: anthropicApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{anthropicApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>OpenAI Direct</span>
-                            <span style={{ fontSize: '7px', color: openaiApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{openaiApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>Groq Acceleration</span>
-                            <span style={{ fontSize: '7px', color: groqApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{groqApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                          <div style={{ background: 'var(--surface-alt)', padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--text)' }}>DeepSeek Direct</span>
-                            <span style={{ fontSize: '7px', color: deepseekApiKey ? '#10b981' : '#ef4444', fontWeight: 800 }}>{deepseekApiKey ? '✓ SET' : '✗ NONE'}</span>
-                          </div>
-                        </div>
-                      </div>
-
+                      {/* End Tier Dynamic Handling */}
                     </div>
                   );
                 })()}

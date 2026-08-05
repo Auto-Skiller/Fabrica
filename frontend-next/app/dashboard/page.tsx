@@ -1690,6 +1690,7 @@ export default function Dashboard() {
   const [deepSources, setDeepSources] = useState<string[]>([]);
   const [isDeepResearching, setIsDeepResearching] = useState<boolean>(false);
   const [isAccountHoverOpen, setIsAccountHoverOpen] = useState<boolean>(false);
+  const [accountHoverPos, setAccountHoverPos] = useState<{ top: number; right: number }>({ top: 38, right: 10 });
   const [agentBtnWin, setAgentBtnWin] = useState({ x: 20, y: 550 });
   const [agentWin, setAgentWin] = useState({ x: 100, y: 150, w: 380, h: 480 });
   const [customApiKey, setCustomApiKey] = useState<string>('');
@@ -5641,8 +5642,7 @@ ${isDirector ? `
 
     const updatedHistory = [
       ...chatHistory,
-      { sender: 'user' as const, text: msg },
-      { sender: 'agent' as const, text: '⚡ Thinking...' }
+      { sender: 'user' as const, text: msg }
     ];
     setChatHistory(updatedHistory);
 
@@ -7980,59 +7980,56 @@ ${isDirector ? `
                 {/* Line 1: Header title on left, Context bar & Model selector on right */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, padding: '0px' }}>
-                    {/* Real PI Agent Context Window Usage Meter Bar in Header */}
-                    {(() => {
-                      const fallbackTokens = Math.round((chatHistory.reduce((acc, m) => acc + (m.text?.length || 0), 0) + (agentsMdContent?.length || 0)) / 4);
-                      const approxContextTokens = piContext ? piContext.tokensUsed : fallbackTokens;
-                      const maxContextWindow = piContext ? piContext.maxTokens : (chatModel.includes('gemini') ? 1000000 : chatModel.includes('claude') ? 200000 : 128000);
-                      const contextPct = piContext ? piContext.percentUsed : Math.min(100, Math.max(1, Math.round((approxContextTokens / maxContextWindow) * 100)));
-                      return (
-                        <div
-                          onClick={() => {
-                            const tenantKey = user?.id || activeEntity || 'default_user';
-                            refreshPiContext(tenantKey);
-                            fetchAgentsMd();
-                            setIsAgentsMdWindowOpen(true);
-                          }}
-                          title={`Real PI Context Window Usage: ${(approxContextTokens || 0).toLocaleString()} / ${maxContextWindow >= 1000000 ? (maxContextWindow/1000000).toFixed(1) + 'M' : (maxContextWindow/1000).toFixed(0) + 'k'} tokens (${contextPct}%). Click to refresh & open Workspace Context.`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justify: 'space-between',
-                            gap: '6px',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '4px',
-                            padding: '2px 8px',
-                            height: '22px',
-                            fontSize: '8.5px',
-                            fontFamily: 'var(--mono)',
-                            fontWeight: 800,
-                            color: 'var(--text-bright)',
-                            cursor: 'pointer',
-                            flex: 1,
-                            minWidth: 0,
-                            transition: 'all 0.15s'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden', flex: 1 }}>
-                            <span style={{ color: 'var(--accent-2)', fontSize: '9.5px', flexShrink: 0 }}>🧠</span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                              CTX: {(approxContextTokens / 1000).toFixed(1)}k / {maxContextWindow >= 1000000 ? `${(maxContextWindow / 1000000).toFixed(1)}M` : `${(maxContextWindow / 1000).toFixed(0)}k`}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, maxWidth: '120px', minWidth: '50px' }}>
-                            <div style={{ flex: 1, height: '5px', background: 'var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
-                              <div style={{ width: `${contextPct}%`, height: '100%', background: contextPct > 80 ? 'var(--danger)' : 'var(--accent-2)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-                            </div>
-                            <span style={{ fontSize: '8px', opacity: 0.9, flexShrink: 0, fontFamily: 'var(--mono)' }}>{contextPct}%</span>
-                          </div>
+                    {/* Live PI Session Context Window Meter Bar in Header */}
+                    <div
+                      onClick={() => {
+                        const tenantKey = user?.id || activeEntity || 'default_user';
+                        refreshPiContext(tenantKey);
+                      }}
+                      title={`Session Context Window: ${(piContext?.tokensUsed ?? 0).toLocaleString()} / ${(piContext?.maxTokens ?? 200000).toLocaleString()} tokens (${piContext?.percentUsed ?? 0}%). Click to refresh.`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '4px',
+                        background: 'var(--surface-alt)',
+                        border: '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        padding: '1px 6px',
+                        height: '18px',
+                        fontSize: '7.5px',
+                        fontFamily: 'var(--mono)',
+                        fontWeight: 800,
+                        color: 'var(--text-bright)',
+                        cursor: 'pointer',
+                        flex: 1,
+                        minWidth: 0,
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0, overflow: 'hidden', flex: 1 }}>
+                        <span style={{ color: 'var(--accent-2)', fontSize: '8.5px', flexShrink: 0 }}>📊</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          CTX: {(piContext?.tokensUsed ?? 0).toLocaleString()} / {(piContext?.maxTokens ?? 200000) >= 1000000 ? `${((piContext?.maxTokens ?? 200000) / 1000000).toFixed(1)}M` : `${((piContext?.maxTokens ?? 200000) / 1000).toFixed(0)}k`}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, maxWidth: '100px', minWidth: '40px' }}>
+                        <div style={{ flex: 1, height: '4px', background: 'var(--border-soft)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              width: `${Math.max(4, Math.min(100, piContext?.percentUsed ?? 0))}%`,
+                              height: '100%',
+                              background: (piContext?.percentUsed ?? 0) > 85 ? '#ef4444' : (piContext?.percentUsed ?? 0) > 60 ? '#f59e0b' : '#10b981',
+                              transition: 'width 0.3s ease'
+                            }}
+                          />
                         </div>
-                      );
-                    })()}
+                        <span style={{ fontSize: '7.5px', opacity: 0.9, flexShrink: 0, fontFamily: 'var(--mono)' }}>{piContext?.percentUsed ?? 0}%</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingLeft: '3px', paddingRight: '3px', paddingTop: '0px', paddingBottom: '0px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, paddingLeft: '2px', paddingRight: '2px', paddingTop: '0px', paddingBottom: '0px' }}>
                     {/* Model Selector */}
                     <select
                       value={tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'managed' : chatModel}
@@ -8048,14 +8045,14 @@ ${isDirector ? `
                         border: '1px solid var(--border-soft)',
                         borderRadius: '4px',
                         color: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'var(--muted)' : 'var(--accent)',
-                        fontSize: '8px',
+                        fontSize: '7.5px',
                         fontFamily: 'var(--mono)',
                         fontWeight: 800,
                         outline: 'none',
                         cursor: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'not-allowed' : 'pointer',
-                        padding: '1px 0px',
-                        maxWidth: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? '140px' : '85px',
-                        height: '22px',
+                        padding: '0px 2px',
+                        maxWidth: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? '120px' : '80px',
+                        height: '18px',
                         textTransform: 'uppercase',
                         textOverflow: 'ellipsis',
                         overflow: 'hidden',
@@ -8067,13 +8064,13 @@ ${isDirector ? `
 
                     {/* BYOK Mode Controls Strip */}
                     {tokenBillingMode === 'byok' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                         <button
                           type="button"
                           onClick={() => setShowOnlyFree(!showOnlyFree)}
                           title={showOnlyFree ? "Show Only Free Models ENABLED" : "Show Only Free Models DISABLED"}
                           style={{
-                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            height: '18px', padding: '0 3px', fontSize: '7px', fontWeight: 800,
                             borderRadius: '4px', border: showOnlyFree ? '1px solid #10b981' : '1px solid var(--border-soft)',
                             background: showOnlyFree ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface-alt)',
                             color: showOnlyFree ? '#10b981' : 'var(--text-bright)',
@@ -8087,7 +8084,7 @@ ${isDirector ? `
                           onClick={() => setAutoFreeFallback(!autoFreeFallback)}
                           title={autoFreeFallback ? "Auto Free Fallback ENABLED" : "Auto Free Fallback DISABLED"}
                           style={{
-                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            height: '18px', padding: '0 3px', fontSize: '7px', fontWeight: 800,
                             borderRadius: '4px', border: autoFreeFallback ? '1px solid #8b5cf6' : '1px solid var(--border-soft)',
                             background: autoFreeFallback ? 'rgba(139, 92, 246, 0.15)' : 'var(--surface-alt)',
                             color: autoFreeFallback ? '#8b5cf6' : 'var(--text-bright)',
@@ -8101,7 +8098,7 @@ ${isDirector ? `
                           onClick={() => setIsAccountWindowOpen(true)}
                           title="Configure Provider API Keys & Rotation Settings"
                           style={{
-                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            height: '18px', padding: '0 3px', fontSize: '7px', fontWeight: 800,
                             borderRadius: '4px', border: '1px solid var(--border-soft)',
                             background: 'var(--surface-alt)', color: 'var(--text)',
                             cursor: 'pointer', flexShrink: 0
@@ -8111,6 +8108,39 @@ ${isDirector ? `
                         </button>
                       </div>
                     )}
+
+                    {/* Thinking Level Dropdown (between Model Switcher and Sessions Switcher) */}
+                    <select
+                      value={thinkingLevel}
+                      onChange={(e) => {
+                        const v = e.target.value as typeof thinkingLevel;
+                        setThinkingLevel(v);
+                        localStorage.setItem('fabrica_thinking_level', v);
+                      }}
+                      title="Agent Thinking Level (--thinking)"
+                      style={{
+                        height: '18px',
+                        padding: '0 2px',
+                        fontSize: '7.5px',
+                        fontFamily: 'var(--mono)',
+                        fontWeight: 800,
+                        borderRadius: '4px',
+                        border: thinkingLevel !== 'off' ? '1px solid rgba(139,92,246,0.5)' : '1px solid var(--border-soft)',
+                        background: thinkingLevel !== 'off' ? 'rgba(139,92,246,0.12)' : 'var(--surface-alt)',
+                        color: thinkingLevel !== 'off' ? '#8b5cf6' : 'var(--text-bright)',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="off">🧠 OFF</option>
+                      <option value="minimal">🧠 MINIMAL</option>
+                      <option value="low">🧠 LOW</option>
+                      <option value="medium">🧠 MED</option>
+                      <option value="high">🧠 HIGH</option>
+                      <option value="xhigh">🧠 XHIGH</option>
+                      <option value="max">🧠 MAX</option>
+                    </select>
 
                     {/* Merged Active Session Button (Small compact badge style) */}
                     <div style={{ position: 'relative' }}>
@@ -8124,30 +8154,30 @@ ${isDirector ? `
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '3px',
-                              height: '22px',
-                              padding: '1px 2px',
+                              gap: '2px',
+                              height: '18px',
+                              padding: '1px 3px',
                               borderRadius: '4px',
                               background: showSessionDropdown ? 'var(--accent)' : 'var(--surface-alt)',
                               color: showSessionDropdown ? 'var(--accent-contrast)' : 'var(--accent)',
                               border: '1px solid var(--border-soft)',
-                              fontSize: '7.5px',
+                              fontSize: '7px',
                               fontFamily: 'var(--mono)',
                               fontWeight: 800,
                               cursor: 'pointer',
                               transition: 'all 0.15s',
-                              maxWidth: '80px',
+                              maxWidth: '75px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap'
                             }}
                             title={`Active Session: ${currentSessionName}. Click to manage sessions.`}
                           >
-                            <span style={{ color: showSessionDropdown ? 'var(--accent-contrast)' : '#10b981', fontSize: '7px', flexShrink: 0 }}>●</span>
+                            <span style={{ color: showSessionDropdown ? 'var(--accent-contrast)' : '#10b981', fontSize: '6.5px', flexShrink: 0 }}>●</span>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                               {currentSessionName}
                             </span>
-                            <span style={{ fontSize: '6.5px', opacity: 0.8, flexShrink: 0 }}>▾</span>
+                            <span style={{ fontSize: '6px', opacity: 0.8, flexShrink: 0 }}>▾</span>
                           </button>
                         );
                       })()}
@@ -8354,27 +8384,54 @@ ${isDirector ? `
                           </div>
                         </div>
                       ))}
-                      {isChatLoading && (
+                      {isChatLoading && (chatHistory.length === 0 || chatHistory[chatHistory.length - 1].sender !== 'agent') && (
                         <div style={{ alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '7.5px', fontWeight: 700, color: 'var(--muted)', padding: '0 4px' }}>
-                            Agent Status
-                          </span>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            padding: '0 4px', 
+                            alignSelf: 'flex-start' 
+                          }}>
+                            <span style={{ 
+                              fontSize: '7.5px', 
+                              fontWeight: 800, 
+                              color: 'var(--accent)', 
+                              textTransform: 'uppercase', 
+                              letterSpacing: '0.02em' 
+                            }}>
+                              {dtxt.assistantLabel}
+                            </span>
+                            <span style={{
+                              fontSize: '7px',
+                              fontWeight: 800,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'rgba(56, 189, 248, 0.12)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(56, 189, 248, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <span style={{ fontSize: '8px', animation: 'spin 1.5s linear infinite' }}>⚙️</span> STATUS: THINKING
+                            </span>
+                          </div>
                           <div style={{
                             alignSelf: 'flex-start',
                             background: 'var(--surface)',
-                            border: '1.5px solid var(--border-soft)',
+                            border: '1.5px solid rgba(56, 189, 248, 0.3)',
                             borderRadius: '12px 12px 12px 2px',
                             padding: '10px 14px',
                             fontSize: '9.5px',
-                            color: 'var(--muted)',
+                            color: 'var(--text-bright)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
                             boxShadow: 'var(--shadow-sm)'
                           }}>
-                            <span style={{ fontSize: '11px', display: 'inline-block', animation: 'spin 1.5s linear infinite' }}>⚙️</span>
                             <span>{dtxt.thinkingLabel}</span>
-                            <span className="thinking-dots" style={{ display: 'inline-flex', gap: '1px', fontWeight: 900 }}>
+                            <span className="thinking-dots" style={{ display: 'inline-flex', gap: '1px', fontWeight: 900, color: 'var(--accent)' }}>
                               <span style={{ animation: 'thinkingDot 1.4s infinite both', animationDelay: '0s' }}>.</span>
                               <span style={{ animation: 'thinkingDot 1.4s infinite both', animationDelay: '0.2s' }}>.</span>
                               <span style={{ animation: 'thinkingDot 1.4s infinite both', animationDelay: '0.4s' }}>.</span>
@@ -8612,7 +8669,7 @@ ${isDirector ? `
                       {/* Left: Commands Button, Context Window Usage Bar, Autonomy Switcher & Agent Output Language Switcher */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, flexShrink: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
                         {/* Pi Agent CLI /commands Button */}
-                        <div style={{ flex: 1, minWidth: '95px', flexShrink: 0 }}>
+                        <div style={{ flexShrink: 0 }}>
                           <button
                             ref={commandsBtnRef}
                             onClick={(e) => toggleCommandsMenu(e)}
@@ -8620,15 +8677,14 @@ ${isDirector ? `
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              justify: 'center',
-                              gap: '6px',
+                              justifyContent: 'center',
+                              gap: '3px',
                               background: showCommandsMenu ? 'rgba(99, 102, 241, 0.22)' : 'var(--surface-alt)',
                               border: `1px solid ${showCommandsMenu ? 'var(--accent)' : 'var(--border-soft)'}`,
-                              borderRadius: '5px',
-                              padding: '3px 12px',
-                              height: '25px',
-                              width: '100%',
-                              fontSize: '10px',
+                              borderRadius: '4px',
+                              padding: '2px 7px',
+                              height: '22px',
+                              fontSize: '9px',
                               fontFamily: 'var(--mono)',
                               fontWeight: 800,
                               color: showCommandsMenu ? 'var(--accent)' : 'var(--text-bright)',
@@ -8637,9 +8693,9 @@ ${isDirector ? `
                               boxShadow: showCommandsMenu ? '0 0 8px rgba(99, 102, 241, 0.3)' : 'none'
                             }}
                           >
-                            <span style={{ color: 'var(--accent)', fontSize: '11px' }}>⚡</span>
+                            <span style={{ color: 'var(--accent)', fontSize: '9px' }}>⚡</span>
                             <span>/commands</span>
-                            <span style={{ fontSize: '8px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
+                            <span style={{ fontSize: '7px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
                           </button>
 
                           {/* Dropdown Popup Menu */}
@@ -8825,63 +8881,6 @@ ${isDirector ? `
                           <span>{webSearchEnabled ? 'WEB ON' : 'WEB OFF'}</span>
                         </button>
 
-                        {/* Plan 1.5: Live Session Context Progress Bar */}
-                        <div
-                          title={`Session Context Window: ${piContext.tokensUsed.toLocaleString()} / ${piContext.maxTokens.toLocaleString()} tokens (${piContext.percentUsed}%)`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            height: '22px',
-                            padding: '0 6px',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '4px',
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            color: 'var(--text-bright)',
-                            flexShrink: 0
-                          }}
-                        >
-                          <span style={{ fontSize: '8.5px' }}>📊</span>
-                          <div style={{ width: '36px', height: '5px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                width: `${Math.max(4, Math.min(100, piContext.percentUsed))}%`,
-                                height: '100%',
-                                background: piContext.percentUsed > 85 ? '#ef4444' : piContext.percentUsed > 60 ? '#f59e0b' : '#10b981',
-                                transition: 'width 0.3s ease'
-                              }}
-                            />
-                          </div>
-                          <span>{piContext.percentUsed}%</span>
-                        </div>
-
-                        {/* Thinking Level Dropdown */}
-                        <select
-                          value={thinkingLevel}
-                          onChange={(e) => {
-                            const v = e.target.value as typeof thinkingLevel;
-                            setThinkingLevel(v);
-                            localStorage.setItem('fabrica_thinking_level', v);
-                          }}
-                          title="Agent Thinking Level (--thinking)"
-                          style={{
-                            height: '22px', padding: '0 4px', fontSize: '8px', fontWeight: 700,
-                            borderRadius: '4px', border: thinkingLevel !== 'off' ? '1px solid rgba(139,92,246,0.5)' : '1px solid var(--border-soft)',
-                            background: thinkingLevel !== 'off' ? 'rgba(139,92,246,0.12)' : 'var(--surface-alt)',
-                            color: thinkingLevel !== 'off' ? '#8b5cf6' : 'var(--text-bright)',
-                            cursor: 'pointer', flexShrink: 0, outline: 'none'
-                          }}
-                        >
-                          <option value="off">🧠 OFF</option>
-                          <option value="minimal">🧠 MINIMAL</option>
-                          <option value="low">🧠 LOW</option>
-                          <option value="medium">🧠 MED</option>
-                          <option value="high">🧠 HIGH</option>
-                          <option value="xhigh">🧠 XHIGH</option>
-                          <option value="max">🧠 MAX</option>
-                        </select>
                         {/* Plan 1.1-B: + Context Picker Button */}
                         <button
                           type="button"
@@ -8911,7 +8910,19 @@ ${isDirector ? `
                           <button
                             type="button"
                             className="mini danger"
-                            style={{ padding: '0 12px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{
+                              height: '28px',
+                              width: '60px',
+                              padding: 0,
+                              fontWeight: 800,
+                              fontSize: '9.5px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxSizing: 'border-box',
+                              flexShrink: 0
+                            }}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -8919,21 +8930,32 @@ ${isDirector ? `
                             }}
                             title="Stop agent turn & halt process"
                           >
-                            <span style={{ fontSize: '10px' }}>🛑</span>
                             <span>{dtxt.stopBtn || "Stop"}</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             className="mini accent"
-                            style={{ padding: '0 14px', height: '28px', fontWeight: 800, fontSize: '10px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            style={{
+                              height: '28px',
+                              width: '60px',
+                              padding: 0,
+                              fontWeight: 800,
+                              fontSize: '9.5px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxSizing: 'border-box',
+                              flexShrink: 0
+                            }}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               handleSendChat();
                             }}
                           >
-                            {dtxt.sendBtn}
+                            <span>{dtxt.sendBtn}</span>
                           </button>
                         )}
                       </div>
@@ -9198,7 +9220,14 @@ ${isDirector ? `
                 {/* Account & API Button */}
                 <div
                   style={{ position: 'relative' }}
-                  onMouseEnter={() => setIsAccountHoverOpen(true)}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setAccountHoverPos({
+                      top: rect.bottom + 6,
+                      right: Math.max(8, window.innerWidth - rect.right)
+                    });
+                    setIsAccountHoverOpen(true);
+                  }}
                   onMouseLeave={() => setIsAccountHoverOpen(false)}
                 >
                   <button
@@ -9228,29 +9257,36 @@ ${isDirector ? `
                   {isAccountHoverOpen && (
                     <div
                       style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: '6px',
+                        position: 'fixed',
+                        top: `${accountHoverPos.top}px`,
+                        right: `${accountHoverPos.right}px`,
                         width: '290px',
                         background: 'var(--surface)',
                         border: '1.5px solid #3b82f6',
                         borderRadius: '8px',
                         boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
                         padding: '12px',
-                        zIndex: 10001,
+                        zIndex: 99999,
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '8px',
-                        pointerEvents: 'auto'
+                        pointerEvents: 'none'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
                         <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                          👤 Plan & Usage Quota
+                          📊 Tier & Quota Overview
                         </span>
                         <span style={{ fontSize: '8px', fontWeight: 800, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.15)', padding: '1px 6px', borderRadius: '3px' }}>
                           {selectedPlan ? `${selectedPlan.toUpperCase()} PLAN` : 'FREE SHARED TIER'}
+                        </span>
+                      </div>
+
+                      {/* Real User Tenant Space ID */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '4px 6px', borderRadius: '4px' }}>
+                        <span style={{ color: 'var(--muted)', fontWeight: 700 }}>TENANT SPACE ID:</span>
+                        <span style={{ fontFamily: 'var(--mono)', color: '#6366f1', fontWeight: 800, fontSize: '8px' }}>
+                          {user?.id ? user.id : (activeEntity || 'sandbox-default-local')}
                         </span>
                       </div>
 
@@ -10096,7 +10132,7 @@ ${isDirector ? `
                       return (
                         <div key={sec.key} style={{
                           flex: '1 1 0px',
-                          minWidth: '220px',
+                          minWidth: '110px',
                           height: '100%',
                           background: 'var(--surface)',
                           border: '1px solid var(--border-soft)',
@@ -10110,7 +10146,7 @@ ${isDirector ? `
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
                             {/* Sub-Section Name directly ABOVE buttons */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                              <span style={{ fontSize: '10px' }}>{sec.icon}</span>
+                              <span style={{ fontSize: '10px', flexShrink: 0 }}>{sec.icon}</span>
                               <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {sec.label} ({secItems.length})
                               </span>
@@ -10136,18 +10172,22 @@ ${isDirector ? `
                                 }}
                                 style={{
                                   flex: 1,
+                                  minWidth: 0,
                                   background: 'var(--surface-alt)',
                                   border: '1px solid var(--border-soft)',
                                   color: 'var(--text-bright)',
                                   fontSize: '7.5px',
                                   fontWeight: 800,
-                                  padding: '2px 4px',
+                                  padding: '2px 3px',
                                   borderRadius: '3px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  gap: '2px'
+                                  gap: '2px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
                                 }}
                                 title={`Import files into ${sec.label}`}
                               >
@@ -10178,18 +10218,22 @@ ${isDirector ? `
                                 }}
                                 style={{
                                   flex: 1,
+                                  minWidth: 0,
                                   background: 'var(--surface-alt)',
                                   border: '1px solid var(--border-soft)',
                                   color: 'var(--accent)',
                                   fontSize: '7.5px',
                                   fontWeight: 800,
-                                  padding: '2px 4px',
+                                  padding: '2px 3px',
                                   borderRadius: '3px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  gap: '2px'
+                                  gap: '2px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
                                 }}
                                 title={`Export ${sec.label} items`}
                               >
@@ -10780,11 +10824,15 @@ ${isDirector ? `
               flexShrink: 0
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>⚡</span>
+                <span style={{ fontSize: '1.25rem' }}>{toolsWindowTab === 'skills' ? '🛠️' : '🔌'}</span>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SKILLS & INTEGRATIONS EXPLORER</b>
+                  <b style={{ fontSize: '11px', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {toolsWindowTab === 'skills' ? 'SKILLS EXPLORER' : 'INTEGRATIONS EXPLORER'}
+                  </b>
                   <span style={{ fontSize: '8.5px', color: 'var(--muted)' }}>
-                    Registered kernel system capabilities & workspace integrations
+                    {toolsWindowTab === 'skills' 
+                      ? 'Registered kernel system capabilities & custom agent skills'
+                      : 'Workspace integrations, API endpoints & external tools'}
                   </span>
                 </div>
               </div>
@@ -12061,59 +12109,75 @@ ${isDirector ? `
             )}
           </div>
 
-          {/* Heartbeat Interval Dropdown — positioned right next to Autonomy button */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            <select
-              value={autonomyInterval}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setAutonomyInterval(val);
-                harnessApi.updateHarnessState({ autonomy_interval: val }).catch(() => {});
-                const labels: Record<number, string> = {
-                  60: '1 min',
-                  120: '2 min',
-                  300: '5 min',
-                  900: '15 min',
-                  1800: '30 min',
-                  3600: '1 h',
-                  14400: '4 h',
-                  86400: '1 D'
-                };
-                setToast({
-                  message: `Heartbeat interval updated to ${labels[val] || val + 's'}`,
-                  type: 'info',
-                  isOpen: true
-                });
-              }}
-              title="Select Autonomy Heartbeat Interval"
-              style={{
-                height: '16px',
-                padding: '0 2px',
-                fontSize: '7px',
-                fontWeight: 800,
-                background: 'var(--surface-alt)',
-                color: 'var(--text)',
-                border: '1px solid var(--border-soft)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                outline: 'none',
-                flexShrink: 0
-              }}
-            >
-              <option value={20}>⏱️ 20s</option>
-              <option value={60}>⏱️ 1 min</option>
-              <option value={120}>⏱️ 2 min</option>
-              <option value={300}>⏱️ 5 min</option>
-              <option value={900}>⏱️ 15 min</option>
-              <option value={1800}>⏱️ 30 min</option>
-              <option value={3600}>⏱️ 1 h</option>
-              <option value={14400}>⏱️ 4 h</option>
-              <option value={86400}>⏱️ 1 D</option>
-              {![20, 60, 120, 300, 900, 1800, 3600, 14400, 86400].includes(autonomyInterval) && (
-                <option value={autonomyInterval}>⏱️ {autonomyInterval}s</option>
-              )}
-            </select>
-          </div>
+          {/* Heartbeat Interval Dropdown — visible in all modes, blurred when Autonomy is OFF */}
+          {(() => {
+            const isAutonomyDisabled = !isAutonomyOn || autonomyLevel === 'off';
+            return (
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                  filter: isAutonomyDisabled ? 'blur(1px)' : 'none',
+                  opacity: isAutonomyDisabled ? 0.45 : 1,
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              >
+                <select
+                  value={autonomyInterval}
+                  disabled={isAutonomyDisabled}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAutonomyInterval(val);
+                    harnessApi.updateHarnessState({ autonomy_interval: val }).catch(() => {});
+                    const labels: Record<number, string> = {
+                      60: '1 min',
+                      120: '2 min',
+                      300: '5 min',
+                      900: '15 min',
+                      1800: '30 min',
+                      3600: '1 h',
+                      14400: '4 h',
+                      86400: '1 D'
+                    };
+                    setToast({
+                      message: `Heartbeat interval updated to ${labels[val] || val + 's'}`,
+                      type: 'info',
+                      isOpen: true
+                    });
+                  }}
+                  title={isAutonomyDisabled ? 'Autonomy is OFF (Heartbeat Paused)' : 'Select Autonomy Heartbeat Interval'}
+                  style={{
+                    height: '16px',
+                    padding: '0 2px',
+                    fontSize: '7px',
+                    fontWeight: 800,
+                    background: 'var(--surface-alt)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border-soft)',
+                    borderRadius: '3px',
+                    cursor: isAutonomyDisabled ? 'not-allowed' : 'pointer',
+                    outline: 'none',
+                    flexShrink: 0
+                  }}
+                >
+                  <option value={20}>⏱️ 20s</option>
+                  <option value={60}>⏱️ 1 min</option>
+                  <option value={120}>⏱️ 2 min</option>
+                  <option value={300}>⏱️ 5 min</option>
+                  <option value={900}>⏱️ 15 min</option>
+                  <option value={1800}>⏱️ 30 min</option>
+                  <option value={3600}>⏱️ 1 h</option>
+                  <option value={14400}>⏱️ 4 h</option>
+                  <option value={86400}>⏱️ 1 D</option>
+                  {![20, 60, 120, 300, 900, 1800, 3600, 14400, 86400].includes(autonomyInterval) && (
+                    <option value={autonomyInterval}>⏱️ {autonomyInterval}s</option>
+                  )}
+                </select>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Right Section: Backlogs & Reviews Operational Ticker Container */}

@@ -646,20 +646,153 @@ function PresetIntegrationCard({
   );
 }
 
+const DEFAULT_METADATA_BY_SKILL: Record<string, SkillMetadata> = {
+  'cloudsql-setup': {
+    what: 'Provisions Cloud SQL (PostgreSQL) and configures Firebase Auth',
+    when: 'Relational database or PostgreSQL is explicitly requested',
+    why: 'Provides scale-to-zero PostgreSQL with fast provisioning',
+    triggers: 'cloudsql-setup, postgresql, sql, relational database',
+    inputs: 'Database configuration, instance tier, project settings',
+    outputs: 'Cloud SQL connection string, Auth setup state'
+  },
+  'cloudsql-execute-sql': {
+    what: 'Executes DQL and DML SQL statements on Cloud SQL',
+    when: 'Querying existing data, seeding databases, debugging',
+    why: 'Allows direct data management and table inspection',
+    triggers: 'cloudsql-execute-sql, sql_statement',
+    inputs: 'SQL statement query string',
+    outputs: 'Query rows, execution statistics'
+  },
+  'cloudsql-update-schema': {
+    what: 'Updates Cloud SQL schema from Drizzle ORM schema files',
+    when: 'Changes are made to src/db/schema.ts or drizzle.config.ts',
+    why: 'Keeps PostgreSQL database schema synchronized with TypeScript types',
+    triggers: 'cloudsql-update-schema, schema_change',
+    inputs: 'Drizzle schema definitions',
+    outputs: 'Migration logs, database table updates'
+  },
+  'firebase-skill': {
+    what: 'Integrates Firebase Firestore database and Authentication',
+    when: 'Persistent Firestore storage, user auth, or security hardening required',
+    why: 'Durable cloud document database and user access rules',
+    triggers: 'set_up_firebase, deploy_firebase, firestore',
+    inputs: 'firebase-blueprint.json, firestore.rules',
+    outputs: 'Provisioned Firestore project, security rules deployment'
+  },
+  'focus_mode': {
+    what: 'Handles visual selection and inspection of UI elements',
+    when: 'Responding to CSS selector selections from the UI preview',
+    why: 'Targeted element editing based on direct visual feedback',
+    triggers: 'focus_mode, css_selector',
+    inputs: 'Selected element CSS selectors',
+    outputs: 'Target element context for edits'
+  },
+  'gemini_api': {
+    what: 'Google GenAI TypeScript SDK integration (@google/genai)',
+    when: 'Text generation, image analysis, chat, function calling',
+    why: 'Modern SDK patterns for Gemini models in full-stack routes',
+    triggers: '@google/genai, gemini_api, generateContent',
+    inputs: 'Text prompts, system instructions, tools schema',
+    outputs: 'Structured responses, function calls, model streams'
+  },
+  'gemini_interactions_api': {
+    what: 'Interactions API for Antigravity & Deep Research agents',
+    when: 'Using Antigravity agent, Deep Research, Omni Flash, or speech generation',
+    why: 'Server-side access to advanced reasoning and specialized agent models',
+    triggers: 'gemini_interactions_api, antigravity, deep_research',
+    inputs: 'Agent prompts, interaction parameters',
+    outputs: 'Agent turn responses, research outputs, audio artifacts'
+  },
+  'github_import_migration': {
+    what: 'Execute-first migration for imported GitHub repositories',
+    when: 'Triaging imported Node.js or Kotlin projects into Cloud Run environment',
+    why: 'Resolves dependencies, ports scripts, and establishes dev server configuration',
+    triggers: 'github-import-migration, import_project',
+    inputs: 'Imported repository file tree',
+    outputs: 'Configured package manifests, build scripts'
+  },
+  'github_import_rewrite': {
+    what: 'Cross-framework rewrite assistant for GitHub imports',
+    when: 'Converting source framework code into target application frameworks',
+    why: 'Preserves core business logic while transforming component architecture',
+    triggers: 'github-import-rewrite, framework_convert',
+    inputs: 'Source framework files, target framework requirements',
+    outputs: 'Converted application codebase'
+  },
+  'google_maps_platform': {
+    what: 'Google Maps, Places API (New), and Routes API integration',
+    when: 'Building location features, store locators, address validation',
+    why: 'Provides interactive maps, geocoding, and directions routing in React',
+    triggers: 'google_maps_platform, places_api, routes_api',
+    inputs: 'Location coordinates, place queries, map configs',
+    outputs: 'Map view components, place details, route lines'
+  },
+  'image_generation': {
+    what: 'Visual asset generation and edit engine using Gemini',
+    when: 'Creating hero banners, illustrations, icons, backgrounds, avatars',
+    why: 'Generates context-aware graphic assets without device frames',
+    triggers: 'generate_image, image_prompt',
+    inputs: 'Prompt string, aspect ratio, reference images',
+    outputs: 'Image artifact files, workspace assets'
+  },
+  'oauth': {
+    what: 'OAuth 2.0 flow implementation for 3rd-party services',
+    when: 'Strava, GitHub, Spotify, or custom popup authentication requested',
+    why: 'Handles popup windows, callback cookies, and authorization tokens securely',
+    triggers: 'set_up_oauth, remove_oauth, third_party_login',
+    inputs: 'Client IDs, requested scopes, authorization URLs',
+    outputs: 'Authenticated user sessions, access tokens'
+  },
+  'realtime_guidelines': {
+    what: 'Real-time WebSockets and multi-user collaborative canvas setup',
+    when: 'Building live chat, multiplayer tools, or shared canvases',
+    why: 'Ensures server-authoritative state synchronization and event handling',
+    triggers: 'realtime_guidelines, websockets, multiplayer',
+    inputs: 'WebSocket event schemas, canvas state objects',
+    outputs: 'Live connection handlers, real-time message streams'
+  },
+  'shadcn': {
+    what: 'shadcn/ui component integration and CLI workflow',
+    when: 'User specifically requests shadcn or shadcn/ui components',
+    why: 'Accessible, unstyled components built with Radix and Tailwind CSS',
+    triggers: 'shadcn, shadcn_ui, add_component',
+    inputs: 'Component names, Tailwind theme configuration',
+    outputs: 'Installed UI components, theme setup'
+  },
+  'workspace_integration': {
+    what: 'Google Workspace APIs integration (Docs, Sheets, Drive, Gmail, Calendar)',
+    when: 'Reading, writing, or searching user Workspace data',
+    why: 'Seamless access to user documents, spreadsheets, and calendar events',
+    triggers: 'workspace_integration, google_drive, google_sheets',
+    inputs: 'Workspace API scopes, document IDs',
+    outputs: 'Workspace document content, event lists, spreadsheet rows'
+  }
+};
+
 function BuiltInSkillCard({
   entityName,
   skillName,
-  parents
+  parents,
+  initialMetadata,
+  isMainHeader
 }: {
   entityName: string;
   skillName: string;
   parents: string[];
+  initialMetadata?: SkillMetadata;
+  isMainHeader?: boolean;
 }) {
   const [files, setFiles] = useState<Array<{ name: string; path: string; type: 'file' | 'folder'; content?: string }>>([]);
-  const [metadata, setMetadata] = useState<SkillMetadata>({
+  const [metadata, setMetadata] = useState<SkillMetadata>(initialMetadata || {
     what: '', when: '', why: '', triggers: '', inputs: '', outputs: ''
   });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (initialMetadata) {
+      setMetadata(initialMetadata);
+    }
+  }, [initialMetadata]);
 
   useEffect(() => {
     let active = true;
@@ -669,7 +802,7 @@ function BuiltInSkillCard({
         const skillMd = res.files.find(f => f.path === 'SKILL.md' || f.name === 'SKILL.md');
         if (skillMd && skillMd.content) {
           const parsed = parseSkillMd(skillMd.content, skillName);
-          setMetadata(parsed.metadata);
+          setMetadata(prev => ({ ...parsed.metadata, ...prev }));
         }
       }
     }).catch(console.error).finally(() => {
@@ -679,20 +812,52 @@ function BuiltInSkillCard({
   }, [entityName, skillName, parents]);
 
   const tree = useMemo(() => buildFileTree(files), [files]);
+  const fallbackMeta = DEFAULT_METADATA_BY_SKILL[skillName] || {
+    what: 'Kernel System Skill',
+    when: 'Agent task execution',
+    why: 'Provides built-in platform capabilities',
+    triggers: skillName,
+    inputs: 'Task parameters',
+    outputs: 'Skill execution results'
+  };
+
+  const finalWhat = metadata.what || fallbackMeta.what;
+  const finalWhen = metadata.when || fallbackMeta.when;
+  const finalWhy = metadata.why || fallbackMeta.why;
+  const finalTriggers = metadata.triggers || fallbackMeta.triggers;
+  const finalInputs = metadata.inputs || fallbackMeta.inputs;
+  const finalOutputs = metadata.outputs || fallbackMeta.outputs;
 
   return (
     <div style={{
-      background: 'var(--surface-alt)',
-      border: '1px solid var(--border-soft)',
+      background: isMainHeader ? 'linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(192, 132, 252, 0.08))' : 'var(--surface-alt)',
+      border: isMainHeader ? '1.5px solid rgba(56, 189, 248, 0.5)' : '1px solid var(--border-soft)',
       borderRadius: 'var(--radius-md)',
       padding: '12px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px'
+      gap: '10px',
+      boxShadow: isMainHeader ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text)' }}>
-          📁 {skillName}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: isMainHeader ? '12px' : '11px', fontWeight: 900, color: 'var(--text)' }}>
+            📁 {skillName}
+          </div>
+          {isMainHeader && (
+            <span style={{
+              fontSize: '8px',
+              fontWeight: 900,
+              padding: '2px 8px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+              color: '#fff',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              ⭐ MAIN SKILL
+            </span>
+          )}
         </div>
         {/* Kernel skills are always active — no toggle */}
         <div style={{
@@ -710,12 +875,12 @@ function BuiltInSkillCard({
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', background: 'var(--surface)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>What:</b> <span style={{ color: 'var(--muted)' }}>{metadata.what || 'N/A'}</span></div>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>When:</b> <span style={{ color: 'var(--muted)' }}>{metadata.when || 'N/A'}</span></div>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Why:</b> <span style={{ color: 'var(--muted)' }}>{metadata.why || 'N/A'}</span></div>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Triggers:</b> <span style={{ color: 'var(--muted)' }}>{metadata.triggers || 'N/A'}</span></div>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Inputs:</b> <span style={{ color: 'var(--muted)' }}>{metadata.inputs || 'N/A'}</span></div>
-        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Outputs:</b> <span style={{ color: 'var(--muted)' }}>{metadata.outputs || 'N/A'}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>What:</b> <span style={{ color: 'var(--muted)' }}>{finalWhat}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>When:</b> <span style={{ color: 'var(--muted)' }}>{finalWhen}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Why:</b> <span style={{ color: 'var(--muted)' }}>{finalWhy}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Triggers:</b> <span style={{ color: 'var(--muted)' }}>{finalTriggers}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Inputs:</b> <span style={{ color: 'var(--muted)' }}>{finalInputs}</span></div>
+        <div style={{ fontSize: '8.5px', color: 'var(--text)' }}><b>Outputs:</b> <span style={{ color: 'var(--muted)' }}>{finalOutputs}</span></div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--surface)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
@@ -1088,32 +1253,117 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
   const [activeFileContent, setActiveFileContent] = useState<string>('');
 
   const domains = useMemo(() => {
-    const rawDomMap = (toolboxes as any)?.domains || (toolboxes as any)?.toolboxes || {};
+    const rawDomMap = (toolboxes as any)?.domains || (toolboxes as any)?.toolboxes || (typeof toolboxes === 'object' && !Array.isArray(toolboxes) ? toolboxes : {});
     return Object.entries(rawDomMap).map(([key, item]: [string, any]) => ({
       id: key,
-      ...item,
+      ...(typeof item === 'object' && item !== null ? item : {}),
     }));
   }, [toolboxes]);
 
+  const [dynWorkspaceSkills, setDynWorkspaceSkills] = useState<any[]>([]);
+  const [dynBuiltinSkills, setDynBuiltinSkills] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getWorkspaceFiles('.pi/skills').then(res => {
+      if (isMounted && res.ok && Array.isArray(res.files)) {
+        const customItems = res.files.map((f: any) => {
+          const folderName = f.name || f.path;
+          return {
+            id: folderName,
+            name: folderName,
+            domainId: 'domain_general',
+            toolboxId: 'workspace_skills',
+            source: 'workspace',
+            parents: ['domain_general', 'workspace_skills']
+          };
+        });
+        setDynWorkspaceSkills(customItems);
+      }
+    }).catch(() => {});
+
+    const fetchKernelSkills = async () => {
+      try {
+        const res = await api.getKernelSkills();
+        if (isMounted && res.ok && Array.isArray(res.skills)) {
+          const builtinItems = res.skills.map((s: any) => ({
+            id: s.name,
+            name: s.name,
+            domainId: 'domain_general',
+            toolboxId: 'system_skills',
+            source: 'built-in',
+            category: s.category || s.name,
+            isMain: !!s.isMain,
+            metadata: s.metadata,
+            parents: ['system_skills', s.name]
+          }));
+          setDynBuiltinSkills(builtinItems);
+        }
+      } catch (e) {}
+    };
+
+    fetchKernelSkills();
+
+    return () => { isMounted = false; };
+  }, [entityName]);
+
   const skillsList = useMemo(() => {
     const items: any[] = [];
+    const seenNames = new Set<string>();
+
     domains.forEach(dom => {
-      Object.entries(dom.toolboxes || {}).forEach(([tbId, tb]: [string, any]) => {
-        Object.entries(tb.skills || {}).forEach(([sId, s]: [string, any]) => {
-          const isBuiltIn = s.source === 'built-in' || (dom.id === 'domain_general' && s.source !== 'workspace');
-          items.push({
-            id: sId,
-            name: sId,
-            domainId: dom.id,
-            toolboxId: tbId,
-            source: isBuiltIn ? 'built-in' : 'workspace',
-            parents: [dom.id, tbId]
-          });
+      const tbs = dom.toolboxes || (dom.skills ? { [dom.id || 'default']: { skills: dom.skills } } : {});
+      Object.entries(tbs || {}).forEach(([tbId, tb]: [string, any]) => {
+        const skillsObj = tb?.skills || (tb?.source ? { [tbId]: tb } : {});
+        Object.entries(skillsObj || {}).forEach(([sId, s]: [string, any]) => {
+          const isBuiltIn = s?.source === 'built-in' || (dom.id === 'domain_general' && s?.source !== 'workspace');
+          if (!seenNames.has(sId)) {
+            seenNames.add(sId);
+            items.push({
+              id: sId,
+              name: sId,
+              domainId: dom.id || 'domain_general',
+              toolboxId: tbId,
+              source: isBuiltIn ? 'built-in' : 'workspace',
+              parents: [dom.id || 'domain_general', tbId]
+            });
+          }
         });
       });
     });
+
+    if ((toolboxes as any)?.skills) {
+      Object.entries((toolboxes as any).skills).forEach(([sId, s]: [string, any]) => {
+        if (!seenNames.has(sId)) {
+          seenNames.add(sId);
+          items.push({
+            id: sId,
+            name: sId,
+            domainId: 'domain_general',
+            toolboxId: 'custom',
+            source: s?.source === 'workspace' ? 'workspace' : 'built-in',
+            parents: ['domain_general', 'custom']
+          });
+        }
+      });
+    }
+
+    dynWorkspaceSkills.forEach(ws => {
+      if (!seenNames.has(ws.name)) {
+        seenNames.add(ws.name);
+        items.push(ws);
+      }
+    });
+
+    dynBuiltinSkills.forEach(bs => {
+      if (!seenNames.has(bs.name)) {
+        seenNames.add(bs.name);
+        items.push(bs);
+      }
+    });
+
     return items;
-  }, [domains]);
+  }, [domains, toolboxes, dynWorkspaceSkills, dynBuiltinSkills]);
 
   const filteredSkills = useMemo(() => {
     return skillsList.filter(s => {
@@ -1122,6 +1372,32 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
       return matchSearch && matchSource;
     });
   }, [skillsList, searchQuery, sourceFilter]);
+
+  const groupedSkills = useMemo(() => {
+    const groups: Array<{
+      category: string;
+      mainSkill?: any;
+      subSkills: any[];
+    }> = [];
+    const groupMap = new Map<string, { category: string; mainSkill?: any; subSkills: any[] }>();
+
+    filteredSkills.forEach(s => {
+      const cat = s.category || (s.source === 'workspace' ? 'Workspace Custom (.pi/skills)' : 'General');
+      if (!groupMap.has(cat)) {
+        const newGroup = { category: cat, mainSkill: undefined, subSkills: [] };
+        groupMap.set(cat, newGroup);
+        groups.push(newGroup);
+      }
+      const grp = groupMap.get(cat)!;
+      if (s.isMain) {
+        grp.mainSkill = s;
+      } else {
+        grp.subSkills.push(s);
+      }
+    });
+
+    return groups;
+  }, [filteredSkills]);
 
   const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return PRESET_INTEGRATION_CATEGORIES;
@@ -1250,46 +1526,43 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
         padding: '10px 14px',
         gap: '10px'
       }}>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', background: 'var(--surface)', padding: '2px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
-          <button
-            onClick={() => setActiveTab('skills')}
-            style={{
-              fontSize: '9.5px',
-              fontWeight: 900,
-              padding: '6px 14px',
-              background: activeTab === 'skills' ? 'linear-gradient(135deg, #c084fc, #9333ea)' : 'transparent',
-              border: 'none',
-              borderRadius: '4px',
-              color: activeTab === 'skills' ? '#fff' : 'var(--muted)',
-              cursor: 'pointer',
-              fontFamily: 'var(--mono)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ⚡ SKILLS ({skillsList.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('extensions')}
-            style={{
-              fontSize: '9.5px',
-              fontWeight: 900,
-              padding: '6px 14px',
-              background: activeTab === 'extensions' ? 'linear-gradient(135deg, #06b6d4, #0284c7)' : 'transparent',
-              border: 'none',
-              borderRadius: '4px',
-              color: activeTab === 'extensions' ? '#fff' : 'var(--muted)',
-              cursor: 'pointer',
-              fontFamily: 'var(--mono)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            🧩 INTEGRATIONS ({activePresetCount}/{totalPresetCount} ACTIVE)
-          </button>
+        {/* Dedicated Window Section Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {activeTab === 'skills' ? (
+            <div
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 900,
+                padding: '6px 14px',
+                background: 'linear-gradient(135deg, #c084fc, #9333ea)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontFamily: 'var(--mono)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              ⚡ REGISTERED SKILLS ({skillsList.length})
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 900,
+                padding: '6px 14px',
+                background: 'linear-gradient(135deg, #06b6d4, #0284c7)',
+                borderRadius: '6px',
+                color: '#fff',
+                fontFamily: 'var(--mono)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🧩 CONNECTED INTEGRATIONS ({activePresetCount}/{totalPresetCount} ACTIVE)
+            </div>
+          )}
         </div>
 
         {/* Filters */}
@@ -1334,7 +1607,7 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
 
       {/* SKILLS SECTION */}
       {activeTab === 'skills' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
               REGISTERED SKILLS ({filteredSkills.length})
@@ -1356,34 +1629,113 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
-            {filteredSkills.map(s => {
-              if (s.source === 'built-in') {
-                return (
-                  <BuiltInSkillCard
-                    key={s.id}
-                    entityName={entityName}
-                    skillName={s.name}
-                    parents={s.parents}
-                  />
-                );
-              } else {
-                return (
-                  <WorkspaceSkillCard
-                    key={s.id}
-                    entityName={entityName}
-                    skillName={s.name}
-                    parents={s.parents}
-                    onInspect={() => openInspectModal('skill', s.parents, s.name)}
-                    onRefresh={onRefresh}
-                    showToast={triggerToast}
-                    isEnabled={skillsEnabled[s.name] !== false}
-                    onToggleEnabled={handleToggleSkill}
-                  />
-                );
-              }
-            })}
-          </div>
+          {groupedSkills.map(grp => (
+            <div
+              key={grp.category}
+              style={{
+                background: 'var(--surface-alt)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}
+            >
+              {/* Section Title Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text)' }}>
+                    ⚡ {grp.category}
+                  </span>
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: 'rgba(192, 132, 252, 0.15)',
+                    color: '#c084fc',
+                    border: '1px solid rgba(192, 132, 252, 0.3)'
+                  }}>
+                    {grp.mainSkill ? '1 Main Skill' : '0 Main Skill'} • {grp.subSkills.length} Sub-Skills
+                  </span>
+                </div>
+              </div>
+
+              {/* MAIN SKILL AT TOP OF SECTION */}
+              {grp.mainSkill && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: '#0284c7', letterSpacing: '0.04em' }}>
+                      ⭐ MAIN SKILL
+                    </span>
+                  </div>
+                  {grp.mainSkill.source === 'built-in' ? (
+                    <BuiltInSkillCard
+                      entityName={entityName}
+                      skillName={grp.mainSkill.name}
+                      parents={grp.mainSkill.parents}
+                      initialMetadata={grp.mainSkill.metadata}
+                      isMainHeader={true}
+                    />
+                  ) : (
+                    <WorkspaceSkillCard
+                      entityName={entityName}
+                      skillName={grp.mainSkill.name}
+                      parents={grp.mainSkill.parents}
+                      onInspect={() => openInspectModal('skill', grp.mainSkill.parents, grp.mainSkill.name)}
+                      onRefresh={onRefresh}
+                      showToast={triggerToast}
+                      isEnabled={skillsEnabled[grp.mainSkill.name] !== false}
+                      onToggleEnabled={handleToggleSkill}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* SUB-SKILLS UNDER THE SAME SECTION */}
+              {grp.subSkills.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: grp.mainSkill ? '6px' : '0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.04em' }}>
+                      ↳ SUB-SKILLS ({grp.subSkills.length})
+                    </span>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                    gap: '12px',
+                    paddingLeft: '12px',
+                    borderLeft: '2px solid var(--border-soft)'
+                  }}>
+                    {grp.subSkills.map(s => (
+                      s.source === 'built-in' ? (
+                        <BuiltInSkillCard
+                          key={s.id}
+                          entityName={entityName}
+                          skillName={s.name}
+                          parents={s.parents}
+                          initialMetadata={s.metadata}
+                        />
+                      ) : (
+                        <WorkspaceSkillCard
+                          key={s.id}
+                          entityName={entityName}
+                          skillName={s.name}
+                          parents={s.parents}
+                          onInspect={() => openInspectModal('skill', s.parents, s.name)}
+                          onRefresh={onRefresh}
+                          showToast={triggerToast}
+                          isEnabled={skillsEnabled[s.name] !== false}
+                          onToggleEnabled={handleToggleSkill}
+                        />
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 

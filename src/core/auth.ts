@@ -368,6 +368,15 @@ export function updateUserTier(tenantId: string = 'default_user', updates: Parti
   return getUserTier(tenantId);
 }
 
+export function verifyUserCard(tenantId: string = 'default_user', cardData?: { cardLast4?: string; provider?: string }): UserTierInfo {
+  return updateUserTier(tenantId, {
+    hasVerifiedCard: true,
+    cardVerified: true,
+    paymentVerified: true,
+    cardLast4: cardData?.cardLast4 || '4242'
+  });
+}
+
 export function deductLlmCredits(
   tenantId: string = 'default_user',
   model: string,

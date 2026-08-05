@@ -1,4 +1,6 @@
 import { Router, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import {
   runPiAgent,
@@ -144,6 +146,87 @@ router.get('/logs', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   const logs = getPiProcessLogs(tenantId);
   res.json({ ok: true, logs });
+});
+
+// GET /api/harness/skills — List built-in kernel skills from Fabrica_kernel/skills
+router.get('/skills', (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
+    if (!fs.existsSync(kernelSkillsDir)) {
+      res.json({ ok: true, skills: [] });
+      return;
+    }
+    const skills: {
+      name: string;
+      path: string;
+      category: string;
+      isMain: boolean;
+      metadata: Record<string, string>;
+    }[] = [];
+
+    const parseYamlOrMd = (content: string): { what: string; when: string; why: string; triggers: string; inputs: string; outputs: string } => {
+      const meta = {
+        what: '', when: '', why: '', triggers: '', inputs: '', outputs: ''
+      };
+      if (!content) return meta;
+      if (content.trim().startsWith('---')) {
+        const endYaml = content.indexOf('---', 3);
+        if (endYaml !== -1) {
+          const yamlStr = content.slice(3, endYaml);
+          for (const line of yamlStr.split('\n')) {
+            const idx = line.indexOf(':');
+            if (idx !== -1) {
+              const key = line.slice(0, idx).trim().toLowerCase();
+              const val = line.slice(idx + 1).trim();
+              if ((key === 'what' || key === 'description' || key === 'name') && !meta.what) meta.what = val;
+              if ((key === 'when' || key === 'when_to_use') && !meta.when) meta.when = val;
+              if ((key === 'why' || key === 'rationale' || key === 'purpose') && !meta.why) meta.why = val;
+              if ((key === 'triggers' || key === 'trigger_keywords' || key === 'keywords') && !meta.triggers) meta.triggers = val;
+              if ((key === 'inputs' || key === 'input' || key === 'params') && !meta.inputs) meta.inputs = val;
+              if ((key === 'outputs' || key === 'output' || key === 'results') && !meta.outputs) meta.outputs = val;
+            }
+          }
+        }
+      }
+      return meta;
+    };
+
+    const scanSkillsDir = (dir: string) => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue;
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const skillMdPath = path.join(fullPath, 'SKILL.md');
+          if (fs.existsSync(skillMdPath)) {
+            const relPath = path.relative(kernelSkillsDir, fullPath);
+            const pathParts = relPath.split(path.sep);
+            const category = pathParts[0];
+            const isMain = pathParts.length === 1;
+            let metadata = { what: '', when: '', why: '', triggers: '', inputs: '', outputs: '' };
+            try {
+              const content = fs.readFileSync(skillMdPath, 'utf-8');
+              metadata = parseYamlOrMd(content);
+            } catch (e) {}
+
+            skills.push({
+              name: entry.name,
+              path: relPath,
+              category,
+              isMain,
+              metadata
+            });
+          }
+          scanSkillsDir(fullPath);
+        }
+      }
+    };
+
+    scanSkillsDir(kernelSkillsDir);
+    res.json({ ok: true, skills });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message, skills: [] });
+  }
 });
 
 // GET /api/harness/config — Get harness config

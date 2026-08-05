@@ -104,6 +104,7 @@ export const harnessApi = {
   deletePiSession: (sessionId: string) => request<{ ok: boolean }>('/api/harness/sessions/delete', { method: 'POST', body: JSON.stringify({ sessionId }) }),
   getPiModels: () => request<{ ok: boolean; models: any[] }>('/api/harness/models'),
   getHarnessLogs: () => request<{ ok: boolean; logs: any[] }>('/api/harness/logs'),
+  getKernelSkills: () => request<{ ok: boolean; skills: any[] }>('/api/harness/skills'),
   getHarnessConfig: () => request<{ ok: boolean; config: any }>('/api/harness/config'),
   getHarnessState: (tenantId: string = 'default_user') => request<{ ok: boolean; harness: any }>(`/api/harness/state?tenantId=${encodeURIComponent(tenantId)}`),
   updateHarnessState: (updates: Record<string, any>) => request<{ ok: boolean; harness: any }>('/api/harness/state', { method: 'POST', body: JSON.stringify(updates) }),
