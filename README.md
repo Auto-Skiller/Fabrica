@@ -1,15 +1,14 @@
-
-<img width="1200" height="896" alt="_Fabrica Banner" src="https://github.com/user-attachments/assets/35242a46-86ef-4ace-ad7f-e67856f92b8d" />
-
-
-
-
-
 # Fabrica — The Business-First Autonomous Operating System
 
 > ### **Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.**
 > #### *AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.*
 > **Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.**
+
+---
+
+<img width="1200" height="896" alt="_Fabrica Banner" src="https://github.com/user-attachments/assets/35242a46-86ef-4ace-ad7f-e67856f92b8d" />
+
+---
 
 Fabrica is a Business-First autonomous operating system engineered for **non-technical solopreneurs, independent consultants, small marketing/creative agencies, small startup ops & growth teams, and researchers & analysts**. While standard AI chat interfaces execute transient single-turn queries and quickly lose context, Fabrica provides full control over a structured, repeatable 24/7 autonomous 4-stage business pipeline (**Drafting ➔ Planning ➔ Execution ➔ Delivery**), entirely from the UI, with **zero technical setup**.
 
