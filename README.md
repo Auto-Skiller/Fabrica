@@ -1,3 +1,10 @@
+
+<img width="1200" height="896" alt="_Fabrica Banner" src="https://github.com/user-attachments/assets/35242a46-86ef-4ace-ad7f-e67856f92b8d" />
+
+
+
+
+
 # Fabrica — The Business-First Autonomous Operating System
 
 > ### **Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.**
