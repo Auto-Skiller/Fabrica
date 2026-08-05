@@ -61,28 +61,28 @@ The Fabrica kernel organizes execution into 4 sequential stages, incorporating a
 ### Stage 1: Drafting (Discovery & Scoping Loop)
 - **Primary Objective**: Clarify user goals, define scope boundaries, evaluate feasibility, and collect source parameters.
 - **Discovery & Scoping Loop**: Interactive multi-turn or multi-option analysis that captures parameters into `Sources / Discovery & Scoping`.
-- **Associated Skill**: `pipeline_Drafting/pipeline_Drafting_Discovery-Scoping`
+- **Associated Skill**: `Drafting/Discovery & Scoping/SKILL.md` (or `Drafting/SKILL.md`)
 - **Output**: Structured scoping card and initial mission parameters ready for Planning.
 
 ### Stage 2: Planning (Deep Research, Analysis & Strategic Synthesis)
 - **Primary Objective**: Build an unambiguous, scored implementation blueprint prior to writing code or making system edits.
 - **Sub-Phases**:
   1. **Deep Research & Intelligence Gathering Loop**: Conducts targeted web searches, documentation verification, and competitor scans into `Sources / Deep Research & Intelligence Gathering`.
-     - *Skill*: `pipeline_Planning/pipeline_Planning_Deep-Research_Intelligence-Gathering`
+     - *Skill*: `Planning/Deep Research & Intelligence Gathering/SKILL.md`
   2. **Data Analysis & Pattern Extraction**: Ingests raw workspace datasets, calculates metrics, and identifies anomalies into `Sources / Data Analysis & Pattern Extraction`.
-     - *Skill*: `pipeline_Planning/pipeline_Planning_Data-Analysis_Pattern-Extraction`
+     - *Skill*: `Planning/Data Analysis & Pattern Extraction/SKILL.md`
   3. **Strategic Synthesis & Decision Support**: Compiles a prioritized task list scored on `benefit` (HIGH/MED/LOW), `cost` (HIGH/MED/LOW), and `worth_it` (YES/NO) into `Sources / Strategic Synthesis & Decision Support`.
-     - *Skill*: `pipeline_Planning/pipeline_Planning_Strategic-Synthesis_Decision-Support`
+     - *Skill*: `Planning/Strategic Synthesis & Decision Support/SKILL.md`
 
 ### Stage 3: Execution (Generation & Verification Loop)
 - **Primary Objective**: Sequentially execute planned tasks with transaction safety, linting, compilation, and automated validation.
 - **Sub-Phases**:
   1. **Generation**: Creates or modifies codebases, database schemas, workflow automations, or content assets under `Deliverables / Executions`.
-     - *Skill*: `pipeline_Execution/pipeline_Execution_Generation` (with specialized sub-skills: `Assets`, `Coding`, `Run-Automations`)
+     - *Skill*: `Execution/Generation/SKILL.md` (with specialized sub-skills: `Assets Generation`, `Coding`, `Automations Runing`)
   2. **Verification Loop**: Automated quality gate that cross-references generated deliverables against `Sources / Strategic Synthesis & Decision Support`.
      - **If FAIL**: Captures specific failure logs, re-triggers the Generation loop with error feedback, and attempts self-repair (up to 3 hypotheses).
      - **If PASS**: Promotes verified deliverable to `Deliverables / Reviews`.
-     - *Skill*: `pipeline_Execution/pipeline_Execution_verification`
+     - *Skill*: `Execution/verification/SKILL.md`
 
 ### Stage 4: Delivering (Review Gate & Feedback Loop)
 - **Primary Objective**: Validate production readiness and obtain final user sign-off.
@@ -90,7 +90,7 @@ The Fabrica kernel organizes execution into 4 sequential stages, incorporating a
   1. **Review Gate**: Presents production deliverables in `Deliverables / Reviews`.
      - **If USER FEEDBACK GIVEN (Not Accepted)**: Work is **ALWAYS moved to Deliverables / Executions**. The user can select a **Custom Entry Target** (any loop or stage, e.g., Drafting, Deep Research, Strategic Synthesis, Generation, Verification) to continue processing the full loop from that entry point based on feedback; if unselected, the default is to continue processing the full **Execution loop** based on feedback.
      - **If ACCEPTED**: Promotes deliverable to `Deliverables / Completed` and archives the mission (`status = 'archive'`).
-     - *Skill*: `pipeline_Delivering/pipeline_Delivering_Review`
+     - *Skill*: `Delivering/SKILL.md`
 
 ---
 
