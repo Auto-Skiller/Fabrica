@@ -40,8 +40,8 @@ Fabrica uses an enterprise **Multi-Tenant Hybrid Storage Engine** with tenant-is
 To maintain system integrity and IP separation, Fabrica enforces two distinct operational layers:
 
 1. **The Core Product (Agent Kernel)**:
-   - Contains: `/Fabrica_kernel/system_prompts/*`, `/Fabrica_kernel/skills/*`, `/Fabrica_kernel/extensions/*`.
-   - **Role**: Read-only core system intelligence and default skill library loaded during system boot-up.
+   - Contains: `/Fabrica_kernel/system_prompts/*`, `/Fabrica_kernel/skills/*`, `/Fabrica_kernel/integrations/*`.
+   - **Role**: Read-only core system intelligence, integration bridges, and default skill library loaded during system boot-up.
 2. **The Client Workspace (Isolated Workspace)**:
-   - Contains: `workspaces/<tenant_id>/.pi/` (`agent/sessions/`, `skills/`, `extensions/`), `AGENTS.md`, `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/` (`Sources/`, `Deliverables/`), and `missions/{missionId}/`.
+   - Contains: `workspaces/<tenant_id>/.pi/` (`agent/sessions/`, `skills/`), `AGENTS.md`, `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/` (`Sources/`, `Deliverables/`), and `missions/{missionId}/`.
    - **Role**: Active execution environment. Fully visible and editable by the client. Custom skills, user data sources, active missions, deliverables, and production assets persist here.

@@ -56,6 +56,7 @@ export interface TenantProfile {
   createdAt: string;
   updatedAt: string;
   settings: Record<string, any>;
+  integrations_config?: Record<string, any>;
 }
 
 export interface TenantTelemetry {

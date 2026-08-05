@@ -69,8 +69,7 @@ Every tenant operates within an isolated workspace root at `workspaces/<tenant_i
 workspaces/<tenant_id>/
 ├── .pi/                            # Hidden Pi Agent Runtime Folder
 │   ├── agent/sessions/             # Native Pi agent session history (.jsonl files)
-│   ├── skills/                     # User-defined custom skills
-│   └── extensions/                 # User-defined custom extensions
+│   └── skills/                     # User-defined custom skills
 │
 ├── AGENTS.md                       # User context file (business context, domain rules, goals - kept empty by default)
 ├── tenant.json                     # Tenant profile, user preferences, telemetry metrics, & audit logs
@@ -105,27 +104,27 @@ When adding new missions via the UI or updating `missions.json`:
 4. Proprietary prompt schema source files or system instruction templates are **never** dropped into the user's workspace. Users can only see their active mission state in `missions.json` and outputs in `workspace/`—never proprietary system prompt schemas.
 
 ### System Autonomy Levels
-1. **FULL AUTO (`autonomous`)**:
+1. **DIRECTOR (`director`)**:
    - **Auto-Mission Generation**: System automatically synthesizes and creates new contextual missions whenever active drafting/planning mission count drops below 2.
    - **Auto-QA Gatekeeping**: Agent automatically answers and approves QA gates for agent/system-created missions using workspace context.
    - **Full Lifecycle Execution**: Moves missions through pipeline stages, sequentially finishes tasks, compiles and hot-swaps new system components, and archives completed missions (`status = 'archive'`).
-2. **SEMI-AUTO (`semi-autonomous`)**:
+2. **WORKER (`worker`)**:
    - System automatically executes planning and task steps once a mission enters Planning, but requires explicit user action at QA gates for user-created missions (`user_created: true`).
-3. **SUPERVISED (`manual`)**:
+3. **OFF (`off`)**:
    - System pauses at QA gates and planning proposals, requiring manual user approval before advancing phases.
 
 ### App Configuration & State Mirroring API
 User configuration and state persist across sign-out and re-login sessions and mirror automatically into `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, and global `.stash/auth.json`:
 
-- **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/system_prompts/` (loaded by system prompt extensions) and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/context/agents-md` and `POST /api/context/agents-md`.
+- **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/system_prompts/` and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/harness/agents-md` and `POST /api/harness/agents-md`.
 - **Tenant-Isolated API Routes**:
   - `GET /api/auth/*` & `POST /api/auth/*` — auth, BYOK keys, LLM key pool rotation, and pricing tier endpoints
   - `GET /api/tenant/*` & `POST /api/tenant/*` — tenant profile, user preferences, usage metrics, telemetry, and audit logs
-  - `GET /api/harness/*` & `POST /api/harness/*` — daemon controls, chat sessions, model selection, and suggestion cards
+  - `GET /api/harness/*` & `POST /api/harness/*` — daemon controls, chat sessions, model selection, SSE streaming, and suggestion cards
   - `GET /api/missions/*` & `POST /api/missions/*` — missions CRUD, pipeline execution, and step blueprints
   - `GET /api/workspace/*` & `POST /api/workspace/*` — workspace files, phase storage (`Sources/` & `Deliverables/`), and file upload pipelines
 - **Persisted State Object (`settings` & `runtime`)**:
-  - `autonomy`: `'autonomous'` | `'semi-autonomous'` | `'manual'`
+  - `autonomy`: `'director'` | `'worker'` | `'off'`
   - `chat_sessions`: Full list of ChatSession objects with conversation histories
   - `active_session_id`: Active chat session identifier
   - `tools_enabled`: Global tools toggle state

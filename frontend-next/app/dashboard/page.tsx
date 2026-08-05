@@ -10,6 +10,7 @@ import { RuntimeYaml } from '../../components/harness/types';
 
 const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });
 import { AccountWorkspaceModal } from '../../components/auth/AccountWorkspaceModal';
+import { ContextPickerModal, AttachedContextItem } from '../../components/harness/ContextPickerModal';
 import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } from '../../components/harness/pi-models';
 import { UserHarnessService } from '../../components/harness/user-harness';
 import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../components/workspace/drive-api';
@@ -1845,7 +1846,19 @@ export default function Dashboard() {
 
   // Backlog & Review News Banner/Ticker custom states
   const [isBacklogEditorOpen, setIsBacklogEditorOpen] = useState<boolean>(false);
-  const [editedBacklog, setEditedBacklog] = useState<string[]>([]);
+
+  // BacklogItem: agent writes 'suggested', user interactions produce 'validated'
+  type BacklogItem = { id: string; text: string; type: 'suggested' | 'validated'; created_at: string };
+  const mkBacklogItem = (text: string, type: 'suggested' | 'validated' = 'validated'): BacklogItem => ({
+    id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    text, type, created_at: new Date().toISOString()
+  });
+  const normalizeBacklog = (raw: any[]): BacklogItem[] =>
+    raw.map(item => typeof item === 'string'
+      ? mkBacklogItem(item, 'validated')
+      : { id: item.id || `bl_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, text: item.text || String(item), type: item.type || 'validated', created_at: item.created_at || new Date().toISOString() });
+
+  const [editedBacklog, setEditedBacklog] = useState<BacklogItem[]>([]);
   const [newBacklogItemText, setNewBacklogItemText] = useState<string>('');
   const [activeReviewItem, setActiveReviewItem] = useState<any | null>(null);
   const [reviewFeedbackText, setReviewFeedbackText] = useState<string>('');
@@ -1962,7 +1975,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     }
   };
 
-  const handleSaveBacklog = async (updatedList: string[]) => {
+  const handleSaveBacklog = async (updatedList: BacklogItem[]) => {
     setIsSavingBacklog(true);
     let listToSave = [...updatedList];
     let showAutoMsg = false;
@@ -1972,7 +1985,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         "Conduct automated Meta/Google conversion rate telemetry checks for campaign budget rationalization.",
         "Review SMTP transaction throughput to optimize cart-abandonment trigger reliability.",
         "Validate product catalog pricing margins against regional multi-channel logs."
-      ];
+      ].map(t => mkBacklogItem(t, 'validated'));
       showAutoMsg = true;
     }
     try {
@@ -2276,6 +2289,11 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   };
 
   const handleSelectSession = (id: string) => {
+    // Guard: block session switch while agent is running
+    if (isChatLoading) {
+      setToast({ message: 'Cannot switch session while agent is running. Please wait for the current task to finish.', type: 'error', isOpen: true });
+      return;
+    }
     const s = sessions.find(x => x.id === id);
     if (s) {
       setActiveSessionId(id);
@@ -2286,6 +2304,11 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   };
 
   const handleCreateSession = async () => {
+    // Guard: block creating a new session while agent is running
+    if (isChatLoading) {
+      setToast({ message: 'Cannot create session while agent is running.', type: 'error', isOpen: true });
+      return;
+    }
     const tenantKey = user?.id || activeEntity || 'default_user';
     try {
       const res = await api.createPiSession(tenantKey, `Session ${sessions.length + 1}`);
@@ -3232,7 +3255,12 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   }, [isAccountWindowOpen, user, selectedPlan]);
   const [realtimeTableFilter, setRealtimeTableFilter] = useState<string>('all');
   const [realtimeEventFilter, setRealtimeEventFilter] = useState<string>('all');
-  const [autonomyLevel, setAutonomyLevel] = useState<'autonomous' | 'semi-autonomous' | 'manual'>('autonomous');
+  const [autonomyLevel, setAutonomyLevel] = useState<'off' | 'director' | 'worker'>(
+    () => (localStorage.getItem('fabrica_autonomy_level') as any) || 'director'
+  );
+  const [thinkingLevel, setThinkingLevel] = useState<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'>(
+    () => (localStorage.getItem('fabrica_thinking_level') as any) || 'low'
+  );
   const [autonomyInterval, setAutonomyInterval] = useState<number>(20);
   const [isAutonomyOn, setIsAutonomyOn] = useState<boolean>(true);
   const [autoMissionsProcessing, setAutoMissionsProcessing] = useState<boolean>(true);
@@ -3242,10 +3270,29 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [heartbeatStatusText, setHeartbeatStatusText] = useState<string>('Testing API Key & workspace context...');
   const [isHeartbeatRunning, setIsHeartbeatRunning] = useState<boolean>(false);
   const isHeartbeatInFlightRef = useRef<boolean>(false);
+  const heartbeatTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toolsEnabled, setToolsEnabled] = useState<boolean>(true);
   const [uiLang, setUiLang] = useState<'EN' | 'FR' | 'AR'>('EN');
   const dtxt = DASHBOARD_TEXT[uiLang] || DASHBOARD_TEXT.EN;
   const [agentLang, setAgentLang] = useState<'EN' | 'FR' | 'AR'>('EN');
+
+  // Plan 1.3: Non-English language selection warning toast
+  const handleAgentLangChange = (newLang: 'EN' | 'FR' | 'AR') => {
+    if (newLang !== 'EN') {
+      setToast({ message: '⚠️ Non-English output consumes more tokens due to tokenizer overhead. Keep English for lowest token cost.', type: 'info', isOpen: true });
+    }
+    setAgentLang(newLang);
+    localStorage.setItem('fabrica_agent_lang', newLang);
+    harnessApi.updateHarnessState({ agent_lang: newLang, output_language: newLang });
+  };
+
+  const [selectedExtraSources, setSelectedExtraSources] = useState<AttachedContextItem[]>([]);
+  const [isContextPickerOpen, setIsContextPickerOpen] = useState<boolean>(false);
+  const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number }>({
+    tokensUsed: 0,
+    maxTokens: 200000,
+    percentUsed: 0
+  });
 
   // Load theme and initial dismiss state on client mount
   useEffect(() => {
@@ -3659,7 +3706,17 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     localStorage.setItem('fabrica_agent_lang', lang);
     window.dispatchEvent(new CustomEvent('fabrica:agent-lang-change', { detail: lang }));
     harnessApi.updateHarnessState({ agent_lang: lang, output_language: lang }).catch(() => {});
+    // Plan 1.3: Language advisory — alert when switching to a non-English language
+    if (lang !== 'EN') {
+      const langLabel = lang === 'FR' ? 'French' : lang === 'AR' ? 'Arabic' : lang;
+      setToast({
+        message: `🌐 Agent language set to ${langLabel}. The agent will respond in ${langLabel} where possible. Response quality may vary by model and provider.`,
+        type: 'info',
+        isOpen: true
+      });
+    }
   };
+
 
   const toggleTheme = () => {
     const nextTheme = theme === 'light' ? 'dark' : 'light';
@@ -4425,9 +4482,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     }
   };
 
-  const handleAutonomyChange = async (newLevel: 'autonomous' | 'semi-autonomous' | 'manual') => {
+  const handleAutonomyChange = async (newLevel: 'off' | 'director' | 'worker') => {
     setAutonomyLevel(newLevel);
-    setIsAutonomyOn(true);
+    localStorage.setItem('fabrica_autonomy_level', newLevel);
+    setIsAutonomyOn(newLevel !== 'off');
     try {
       await api.saveAppConfig({
         user_id: activeEntity || 'default_user',
@@ -4441,11 +4499,8 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         autonomy: newLevel,
         autonomy_interval: autonomyInterval
       }).catch(() => {});
-      setToast({
-        message: `Autonomy set to ${newLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}!`,
-        type: 'success',
-        isOpen: true
-      });
+      const label = newLevel === 'director' ? 'DIRECTOR' : newLevel === 'worker' ? 'WORKER' : 'OFF';
+      setToast({ message: `Autonomy set to ${label}!`, type: 'success', isOpen: true });
       fetchWorkspaceData();
     } catch (err: any) {
       console.error('Failed to save autonomy config:', err);
@@ -4504,64 +4559,59 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     }
   };
 
-  useEffect(() => {
-    if (!isAutonomyOn || autonomyLevel !== 'autonomous') {
-      setHeartbeatStatus('testing');
+  // Plan 4.2: Heartbeat — now a standalone function, driven by setTimeout after agent_end
+  const runHeartbeat = async () => {
+    if (!isAutonomyOn || autonomyLevel === 'off') return;
+    if (isHeartbeatInFlightRef.current) return;
+
+    // 1. Check Key/Credit
+    const activeKey = geminiApiKey || customApiKey || (backendKeys && backendKeys.gemini ? 'backend' : '');
+    if (!activeKey) {
+      setHeartbeatStatus('no_key');
+      setHeartbeatStatusText('Agent Heartbeat Paused: No Google AI Studio key or custom API key provided. Please configure key in Account & API.');
       return;
     }
 
-    const runHeartbeat = async () => {
-      if (isHeartbeatInFlightRef.current) return;
+    // 2. Check Context
+    const hasMissions = Array.isArray(missions) && missions.length > 0;
+    const hasRawData = Array.isArray(rawDataList) && rawDataList.length > 0;
+    const hasSystems = Array.isArray(systemComponents) && systemComponents.length > 0;
+    const hasObjective = Boolean(boardContent && boardContent.trim().length > 0);
 
-      // 1. Check Key/Credit
-      const activeKey = geminiApiKey || customApiKey || (backendKeys && backendKeys.gemini ? 'backend' : '');
-      if (!activeKey) {
-        setHeartbeatStatus('no_key');
-        setHeartbeatStatusText('Agent Heartbeat Paused: No Google AI Studio key or custom API key provided. Please configure key in Account & API.');
-        return;
-      }
+    if (!hasMissions && !hasRawData && !hasSystems && !hasObjective) {
+      setHeartbeatStatus('no_context');
+      setHeartbeatStatusText('Agent Heartbeat Idle: User has not set any data sources, systems, or missions yet. Agent waiting for context.');
+      return;
+    }
 
-      // 2. Check Context (if user didn't set anything yet, agent doesn't have context to start with so he doesn't do anything)
-      const hasMissions = Array.isArray(missions) && missions.length > 0;
-      const hasRawData = Array.isArray(rawDataList) && rawDataList.length > 0;
-      const hasSystems = Array.isArray(systemComponents) && systemComponents.length > 0;
-      const hasObjective = Boolean(boardContent && boardContent.trim().length > 0);
+    isHeartbeatInFlightRef.current = true;
+    setIsHeartbeatRunning(true);
+    setHeartbeatStatus('active');
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setLastHeartbeatTime(timeStr);
+    setHeartbeatStatusText(`Agent Heartbeat Active • Last pulse at ${timeStr} • Key Validated • Agent evaluating context...`);
 
-      if (!hasMissions && !hasRawData && !hasSystems && !hasObjective) {
-        setHeartbeatStatus('no_context');
-        setHeartbeatStatusText('Agent Heartbeat Idle: User has not set any data sources, systems, or missions yet. Agent waiting for context.');
-        return;
-      }
+    try {
+      const keyToUse = activeKey === 'backend' ? undefined : activeKey;
+      const tenantKey = user?.id || activeEntity || 'default_user';
 
-      // 3. Key & Context present -> Trigger Agent Heartbeat Work
-      isHeartbeatInFlightRef.current = true;
-      setIsHeartbeatRunning(true);
-      setHeartbeatStatus('active');
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setLastHeartbeatTime(timeStr);
-      setHeartbeatStatusText(`Agent Heartbeat Active • Last pulse at ${timeStr} • Key Validated • Agent evaluating context...`);
+      const missionsSummary = (missions || []).slice(0, 10).map((m: any) => {
+        const id = m.id || m.name;
+        const title = m.title || m.name || m.id;
+        const status = m.status || m.state?.class || 'DRAFT';
+        const phase = m.phase || 'draft';
+        return `• [ID: ${id}] "${title}" (Status: ${status}, Phase: ${phase})`;
+      }).join('\n');
 
-      try {
-        const keyToUse = activeKey === 'backend' ? undefined : activeKey;
-        const tenantKey = user?.id || activeEntity || 'default_user';
+      const systemsSummary = (systemComponents || []).slice(0, 5).map((s: any) => `• System Component: ${s.name} (${s.role || 'Active'})`).join('\n');
+      const rawDataSummary = (rawDataList || []).slice(0, 5).map((d: any) => `• Data Asset: ${d.name}`).join('\n');
+      const lastSessionsSummary = (sessions || []).slice(-2).map((s: any, idx: number) => {
+        const lastMsg = s.chatHistory && s.chatHistory.length > 0 ? s.chatHistory[s.chatHistory.length - 1].text?.slice(0, 150) : (s.lastPrompt || 'No messages');
+        return `• Session ${idx + 1} (${s.name || s.id}): ${lastMsg}`;
+      }).join('\n');
 
-        const missionsSummary = (missions || []).slice(0, 10).map((m: any) => {
-          const id = m.id || m.name;
-          const title = m.title || m.name || m.id;
-          const status = m.status || m.state?.class || 'DRAFT';
-          const phase = m.phase || 'draft';
-          return `• [ID: ${id}] "${title}" (Status: ${status}, Phase: ${phase})`;
-        }).join('\n');
-
-        const systemsSummary = (systemComponents || []).slice(0, 5).map((s: any) => `• System Component: ${s.name} (${s.role || 'Active'})`).join('\n');
-        const rawDataSummary = (rawDataList || []).slice(0, 5).map((d: any) => `• Data Asset: ${d.name}`).join('\n');
-        const lastSessionsSummary = (sessions || []).slice(-2).map((s: any, idx: number) => {
-          const lastMsg = s.chatHistory && s.chatHistory.length > 0 ? s.chatHistory[s.chatHistory.length - 1].text?.slice(0, 150) : (s.lastPrompt || 'No messages');
-          return `• Session ${idx + 1} (${s.name || s.id}): ${lastMsg}`;
-        }).join('\n');
-
-        const heartbeatPrompt = `[AUTONOMOUS AGENT HEARTBEAT CYCLE - ${timeStr}]
-You are Fabrica's Autonomous AI Agent running in DIRECTOR (Full Auto) mode.
+      const heartbeatPrompt = `[AUTONOMOUS AGENT HEARTBEAT CYCLE - ${timeStr}]
+You are Fabrica's Autonomous AI Agent running in ${autonomyLevel === 'director' ? 'DIRECTOR (Full Auto)' : 'WORKER (Semi-Auto)'} mode.
 Evaluate current workspace state and session logs, then decide if any mission or system needs your direct intervention.
 
 CURRENT WORKSPACE CONTEXT:
@@ -4581,61 +4631,57 @@ AGENT DIRECTIVES:
 2. If you decide to advance a mission, include: ACTION: ADVANCE_MISSION id="<MISSION_ID>" targetStatus="<planning|execution|done>"
 3. Keep your response brief, professional, and clear.`;
 
-        const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang, activeSessionId, tenantKey, true);
+      const res = await api.chatAgent(heartbeatPrompt, [], keyToUse, chatModel, false, agentLang, activeSessionId, tenantKey, true);
 
-        if (res && res.ok && res.text) {
-          const agentText = res.text;
+      if (res && res.ok && res.text) {
+        const agentText = res.text;
 
-          // Check if Agent decided to advance a mission
-          const advanceMatch = agentText.match(/ACTION:\s*ADVANCE_MISSION\s+id=["']?([^"'\s]+)["']?\s+targetStatus=["']?([^"'\s]+)["']?/i);
-          if (advanceMatch) {
-            const targetId = advanceMatch[1];
-            const targetStatus = advanceMatch[2].toLowerCase();
-            const targetMission = (missions || []).find((m: any) => m.id === targetId || m.name === targetId);
-            if (targetMission) {
-              await handleUpdateMissionStatus(targetMission, targetStatus);
-              setToast({
-                message: `🤖 [AGENT HEARTBEAT] Agent advanced mission '${targetMission.title || targetMission.name}' to ${targetStatus.toUpperCase()}!`,
-                type: 'success',
-                isOpen: true
-              });
-            }
+        const advanceMatch = agentText.match(/ACTION:\s*ADVANCE_MISSION\s+id=["']?([^"'\s]+)["']?\s+targetStatus=["']?([^"'\s]+)["']?/i);
+        if (advanceMatch) {
+          const targetId = advanceMatch[1];
+          const targetStatus = advanceMatch[2].toLowerCase();
+          const targetMission = (missions || []).find((m: any) => m.id === targetId || m.name === targetId);
+          if (targetMission) {
+            await handleUpdateMissionStatus(targetMission, targetStatus);
+            setToast({
+              message: `🤖 [AGENT HEARTBEAT] Agent advanced mission '${targetMission.title || targetMission.name}' to ${targetStatus.toUpperCase()}!`,
+              type: 'success',
+              isOpen: true
+            });
           }
-
-          // Record Agent's autonomous action in Chat History
-          setChatHistory(prev => [
-            ...prev,
-            {
-              sender: 'agent',
-              text: `🤖 **[AUTONOMOUS HEARTBEAT ${timeStr}]**:\n${agentText}`
-            }
-          ]);
-
-          fetchWorkspaceData();
-          setHeartbeatStatusText(`Agent Heartbeat Active • Last pulse at ${timeStr} • Agent cycle completed.`);
-        } else {
-          setHeartbeatStatusText(`Agent Heartbeat Pulse at ${timeStr} • Standby.`);
         }
-      } catch (err: any) {
-        console.warn('Agent Heartbeat Error:', err);
-        setHeartbeatStatusText(`Agent Heartbeat pulse completed with fallback at ${timeStr}`);
-      } finally {
-        setIsHeartbeatRunning(false);
-        isHeartbeatInFlightRef.current = false;
+
+        setChatHistory(prev => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: `🤖 **[AUTONOMOUS HEARTBEAT ${timeStr}]**:\n${agentText}`
+          }
+        ]);
+
+        fetchWorkspaceData();
+        setHeartbeatStatusText(`Agent Heartbeat Active • Last pulse at ${timeStr} • Agent cycle completed.`);
+      } else {
+        setHeartbeatStatusText(`Agent Heartbeat Pulse at ${timeStr} • Standby.`);
       }
-    };
+    } catch (err: any) {
+      console.warn('Agent Heartbeat Error:', err);
+      setHeartbeatStatusText(`Agent Heartbeat pulse completed with fallback at ${timeStr}`);
+    } finally {
+      setIsHeartbeatRunning(false);
+      isHeartbeatInFlightRef.current = false;
+    }
+  };
 
-    // Execute heartbeat initial check
+  // Plan 4.2: Initial heartbeat check on autonomy mode change (no setInterval)
+  useEffect(() => {
+    if (!isAutonomyOn || autonomyLevel === 'off') {
+      setHeartbeatStatus('testing');
+      if (heartbeatTimeoutRef.current) clearTimeout(heartbeatTimeoutRef.current);
+      return;
+    }
     runHeartbeat();
-
-    // Set heartbeat interval (realtimed from autonomyInterval setting)
-    const intervalMs = Math.max(3000, (autonomyInterval || 20) * 1000);
-    const interval = setInterval(() => {
-      runHeartbeat();
-    }, intervalMs);
-
-    return () => clearInterval(interval);
-  }, [isAutonomyOn, autonomyLevel, autonomyInterval, activeEntity]);
+  }, [isAutonomyOn, autonomyLevel, activeEntity]);
 
   const handleUpdateMissionField = async (mission: any, fieldPath: string[], value: any) => {
     try {
@@ -5517,7 +5563,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
   const missionEventQueueRef = useRef<Array<{ action: 'ADDED' | 'MOVED'; mission: any; extraInfo?: string }>>([]);
 
   const processMissionEvent = async (action: 'ADDED' | 'MOVED', mission: any, extraInfo?: string) => {
-    const isDirector = autonomyLevel === 'autonomous' || autonomyLevel === 'director' || (typeof isAutonomyOn !== 'undefined' && isAutonomyOn);
+    const isDirector = autonomyLevel === 'director' || (typeof isAutonomyOn !== 'undefined' && isAutonomyOn && autonomyLevel !== 'worker' && autonomyLevel !== 'off');
     const modeStr = isDirector ? 'DIRECTOR (Autonomous Mode)' : 'WORKER (Interactive / Semi-Autonomous Mode)';
 
     const missionTitle = mission.title || mission.objective || mission.id || 'Untitled Mission';
@@ -5587,8 +5633,20 @@ ${isDirector ? `
 
   // Agent Chat trigger
   const handleSendChat = async (msgOverride?: string) => {
-    const msg = (msgOverride || chatMessage).trim();
-    if (!msg) return;
+    let msg = (msgOverride || chatMessage).trim();
+    if (!msg) {
+      if (selectedExtraSources.length === 0) return;
+      msg = 'Evaluate attached context items and assist.';
+    }
+
+    // Plan 1.1-B: Attach extra context items to prompt
+    if (selectedExtraSources.length > 0) {
+      const contextBlock = selectedExtraSources.map(item =>
+        item.path ? `@${item.path}` : `[ATTACHED ${item.type.toUpperCase()}: ${item.label}]\n${item.content}`
+      ).join('\n\n');
+      msg = `${contextBlock}\n\n${msg}`;
+      setSelectedExtraSources([]);
+    }
 
     lastSendTimeRef.current = Date.now();
     setChatMessage('');
@@ -5597,27 +5655,85 @@ ${isDirector ? `
     const controller = new AbortController();
     chatAbortControllerRef.current = controller;
 
-    const updatedHistory = [...chatHistory, { sender: 'user' as const, text: msg }];
+    const updatedHistory = [
+      ...chatHistory,
+      { sender: 'user' as const, text: msg },
+      { sender: 'agent' as const, text: '⚡ Thinking...' }
+    ];
     setChatHistory(updatedHistory);
 
     try {
-      // Map history to server spec
-      const formattedHistory = updatedHistory.map(h => ({
+      const formattedHistory = updatedHistory.slice(0, -1).map(h => ({
         sender: h.sender === 'user' ? 'user' : 'model',
         text: h.text
       }));
 
       const tenantKey = user?.id || activeEntity || 'default_user';
       const activeCustomKey = customApiKey && customApiKey.trim().length > 0 ? customApiKey.trim() : undefined;
-      const res = await api.chatAgent(msg, formattedHistory, activeCustomKey, chatModel, webSearchEnabled, agentLang, activeSessionId, tenantKey, true, controller.signal);
+
+      let accumulatedStreamText = '';
+      const res = await api.chatAgentStream(
+        msg,
+        formattedHistory,
+        activeCustomKey,
+        chatModel,
+        webSearchEnabled,
+        agentLang,
+        activeSessionId,
+        tenantKey,
+        true,
+        controller.signal,
+        thinkingLevel,
+        (chunkData: any) => {
+          if (chunkData.type === 'message' && typeof chunkData.content === 'string') {
+            accumulatedStreamText += chunkData.content;
+          } else if (chunkData.type === 'turn_end' && chunkData.message) {
+            const content = chunkData.message.content;
+            if (typeof content === 'string') accumulatedStreamText = content;
+            else if (Array.isArray(content)) {
+              accumulatedStreamText = content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
+            }
+            if (chunkData.message.usage) {
+              const inT = chunkData.message.usage.input || 0;
+              const outT = chunkData.message.usage.output || 0;
+              const total = inT + outT;
+              const maxT = chunkData.message.usage.contextWindow || 200000;
+              setPiContext({
+                tokensUsed: total,
+                maxTokens: maxT,
+                percentUsed: Math.min(100, Math.round((total / maxT) * 100))
+              });
+            }
+          } else if (chunkData.text) {
+            accumulatedStreamText = chunkData.text;
+          }
+
+          if (accumulatedStreamText) {
+            setChatHistory(prev => {
+              const updated = [...prev];
+              const lastIdx = updated.length - 1;
+              if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+                updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
+              }
+              return updated;
+            });
+          }
+        }
+      );
+
       fetchUserTierData();
       if (res.ok) {
-        setChatHistory(prev => [...prev, { sender: 'agent', text: res.text }]);
-        if (res.suggestions && Array.isArray(res.suggestions) && res.suggestions.length > 0) {
-          setAgentSuggestions(res.suggestions);
-          api.patchEntity(activeEntity, 'runtime', ['suggestions'], res.suggestions).catch(() => null);
+        if (accumulatedStreamText) {
+          setChatHistory(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+              updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
+            }
+            return updated;
+          });
         }
-        const lowerText = (res.text || '').toLowerCase();
+        const lowerText = (res.text || accumulatedStreamText || '').toLowerCase();
         if (
           lowerText.includes('no key') ||
           lowerText.includes('api key') ||
@@ -5632,7 +5748,14 @@ ${isDirector ? `
         }
       } else {
         const errorMsg = res.text || res.error || 'Connection lost or API service unavailable. Ensure your API Key is configured in settings.';
-        setChatHistory(prev => [...prev, { sender: 'agent', text: errorMsg }]);
+        setChatHistory(prev => {
+          const updated = [...prev];
+          const lastIdx = updated.length - 1;
+          if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+            updated[lastIdx] = { sender: 'agent', text: errorMsg };
+          }
+          return updated;
+        });
         if (errorMsg.toLowerCase().includes('key') || errorMsg.toLowerCase().includes('card') || errorMsg.toLowerCase().includes('setting')) {
           setIsAccountWindowOpen(true);
           setToast({ message: 'API Key or configuration required. Opening settings...', type: 'warn', isOpen: true });
@@ -5654,6 +5777,16 @@ ${isDirector ? `
       await fetchWorkspaceData();
       await runPostTurnAutomations();
 
+      // Read updated suggestions from harness.json after agent turn completes
+      try {
+        const harnessState = await harnessApi.getHarnessState(tenantKey);
+        if (harnessState?.harness?.suggestions && Array.isArray(harnessState.harness.suggestions) && harnessState.harness.suggestions.length > 0) {
+          setAgentSuggestions(harnessState.harness.suggestions);
+        } else if (harnessState?.suggestions && Array.isArray(harnessState.suggestions) && harnessState.suggestions.length > 0) {
+          setAgentSuggestions(harnessState.suggestions);
+        }
+      } catch (_) {}
+
       // Dequeue queued mission event if any after turn ends
       if (missionEventQueueRef.current.length > 0) {
         const nextEvent = missionEventQueueRef.current.shift();
@@ -5662,6 +5795,13 @@ ${isDirector ? `
             processMissionEvent(nextEvent.action, nextEvent.mission, nextEvent.extraInfo);
           }, 400);
         }
+      }
+
+      // Plan 4.2: Schedule next heartbeat via setTimeout after agent_end
+      if (isAutonomyOn && autonomyLevel !== 'off') {
+        const intervalMs = Math.max(20000, (autonomyInterval || 20) * 1000);
+        if (heartbeatTimeoutRef.current) clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = setTimeout(() => { runHeartbeat(); }, intervalMs);
       }
     }
   };
@@ -5987,6 +6127,14 @@ ${isDirector ? `
   };
 
   const renderModelOptions = () => {
+    if (tokenBillingMode === 'managed' || tokenBillingMode === 'paug') {
+      return (
+        <option value="managed">
+          Managed — no model selection
+        </option>
+      );
+    }
+
     if (tokenBillingMode === 'pool') {
       return (
         <optgroup label="🏊 Fabrica System Pool (Free Allocation)" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
@@ -6001,7 +6149,14 @@ ${isDirector ? `
 
     const providers = buildProvidersFromPiCli(piModelsList);
 
-    if (!providers || providers.length === 0) {
+    const activeProviders = providers.filter((prov) => {
+      if (showOnlyFree) {
+        return prov.id === 'google' || prov.id === 'openrouter' || prov.id === 'groq';
+      }
+      return true;
+    });
+
+    if (!activeProviders || activeProviders.length === 0) {
       return (
         <option value="gemini-3.6-flash">
           google/gemini-3.6-flash (Agent CLI Default)
@@ -6011,7 +6166,7 @@ ${isDirector ? `
 
     return (
       <>
-        {providers.map((prov) => (
+        {activeProviders.map((prov) => (
           <optgroup
             key={prov.id}
             label={`${prov.name} — [${prov.badge}]`}
@@ -7896,28 +8051,82 @@ ${isDirector ? `
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingLeft: '3px', paddingRight: '3px', paddingTop: '0px', paddingBottom: '0px' }}>
                     {/* Model Selector */}
                     <select
-                      value={chatModel}
-                      onChange={(e) => handleModelChange(e.target.value)}
+                      value={tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'managed' : chatModel}
+                      disabled={tokenBillingMode === 'managed' || tokenBillingMode === 'paug'}
+                      onChange={(e) => {
+                        if (e.target.value !== 'managed') {
+                          handleModelChange(e.target.value);
+                        }
+                      }}
+                      title={tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? "Managed — no model selection (system routed)" : "Select AI Model"}
                       style={{
                         background: 'var(--surface-alt)',
                         border: '1px solid var(--border-soft)',
                         borderRadius: '4px',
-                        color: 'var(--accent)',
+                        color: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'var(--muted)' : 'var(--accent)',
                         fontSize: '8px',
                         fontFamily: 'var(--mono)',
                         fontWeight: 800,
                         outline: 'none',
-                        cursor: 'pointer',
+                        cursor: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'not-allowed' : 'pointer',
                         padding: '1px 0px',
-                        maxWidth: '85px',
+                        maxWidth: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? '140px' : '85px',
                         height: '22px',
                         textTransform: 'uppercase',
                         textOverflow: 'ellipsis',
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        opacity: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 0.7 : 1
                       }}
                     >
                       {renderModelOptions()}
                     </select>
+
+                    {/* BYOK Mode Controls Strip */}
+                    {tokenBillingMode === 'byok' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowOnlyFree(!showOnlyFree)}
+                          title={showOnlyFree ? "Show Only Free Models ENABLED" : "Show Only Free Models DISABLED"}
+                          style={{
+                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            borderRadius: '4px', border: showOnlyFree ? '1px solid #10b981' : '1px solid var(--border-soft)',
+                            background: showOnlyFree ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface-alt)',
+                            color: showOnlyFree ? '#10b981' : 'var(--text-bright)',
+                            cursor: 'pointer', flexShrink: 0
+                          }}
+                        >
+                          {showOnlyFree ? '⚡ FREE ONLY' : 'ALL'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAutoFreeFallback(!autoFreeFallback)}
+                          title={autoFreeFallback ? "Auto Free Fallback ENABLED" : "Auto Free Fallback DISABLED"}
+                          style={{
+                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            borderRadius: '4px', border: autoFreeFallback ? '1px solid #8b5cf6' : '1px solid var(--border-soft)',
+                            background: autoFreeFallback ? 'rgba(139, 92, 246, 0.15)' : 'var(--surface-alt)',
+                            color: autoFreeFallback ? '#8b5cf6' : 'var(--text-bright)',
+                            cursor: 'pointer', flexShrink: 0
+                          }}
+                        >
+                          {autoFreeFallback ? '🔄 ROTATE' : 'OFF'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsAccountWindowOpen(true)}
+                          title="Configure Provider API Keys & Rotation Settings"
+                          style={{
+                            height: '22px', padding: '0 4px', fontSize: '7.5px', fontWeight: 800,
+                            borderRadius: '4px', border: '1px solid var(--border-soft)',
+                            background: 'var(--surface-alt)', color: 'var(--text)',
+                            cursor: 'pointer', flexShrink: 0
+                          }}
+                        >
+                          ⚙️ KEYS
+                        </button>
+                      </div>
+                    )}
 
                     {/* Merged Active Session Button (Small compact badge style) */}
                     <div style={{ position: 'relative' }}>
@@ -8241,7 +8450,7 @@ ${isDirector ? `
                             {/* Top Suggestion Card (3rd card placed above - 2 lines layout) */}
                             {topCard && (
                               <button
-                                onClick={() => handleSendChat(topCard.prompt)}
+                                onClick={() => { setChatMessage(topCard.prompt); }}
                                 title={`${topCard.title}${topCard.desc ? ': ' + topCard.desc : ''}`}
                                 style={{
                                   display: 'flex',
@@ -8288,7 +8497,7 @@ ${isDirector ? `
                               {bottomCards.map((s, idx) => (
                                 <button
                                   key={idx}
-                                  onClick={() => handleSendChat(s.prompt)}
+                                  onClick={() => { setChatMessage(s.prompt); }}
                                   title={`${s.title}${s.desc ? ': ' + s.desc : ''}`}
                                   style={{
                                     display: 'flex',
@@ -8335,9 +8544,38 @@ ${isDirector ? `
                           height: '1px',
                           background: 'var(--border-soft)',
                           marginTop: '4px',
-                          marginBottom: '6px'
-                        }}
-                      />
+                      {/* Plan 1.1-B: Attached Extra Context Chips */}
+                      {selectedExtraSources.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                          {selectedExtraSources.map((item) => (
+                            <div
+                              key={item.id}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: 'rgba(99, 102, 241, 0.12)',
+                                border: '1px solid rgba(99, 102, 241, 0.3)',
+                                color: 'var(--accent)',
+                                fontSize: '8.5px',
+                                fontWeight: 800
+                              }}
+                            >
+                              <span>{item.type === 'file' ? '📄' : item.type === 'mission' ? '🎯' : '📦'}</span>
+                              <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedExtraSources(prev => prev.filter(i => i.id !== item.id))}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '9px', padding: '0 2px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       <textarea
                         id="agent-chat-textarea"
@@ -8345,10 +8583,12 @@ ${isDirector ? `
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
+                          // Shift+Enter = send, bare Enter = insert newline (Plan 1.1-C)
+                          if (e.key === 'Enter' && e.shiftKey) {
                             e.preventDefault();
                             handleSendChat();
                           }
+                          // bare Enter: let textarea handle naturally (inserts \n)
                         }}
                         onMouseUp={(e) => {
                           const target = e.currentTarget;
@@ -8599,7 +8839,86 @@ ${isDirector ? `
                           <span>{webSearchEnabled ? 'WEB ON' : 'WEB OFF'}</span>
                         </button>
 
+                        {/* Plan 1.5: Live Session Context Progress Bar */}
+                        <div
+                          title={`Session Context Window: ${piContext.tokensUsed.toLocaleString()} / ${piContext.maxTokens.toLocaleString()} tokens (${piContext.percentUsed}%)`}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            height: '22px',
+                            padding: '0 6px',
+                            background: 'var(--surface-alt)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '4px',
+                            fontSize: '8px',
+                            fontWeight: 800,
+                            color: 'var(--text-bright)',
+                            flexShrink: 0
+                          }}
+                        >
+                          <span style={{ fontSize: '8.5px' }}>📊</span>
+                          <div style={{ width: '36px', height: '5px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: `${Math.max(4, Math.min(100, piContext.percentUsed))}%`,
+                                height: '100%',
+                                background: piContext.percentUsed > 85 ? '#ef4444' : piContext.percentUsed > 60 ? '#f59e0b' : '#10b981',
+                                transition: 'width 0.3s ease'
+                              }}
+                            />
+                          </div>
+                          <span>{piContext.percentUsed}%</span>
+                        </div>
 
+                        {/* Thinking Level Dropdown */}
+                        <select
+                          value={thinkingLevel}
+                          onChange={(e) => {
+                            const v = e.target.value as typeof thinkingLevel;
+                            setThinkingLevel(v);
+                            localStorage.setItem('fabrica_thinking_level', v);
+                          }}
+                          title="Agent Thinking Level (--thinking)"
+                          style={{
+                            height: '22px', padding: '0 4px', fontSize: '8px', fontWeight: 700,
+                            borderRadius: '4px', border: thinkingLevel !== 'off' ? '1px solid rgba(139,92,246,0.5)' : '1px solid var(--border-soft)',
+                            background: thinkingLevel !== 'off' ? 'rgba(139,92,246,0.12)' : 'var(--surface-alt)',
+                            color: thinkingLevel !== 'off' ? '#8b5cf6' : 'var(--text-bright)',
+                            cursor: 'pointer', flexShrink: 0, outline: 'none'
+                          }}
+                        >
+                          <option value="off">🧠 OFF</option>
+                          <option value="minimal">🧠 MINIMAL</option>
+                          <option value="low">🧠 LOW</option>
+                          <option value="medium">🧠 MED</option>
+                          <option value="high">🧠 HIGH</option>
+                          <option value="xhigh">🧠 XHIGH</option>
+                          <option value="max">🧠 MAX</option>
+                        {/* Plan 1.1-B: + Context Picker Button */}
+                        <button
+                          type="button"
+                          onClick={() => setIsContextPickerOpen(true)}
+                          title="Attach extra context (Files, Missions, Workspace Data Assets)"
+                          style={{
+                            height: '28px',
+                            width: '28px',
+                            padding: 0,
+                            fontSize: '14px',
+                            fontWeight: 900,
+                            borderRadius: '4px',
+                            border: selectedExtraSources.length > 0 ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                            background: selectedExtraSources.length > 0 ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-alt)',
+                            color: selectedExtraSources.length > 0 ? 'var(--accent)' : 'var(--text-bright)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          +
+                        </button>
 
                         {isChatLoading ? (
                           <button
@@ -11668,7 +11987,7 @@ ${isDirector ? `
                   background: 'rgba(0,0,0,0.25)',
                   fontWeight: 900
                 }}>
-                  {!isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'autonomous' ? 'DIRECTOR' : 'WORKER'}
+                  {autonomyLevel === 'off' || !isAutonomyOn ? 'SUPERVISED' : autonomyLevel === 'director' ? 'DIRECTOR' : 'WORKER'}
                 </span>
               </div>
             </button>
@@ -11718,37 +12037,37 @@ ${isDirector ? `
                 </div>
 
                 <button
-                  onClick={() => handleAutonomyChange('autonomous')}
+                  onClick={() => handleAutonomyChange('director')}
                   style={{
                     display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
                     borderRadius: '4px',
-                    border: isAutonomyOn && autonomyLevel === 'autonomous' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
-                    background: isAutonomyOn && autonomyLevel === 'autonomous' ? 'rgba(16,185,129,0.12)' : 'var(--surface-alt)',
-                    color: isAutonomyOn && autonomyLevel === 'autonomous' ? '#10b981' : 'var(--text)',
+                    border: isAutonomyOn && autonomyLevel === 'director' ? '1.5px solid #10b981' : '1px solid var(--border-soft)',
+                    background: isAutonomyOn && autonomyLevel === 'director' ? 'rgba(16,185,129,0.12)' : 'var(--surface-alt)',
+                    color: isAutonomyOn && autonomyLevel === 'director' ? '#10b981' : 'var(--text)',
                     cursor: 'pointer', textAlign: 'left'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
                     <span>👑 DIRECTOR Mode</span>
-                    {isAutonomyOn && autonomyLevel === 'autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                    {isAutonomyOn && autonomyLevel === 'director' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
                   </div>
                   <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>Agent wakes up via Heartbeat and executes actions</div>
                 </button>
 
                 <button
-                  onClick={() => handleAutonomyChange('semi-autonomous')}
+                  onClick={() => handleAutonomyChange('worker')}
                   style={{
                     display: 'flex', flexDirection: 'column', gap: '2px', padding: '5px 6px',
                     borderRadius: '4px',
-                    border: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
-                    background: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? 'rgba(245,158,11,0.12)' : 'var(--surface-alt)',
-                    color: isAutonomyOn && autonomyLevel === 'semi-autonomous' ? '#f59e0b' : 'var(--text)',
+                    border: isAutonomyOn && autonomyLevel === 'worker' ? '1.5px solid #f59e0b' : '1px solid var(--border-soft)',
+                    background: isAutonomyOn && autonomyLevel === 'worker' ? 'rgba(245,158,11,0.12)' : 'var(--surface-alt)',
+                    color: isAutonomyOn && autonomyLevel === 'worker' ? '#f59e0b' : 'var(--text)',
                     cursor: 'pointer', textAlign: 'left'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '8.5px', fontWeight: 800 }}>
                     <span>🛠️ WORKER Mode</span>
-                    {isAutonomyOn && autonomyLevel === 'semi-autonomous' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
+                    {isAutonomyOn && autonomyLevel === 'worker' && <span style={{ fontSize: '8px', fontWeight: 900 }}>✓ ACTIVE</span>}
                   </div>
                   <div style={{ fontSize: '7px', color: 'var(--muted)', fontWeight: 600 }}>AI performs planning with approval checkpoints</div>
                 </button>
@@ -11795,6 +12114,7 @@ ${isDirector ? `
                 flexShrink: 0
               }}
             >
+              <option value={20}>⏱️ 20s</option>
               <option value={60}>⏱️ 1 min</option>
               <option value={120}>⏱️ 2 min</option>
               <option value={300}>⏱️ 5 min</option>
@@ -11803,7 +12123,7 @@ ${isDirector ? `
               <option value={3600}>⏱️ 1 h</option>
               <option value={14400}>⏱️ 4 h</option>
               <option value={86400}>⏱️ 1 D</option>
-              {![60, 120, 300, 900, 1800, 3600, 14400, 86400].includes(autonomyInterval) && (
+              {![20, 60, 120, 300, 900, 1800, 3600, 14400, 86400].includes(autonomyInterval) && (
                 <option value={autonomyInterval}>⏱️ {autonomyInterval}s</option>
               )}
             </select>
@@ -11852,7 +12172,7 @@ ${isDirector ? `
               {/* Interactive Count Badge Button for Backlog */}
               <button
                 onClick={() => {
-                  setEditedBacklog(runtime?.backlog || []);
+                  setEditedBacklog(normalizeBacklog(runtime?.backlog || []));
                   setIsBacklogEditorOpen(true);
                 }}
                 style={{
@@ -15116,110 +15436,82 @@ ${isDirector ? `
                 </div>
               ) : (
                 editedBacklog.map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 10px', borderRadius: '6px' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#10b981', minWidth: '20px' }}>
-                      #{idx + 1}
-                    </span>
+                  <div key={item.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: 'var(--surface-alt)',
+                    border: `1px solid ${item.type === 'suggested' ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.25)'}`,
+                    padding: '6px 10px', borderRadius: '6px'
+                  }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#10b981', minWidth: '20px' }}>#{idx + 1}</span>
+                    {/* Type badge */}
+                    <span style={{
+                      fontSize: '7px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                      padding: '2px 5px', borderRadius: '3px', flexShrink: 0,
+                      background: item.type === 'suggested' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.12)',
+                      color: item.type === 'suggested' ? '#f59e0b' : '#10b981',
+                      border: `1px solid ${item.type === 'suggested' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.25)'}`
+                    }}>{item.type === 'suggested' ? 'SUGGESTED' : 'VALIDATED'}</span>
                     <input
                       type="text"
-                      value={item}
+                      value={item.text}
                       onChange={(e) => {
                         const copy = [...editedBacklog];
-                        copy[idx] = e.target.value;
+                        copy[idx] = { ...copy[idx], text: e.target.value, type: 'validated' };
                         setEditedBacklog(copy);
                       }}
                       style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--text-bright)',
-                        fontSize: '10px',
-                        flex: 1,
-                        outline: 'none',
-                        fontFamily: 'var(--mono)'
+                        background: 'transparent', border: 'none',
+                        color: 'var(--text-bright)', fontSize: '10px',
+                        flex: 1, outline: 'none', fontFamily: 'var(--mono)'
                       }}
                       placeholder={`Goal #${idx + 1}...`}
                     />
-                    
                     {/* Action controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {item.type === 'suggested' && (
+                        <button
+                          onClick={() => { const c=[...editedBacklog]; c[idx]={...c[idx],type:'validated'}; setEditedBacklog(c); }}
+                          style={{ background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:'3px',color:'#10b981',fontSize:'7.5px',fontWeight:800,padding:'2px 5px',cursor:'pointer',flexShrink:0 }}
+                          title="Mark as Validated"
+                        >✓ Validate</button>
+                      )}
                       <button
                         onClick={() => {
                           if (idx === 0) return;
                           const copy = [...editedBacklog];
-                          const t = copy[idx];
-                          copy[idx] = copy[idx - 1];
-                          copy[idx - 1] = t;
+                          const t = copy[idx]; copy[idx] = copy[idx - 1]; copy[idx - 1] = t;
+                          if (copy[idx - 1].type === 'suggested') copy[idx - 1] = { ...copy[idx - 1], type: 'validated' };
                           setEditedBacklog(copy);
                         }}
                         disabled={idx === 0}
-                        style={{
-                          background: 'rgba(255,255,255,0.02)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '3px',
-                          color: idx === 0 ? 'var(--muted-dark)' : 'var(--text)',
-                          fontSize: '8px',
-                          padding: '3px 6px',
-                          cursor: idx === 0 ? 'not-allowed' : 'pointer'
-                        }}
+                        style={{ background:'rgba(255,255,255,0.02)',border:'1px solid var(--border-soft)',borderRadius:'3px',color:idx===0?'var(--muted-dark)':'var(--text)',fontSize:'8px',padding:'3px 6px',cursor:idx===0?'not-allowed':'pointer' }}
                         title="Move Up"
-                      >
-                        ▲
-                      </button>
+                      >▲</button>
                       <button
                         onClick={() => {
                           if (idx === editedBacklog.length - 1) return;
                           const copy = [...editedBacklog];
-                          const t = copy[idx];
-                          copy[idx] = copy[idx + 1];
-                          copy[idx + 1] = t;
+                          const t = copy[idx]; copy[idx] = copy[idx + 1]; copy[idx + 1] = t;
+                          if (copy[idx + 1].type === 'suggested') copy[idx + 1] = { ...copy[idx + 1], type: 'validated' };
                           setEditedBacklog(copy);
                         }}
                         disabled={idx === editedBacklog.length - 1}
-                        style={{
-                          background: 'rgba(255,255,255,0.02)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '3px',
-                          color: idx === editedBacklog.length - 1 ? 'var(--muted-dark)' : 'var(--text)',
-                          fontSize: '8px',
-                          padding: '3px 6px',
-                          cursor: idx === editedBacklog.length - 1 ? 'not-allowed' : 'pointer'
-                        }}
+                        style={{ background:'rgba(255,255,255,0.02)',border:'1px solid var(--border-soft)',borderRadius:'3px',color:idx===editedBacklog.length-1?'var(--muted-dark)':'var(--text)',fontSize:'8px',padding:'3px 6px',cursor:idx===editedBacklog.length-1?'not-allowed':'pointer' }}
                         title="Move Down"
-                      >
-                        ▼
-                      </button>
+                      >▼</button>
                       <button
                         onClick={() => {
-                          const copy = editedBacklog.filter((_, itemIdx) => itemIdx !== idx);
+                          const copy = editedBacklog.filter((_,i)=>i!==idx);
                           setEditedBacklog(copy);
                           if (copy.length === 0) {
-                            const autoGoals = [
-                              "Synthesize customer chat transcripts (csv) to align with Gemini recommendation templates.",
-                              "Conduct automated Meta/Google conversion rate telemetry checks for campaign budget rationalization.",
-                              "Review SMTP transaction throughput to optimize cart-abandonment trigger reliability.",
-                              "Validate product catalog pricing margins against regional multi-channel logs."
-                            ];
+                            const autoGoals=[ "Synthesize customer chat transcripts (csv) to align with Gemini recommendation templates.", "Conduct automated Meta/Google conversion rate telemetry checks for campaign budget rationalization.", "Review SMTP transaction throughput to optimize cart-abandonment trigger reliability.", "Validate product catalog pricing margins against regional multi-channel logs." ].map(t=>mkBacklogItem(t,'validated'));
                             setEditedBacklog(autoGoals);
-                            setToast({
-                              message: "⚡ Backlog cleared! Agent vision has auto-generated next strategic goals.",
-                              type: 'info',
-                              isOpen: true
-                            });
+                            setToast({ message:"⚡ Backlog cleared! Agent vision has auto-generated next strategic goals.", type:'info', isOpen:true });
                           }
                         }}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.08)',
-                          border: '1px solid rgba(239, 68, 68, 0.25)',
-                          borderRadius: '3px',
-                          color: '#ef4444',
-                          fontSize: '8px',
-                          padding: '3px 6px',
-                          cursor: 'pointer'
-                        }}
+                        style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'3px',color:'#ef4444',fontSize:'8px',padding:'3px 6px',cursor:'pointer' }}
                         title="Delete goal"
-                      >
-                        🗑️
-                      </button>
+                      >🗑️</button>
                     </div>
                   </div>
                 ))
@@ -15234,7 +15526,7 @@ ${isDirector ? `
                   onChange={(e) => setNewBacklogItemText(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && newBacklogItemText.trim()) {
-                      setEditedBacklog([...editedBacklog, newBacklogItemText.trim()]);
+                      setEditedBacklog([...editedBacklog, mkBacklogItem(newBacklogItemText.trim(), 'validated')]);
                       setNewBacklogItemText('');
                     }
                   }}
@@ -15253,7 +15545,7 @@ ${isDirector ? `
                 <button
                   onClick={() => {
                     if (newBacklogItemText.trim()) {
-                      setEditedBacklog([...editedBacklog, newBacklogItemText.trim()]);
+                      setEditedBacklog([...editedBacklog, mkBacklogItem(newBacklogItemText.trim(), 'validated')]);
                       setNewBacklogItemText('');
                     }
                   }}
@@ -15389,104 +15681,84 @@ ${isDirector ? `
               ) : (
                 editedReviewQueue.map((item, idx) => {
                   const label = typeof item === 'string' ? item : (item.label || item.name || 'Verification');
+                  const itemType: 'suggested' | 'validated' = (typeof item === 'object' && item?.type) ? item.type : 'validated';
                   return (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 10px', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#f43f5e', minWidth: '20px' }}>
-                        #{idx + 1}
-                      </span>
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      background: 'var(--surface-alt)',
+                      border: `1px solid ${itemType === 'suggested' ? 'rgba(245,158,11,0.35)' : 'rgba(244,63,94,0.25)'}`,
+                      padding: '6px 10px', borderRadius: '6px'
+                    }}>
+                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#f43f5e', minWidth: '20px' }}>#{idx + 1}</span>
+                      {/* Type badge */}
+                      <span style={{
+                        fontSize: '7px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em',
+                        padding: '2px 5px', borderRadius: '3px', flexShrink: 0,
+                        background: itemType === 'suggested' ? 'rgba(245,158,11,0.15)' : 'rgba(244,63,94,0.1)',
+                        color: itemType === 'suggested' ? '#f59e0b' : '#f43f5e',
+                        border: `1px solid ${itemType === 'suggested' ? 'rgba(245,158,11,0.3)' : 'rgba(244,63,94,0.25)'}`
+                      }}>{itemType === 'suggested' ? 'SUGGESTED' : 'VALIDATED'}</span>
                       <input
                         type="text"
                         value={label}
                         onChange={(e) => {
                           const copy = [...editedReviewQueue];
                           if (typeof item === 'string') {
-                            copy[idx] = e.target.value;
+                            copy[idx] = { label: e.target.value, type: 'validated' };
                           } else {
-                            copy[idx] = {
-                              ...item,
-                              label: e.target.value
-                            };
+                            copy[idx] = { ...item, label: e.target.value, type: 'validated' };
                           }
                           setEditedReviewQueue(copy);
                         }}
                         style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-bright)',
-                          fontSize: '10px',
-                          flex: 1,
-                          outline: 'none',
-                          fontFamily: 'var(--mono)'
+                          background: 'transparent', border: 'none',
+                          color: 'var(--text-bright)', fontSize: '10px',
+                          flex: 1, outline: 'none', fontFamily: 'var(--mono)'
                         }}
                         placeholder={`Review Item #${idx + 1}...`}
                       />
-                      
                       {/* Action controls */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {itemType === 'suggested' && (
+                          <button
+                            onClick={() => {
+                              const copy = [...editedReviewQueue];
+                              copy[idx] = typeof item === 'string'
+                                ? { label: item, type: 'validated' }
+                                : { ...item, type: 'validated' };
+                              setEditedReviewQueue(copy);
+                            }}
+                            style={{ background:'rgba(244,63,94,0.1)',border:'1px solid rgba(244,63,94,0.3)',borderRadius:'3px',color:'#f43f5e',fontSize:'7.5px',fontWeight:800,padding:'2px 5px',cursor:'pointer',flexShrink:0 }}
+                            title="Mark as Validated"
+                          >✓ Validate</button>
+                        )}
                         <button
                           onClick={() => {
                             if (idx === 0) return;
                             const copy = [...editedReviewQueue];
-                            const t = copy[idx];
-                            copy[idx] = copy[idx - 1];
-                            copy[idx - 1] = t;
+                            const t = copy[idx]; copy[idx] = copy[idx - 1]; copy[idx - 1] = t;
                             setEditedReviewQueue(copy);
                           }}
                           disabled={idx === 0}
-                          style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '3px',
-                            color: idx === 0 ? 'var(--muted-dark)' : 'var(--text)',
-                            fontSize: '8px',
-                            padding: '3px 6px',
-                            cursor: idx === 0 ? 'not-allowed' : 'pointer'
-                          }}
+                          style={{ background:'rgba(255,255,255,0.02)',border:'1px solid var(--border-soft)',borderRadius:'3px',color:idx===0?'var(--muted-dark)':'var(--text)',fontSize:'8px',padding:'3px 6px',cursor:idx===0?'not-allowed':'pointer' }}
                           title="Move Up"
-                        >
-                          ▲
-                        </button>
+                        >▲</button>
                         <button
                           onClick={() => {
                             if (idx === editedReviewQueue.length - 1) return;
                             const copy = [...editedReviewQueue];
-                            const t = copy[idx];
-                            copy[idx] = copy[idx + 1];
-                            copy[idx + 1] = t;
+                            const t = copy[idx]; copy[idx] = copy[idx + 1]; copy[idx + 1] = t;
                             setEditedReviewQueue(copy);
                           }}
                           disabled={idx === editedReviewQueue.length - 1}
-                          style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '3px',
-                            color: idx === editedReviewQueue.length - 1 ? 'var(--muted-dark)' : 'var(--text)',
-                            fontSize: '8px',
-                            padding: '3px 6px',
-                            cursor: idx === editedReviewQueue.length - 1 ? 'not-allowed' : 'pointer'
-                          }}
+                          style={{ background:'rgba(255,255,255,0.02)',border:'1px solid var(--border-soft)',borderRadius:'3px',color:idx===editedReviewQueue.length-1?'var(--muted-dark)':'var(--text)',fontSize:'8px',padding:'3px 6px',cursor:idx===editedReviewQueue.length-1?'not-allowed':'pointer' }}
                           title="Move Down"
-                        >
-                          ▼
-                        </button>
+                        >▼</button>
                         <button
-                          onClick={() => {
-                            const copy = editedReviewQueue.filter((_, itemIdx) => itemIdx !== idx);
-                            setEditedReviewQueue(copy);
-                          }}
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.08)',
-                            border: '1px solid rgba(239, 68, 68, 0.25)',
-                            borderRadius: '3px',
-                            color: '#ef4444',
-                            fontSize: '8px',
-                            padding: '3px 6px',
-                            cursor: 'pointer'
-                          }}
+                          onClick={() => setEditedReviewQueue(editedReviewQueue.filter((_,i)=>i!==idx))}
+                          style={{ background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'3px',color:'#ef4444',fontSize:'8px',padding:'3px 6px',cursor:'pointer' }}
                           title="Delete Item"
-                        >
-                          🗑️
-                        </button>
+                        >🗑️</button>
                       </div>
                     </div>
                   );
@@ -18087,7 +18359,16 @@ ${isDirector ? `
             </div>
           </div>
         </div>
-      )}
+
+      {/* Plan 1.1-B: Context Picker Modal */}
+      <ContextPickerModal
+        isOpen={isContextPickerOpen}
+        onClose={() => setIsContextPickerOpen(false)}
+        onAttach={(items) => setSelectedExtraSources(prev => [...prev, ...items])}
+        missions={missions}
+        rawDataList={rawDataList}
+        systemComponents={systemComponents}
+      />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes marqueeLeftToRight {

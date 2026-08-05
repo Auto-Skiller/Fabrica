@@ -1,7 +1,7 @@
-import { execFile, execFileSync, ChildProcess } from 'child_process';
+import { execFile, execFileSync, ChildProcess, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { keyPoolManager, getUserTier, deductLlmCredits, decryptSecret } from './auth.js';
+import { keyPoolManager, getUserTier, deductLlmCredits, decryptSecret, checkUserCanRun } from './auth.js';
 import { getTenantRoot, appendTenantAuditLog } from './tenant.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
@@ -63,6 +63,7 @@ export interface PiAgentRunOptions {
   customKey?: string;
   agentLang?: string;
   webSearchEnabled?: boolean;
+  thinkingLevel?: 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   disableWorkspaceSkills?: boolean;
   disableWorkspaceExtensions?: boolean;
 }
@@ -70,7 +71,6 @@ export interface PiAgentRunOptions {
 export interface PiAgentResponse {
   ok: boolean;
   text: string;
-  suggestions: string[];
   sessionId: string;
   model: string;
   usage?: {
@@ -88,7 +88,6 @@ export interface PiSessionItem {
   createdAt: string;
   updatedAt: string;
   messageCount: number;
-  tokensUsed: number;
   history: { sender: 'user' | 'agent'; text: string; timestamp?: string }[];
 }
 
@@ -290,11 +289,10 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   const piDir = path.join(userRoot, '.pi');
   const piAgentDir = path.join(piDir, 'agent');
   const piSkillsDir = path.join(piDir, 'skills');
-  const piExtensionsDir = path.join(piDir, 'extensions');
+  // Note: user workspace extensions (.pi/extensions/) removed per Plan 2.2
 
   fs.mkdirSync(piAgentDir, { recursive: true });
   fs.mkdirSync(piSkillsDir, { recursive: true });
-  fs.mkdirSync(piExtensionsDir, { recursive: true });
 
   syncPiUserAuthKeys(tenantId);
 
@@ -327,7 +325,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       tenant_id: tenantId,
       status: "idle",
       selected_model: "gemini-3.6-flash",
-      autonomy: "autonomous",
+      autonomy: "director",
       autonomy_interval: 20,
       agent_lang: "EN",
       output_language: "EN",
@@ -338,6 +336,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       backlog: [],
       review_queues: [],
       review: [],
+      new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] },
       last_active: new Date().toISOString()
     }, null, 2), 'utf8');
   }
@@ -423,18 +422,42 @@ export function getHarnessState(tenantId: string = 'default_user'): Record<strin
       const data = JSON.parse(fs.readFileSync(harnessJsonPath, 'utf8'));
       const lang = data.agent_lang || data.output_language || 'EN';
       const suggestions = data.suggestions || data.suggestion_cards || [];
-      const backlog = data.backlog || data.backlogs || [];
-      const review = data.review || data.review_queues || [];
+      const rawBacklog = data.backlog || data.backlogs || [];
+      const rawReview = data.review || data.review_queues || [];
       const interval = data.autonomy_interval ?? data.autonomyInterval ?? 20;
+
+      // Plan 3.2: Migrate backlog string items → BacklogItem objects
+      const now = new Date().toISOString();
+      const backlog = rawBacklog.map((item: any) =>
+        typeof item === 'string'
+          ? { id: `bl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text: item, type: 'validated', created_at: now }
+          : { id: item.id || `bl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text: item.text || item.label || String(item), type: item.type || 'validated', created_at: item.created_at || now }
+      );
+
+      // Plan 3.3: Migrate review string items → ReviewItem objects
+      const review = rawReview.map((item: any) =>
+        typeof item === 'string'
+          ? { id: `rv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text: item, type: 'pending', created_at: now }
+          : { id: item.id || `rv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text: item.text || item.label || String(item), type: item.type || 'pending', feedback: item.feedback, created_at: item.created_at || now }
+      );
 
       const autoMissions = data.auto_missions_processing ?? data.autoMissionsProcessing ?? true;
       const autoImports = data.auto_imports_processing ?? data.autoImportsProcessing ?? true;
+
+      // Plan 4.1-A: Migrate old autonomy values to new names
+      const rawAutonomy = data.autonomy || 'director';
+      const autonomy = rawAutonomy === 'autonomous' ? 'director'
+        : rawAutonomy === 'semi-autonomous' ? 'worker'
+        : rawAutonomy === 'manual' ? 'off'
+        : rawAutonomy;
+
+      const newUserActions = data.new_user_actions || { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] };
 
       return {
         tenant_id: tenantId,
         status: data.status || 'idle',
         selected_model: data.selected_model || 'gemini-3.6-flash',
-        autonomy: data.autonomy || 'autonomous',
+        autonomy,
         autonomy_interval: Number(interval),
         auto_missions_processing: Boolean(autoMissions),
         auto_imports_processing: Boolean(autoImports),
@@ -447,6 +470,9 @@ export function getHarnessState(tenantId: string = 'default_user'): Record<strin
         backlog,
         review_queues: review,
         review,
+        new_user_actions: newUserActions,
+        skills_enabled: data.skills_enabled || {},
+        integrations_enabled: data.integrations_enabled || {},
         last_active: data.last_active || new Date().toISOString()
       };
     }
@@ -456,7 +482,7 @@ export function getHarnessState(tenantId: string = 'default_user'): Record<strin
     tenant_id: tenantId,
     status: 'idle',
     selected_model: 'gemini-3.6-flash',
-    autonomy: 'autonomous',
+    autonomy: 'director',
     autonomy_interval: 20,
     auto_missions_processing: true,
     auto_imports_processing: true,
@@ -469,6 +495,9 @@ export function getHarnessState(tenantId: string = 'default_user'): Record<strin
     backlog: [],
     review_queues: [],
     review: [],
+    new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] },
+    skills_enabled: {},
+    integrations_enabled: {},
     last_active: new Date().toISOString()
   };
 }
@@ -513,6 +542,64 @@ export function updateHarnessState(tenantId: string = 'default_user', updates: R
   return merged;
 }
 
+// Plan 4.1-B: Append a user action to the appropriate category in harness.json
+export function appendUserAction(tenantId: string = 'default_user', category: 'backlog_actions' | 'reviews_actions' | 'missions_actions' | 'workspace_actions', action: string): void {
+  const current = getHarnessState(tenantId);
+  const actions = current.new_user_actions || { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] };
+  if (!Array.isArray(actions[category])) actions[category] = [];
+  actions[category] = [...actions[category], { action, timestamp: new Date().toISOString() }];
+  updateHarnessState(tenantId, { new_user_actions: actions });
+}
+
+// Plan 4.1-C: Clear all user actions after normal agent_end
+export function clearUserActions(tenantId: string = 'default_user'): void {
+  updateHarnessState(tenantId, { new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] } });
+}
+
+// Plan 4.1-D: Build per-turn directive blocks for agent context
+export function buildRunDirectives(tenantId: string = 'default_user'): string {
+  const harnessData = getHarnessState(tenantId);
+  let directives = '';
+
+  // Block 1: User actions since last turn
+  const actions = harnessData.new_user_actions || {};
+  const allActions = [
+    ...(actions.backlog_actions || []),
+    ...(actions.reviews_actions || []),
+    ...(actions.missions_actions || []),
+    ...(actions.workspace_actions || [])
+  ];
+  if (allActions.length > 0) {
+    directives += `\n\n[USER ACTIONS SINCE LAST TURN]:\n${allActions.map((a: any) => `- ${a.action} (${a.timestamp})`).join('\n')}`;
+  }
+
+  // Block 2: Validated backlog items
+  const backlog = (harnessData.backlog || []);
+  const validatedBacklog = backlog.filter((item: any) => typeof item === 'string' || !item.type || item.type === 'validated');
+  if (validatedBacklog.length > 0) {
+    const items = validatedBacklog.map((item: any, i: number) => `${i + 1}. ${typeof item === 'string' ? item : item.text}`).join('\n');
+    directives += `\n\n[VALIDATED BACKLOGS - Prioritized Goals]:\n${items}\n(Monitor for drift — flag if your work deviates from these goals)`;
+  }
+
+  // Block 3: Reviews
+  const review = (harnessData.review || []);
+  if (review.length > 0) {
+    const pending = review.filter((r: any) => typeof r === 'string' || !r.type || r.type === 'pending');
+    const reviewed = review.filter((r: any) => r.type === 'reviewed');
+    if (pending.length > 0) {
+      directives += `\n\n[PENDING REVIEWS - Awaiting Validation]:\n${pending.map((r: any) => `- ${typeof r === 'string' ? r : r.label || r.text}`).join('\n')}\n(Address these in your next turn if relevant)`;
+    }
+    if (reviewed.length > 0) {
+      directives += `\n\n[REVIEWED ITEMS - User Feedback Applied]:\n${reviewed.map((r: any) => `- ${r.label || r.text}${r.feedback ? ': ' + r.feedback : ''}`).join('\n')}`;
+    }
+  }
+
+  // Block 4: Suggestions audit
+  directives += '\n\n[SUGGESTIONS AUDIT]: Review your current suggestions in harness.json. Ensure they are relevant, actionable, and no more than 3. Replace stale suggestions with fresh ones based on current workspace context.';
+
+  return directives;
+}
+
 export function loadKernelSystemPrompts(tenantId: string = 'default_user'): string {
   const kernelPromptsDir = path.join(process.cwd(), 'Fabrica_kernel', 'system_prompts');
   let combinedPrompts = '';
@@ -529,34 +616,29 @@ export function loadKernelSystemPrompts(tenantId: string = 'default_user'): stri
     }
   }
 
-  const userRoot = getTenantRoot(tenantId);
-  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
-  if (fs.existsSync(agentsMdPath)) {
-    try {
-      const agentsMdContent = fs.readFileSync(agentsMdPath, 'utf8');
-      if (agentsMdContent.trim()) {
-        combinedPrompts += `\n\n[USER AGENTS.MD DIRECTIVES]:\n${agentsMdContent.trim()}`;
-      }
-    } catch (_) {}
+  // Plan 1.2: AGENTS.md is no longer injected here — it is passed as @path in runPiAgent()
+  // This prevents double-injection and lets pi read the file as native context.
+
+  // Inject minimal Harness State — only Output Language (Plan 1.2 prune)
+  const harnessData = getHarnessState(tenantId);
+  combinedPrompts += `\n\n[HARNESS STATE]:\n` +
+    `- Output Language: ${harnessData.output_language || harnessData.agent_lang || 'EN'}`;
+
+  // Plan 1.4: Web Search directive — appended when user enables web search
+  if (harnessData.web_search_enabled) {
+    combinedPrompts += '\n\n[CRITICAL WEB DIRECTIVE: Use live web tools for search and grounding when Needed.]';
   }
 
-  // Inject Realtime Harness State from harness.json
-  const harnessData = getHarnessState(tenantId);
-  combinedPrompts += `\n\n[HARNESS REALTIME STATE DIRECTIVES]:\n` +
-    `- Output Language: ${harnessData.output_language || harnessData.agent_lang || 'EN'}\n` +
-    `- Autonomy Mode: ${harnessData.autonomy || 'autonomous'} (Heartbeat Interval: ${harnessData.autonomy_interval || 20}s)\n` +
-    `- Active Model Selection: ${harnessData.selected_model || 'gemini-3.6-flash'}\n` +
-    `- Active Backlog Items (${(harnessData.backlog || []).length}): ${JSON.stringify(harnessData.backlog || [])}\n` +
-    `- Active Review Queue (${(harnessData.review || []).length}): ${JSON.stringify(harnessData.review || [])}\n` +
-    `- Active Suggestion Cards: ${JSON.stringify(harnessData.suggestions || [])}\n`;
+  // Plan 4.1-D: Per-turn run directives (user actions, backlogs, reviews, suggestions audit)
+  combinedPrompts += buildRunDirectives(tenantId);
 
   return combinedPrompts;
 }
 
 export function getPiExecutionOptions(
   tenantId: string = 'default_user',
-  disableWorkspaceSkills: boolean = false,
-  disableWorkspaceExtensions: boolean = false
+  _disableWorkspaceSkills: boolean = false,
+  _disableWorkspaceExtensions: boolean = false
 ): PiExecutionOptions {
   ensureUserHarness(tenantId);
   const userRoot = getTenantRoot(tenantId);
@@ -565,25 +647,61 @@ export function getPiExecutionOptions(
 
   const cliFlags: string[] = [];
 
+  // ── Kernel skills: always active ──────────────────────────────────────────
   const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
   if (fs.existsSync(kernelSkillsDir) && fs.readdirSync(kernelSkillsDir).length > 0) {
     cliFlags.push('--skill', kernelSkillsDir);
   }
 
-  if (!disableWorkspaceSkills) {
-    const userSkillsDir = path.join(userRoot, '.pi', 'skills');
-    if (fs.existsSync(userSkillsDir) && fs.readdirSync(userSkillsDir).length > 0) {
-      cliFlags.push('--skill', userSkillsDir);
+  // ── User workspace skills: per-skill toggle via harness.json skills_enabled ─
+  const harnessData = getHarnessState(tenantId);
+  const skillsEnabled: Record<string, boolean> = harnessData.skills_enabled || {};
+  const userSkillsDir = path.join(userRoot, '.pi', 'skills');
+  if (fs.existsSync(userSkillsDir)) {
+    const skillFolders = fs.readdirSync(userSkillsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+    for (const skillName of skillFolders) {
+      // Include skill unless explicitly disabled (default: enabled)
+      if (skillsEnabled[skillName] !== false) {
+        cliFlags.push('--skill', path.join(userSkillsDir, skillName));
+      }
     }
   }
 
-  if (!disableWorkspaceExtensions) {
-    const userExtDir = path.join(userRoot, '.pi', 'extensions');
-    if (fs.existsSync(userExtDir)) {
-      const extFiles = fs.readdirSync(userExtDir).filter(f => f.endsWith('.js') || f.endsWith('.ts'));
-      for (const extFile of extFiles) {
-        cliFlags.push('--extension', path.join(userExtDir, extFile));
+  // ── Kernel integrations: only toggled-on ones loaded (skills/ + extensions/) ──
+  const integrationsDir = path.join(process.cwd(), 'Fabrica_kernel', 'integrations');
+  if (fs.existsSync(integrationsDir)) {
+    const integrationsEnabled: Record<string, boolean> = harnessData.integrations_enabled || {};
+    const integrationDirs = fs.readdirSync(integrationsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+    for (const integrationName of integrationDirs) {
+      if (!integrationsEnabled[integrationName]) continue;
+      const integrationSkillsPath = path.join(integrationsDir, integrationName, 'skills');
+      if (fs.existsSync(integrationSkillsPath)) {
+        cliFlags.push('--skill', integrationSkillsPath);
       }
+      const integrationExtPath = path.join(integrationsDir, integrationName, 'extensions');
+      if (fs.existsSync(integrationExtPath)) {
+        const extFiles = fs.readdirSync(integrationExtPath).filter(f => f.endsWith('.js'));
+        for (const extFile of extFiles) {
+          cliFlags.push('--extension', path.join(integrationExtPath, extFile));
+        }
+      }
+    }
+  }
+
+  // Plan 1.2: Disable pi's automatic AGENTS.md context file discovery
+  cliFlags.push('--no-context-files');
+
+  // Plan 1.2: If AGENTS.md exists, pass it as @path context + a memory directive
+  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+  if (fs.existsSync(agentsMdPath)) {
+    const agentsMdContent = fs.readFileSync(agentsMdPath, 'utf8').trim();
+    if (agentsMdContent) {
+      cliFlags.push('--append-system-prompt',
+        `[CRITICAL MEMORY CONTEXT DIRECTIVE: AGENTS.md is your long-running memory. Read it via @${agentsMdPath} for context. Append important things (user preferences, project info, goals). Audit it if anything changes — no outdated info.]`);
     }
   }
 
@@ -608,6 +726,19 @@ export function getPiExecutionOptions(
 export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentResponse> {
   const tenantId = options.tenantId || 'default_user';
   ensureUserHarness(tenantId);
+
+  // Plan 1.1-A: Check credit quota before agent execution
+  const runCheck = checkUserCanRun(tenantId, options.customKey);
+  if (!runCheck.canRun) {
+    updateHarnessState(tenantId, { status: 'idle' });
+    return {
+      ok: false,
+      text: runCheck.reason || 'Monthly token quota exceeded. Please enter a custom BYOK API key or upgrade your plan.',
+      sessionId: options.sessionId || `session_${Date.now()}`,
+      model: options.model || 'gemini-3.6-flash',
+      error: 'quota_exceeded'
+    };
+  }
 
   updateHarnessState(tenantId, {
     status: 'running',
@@ -698,11 +829,25 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in English.]';
     }
 
+    // Plan 4.1-E & 1.2-B: Prepend @path tokens for core workspace files so pi reads them natively
+    const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+    const missionsPath = path.join(userRoot, 'missions.json');
+    const workspacePath = path.join(userRoot, 'workspace.json');
+    const harnessJsonPath2 = path.join(userRoot, 'harness.json');
+    const filePaths = [agentsMdPath, missionsPath, workspacePath, harnessJsonPath2]
+      .filter(p => fs.existsSync(p))
+      .map(p => `@${p}`)
+      .join(' ');
+    if (filePaths) {
+      promptWithLang = `${filePaths}\n${promptWithLang}`;
+    }
+
     const args: string[] = [
       '-p',
       '--mode', 'json',
       '--session-id', sessionId,
       '--model', fullModel,
+      ...(options.thinkingLevel && options.thinkingLevel !== 'off' ? ['--thinking', options.thinkingLevel] : []),
       ...execOpts.cliFlags,
       promptWithLang
     ];
@@ -782,18 +927,17 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       const inTokens = resParsed.usage?.inputTokens || Math.max(50, Math.round(options.prompt.length / 4));
       const outTokens = resParsed.usage?.outputTokens || Math.max(20, Math.round((resParsed.text || '').length / 4));
       try { deductLlmCredits(tenantId, fullModel, inTokens, outTokens); } catch (_) {}
-      updateHarnessState(tenantId, { status: 'idle', suggestions: resParsed.suggestions || [] });
+      updateHarnessState(tenantId, { status: 'idle' });
       return resParsed;
     } catch (err: any) {
       const errRes = {
         ok: false,
         text: `Error executing pi agent: ${err.message}`,
-        suggestions: ["Check API Key", "Retry request"],
         sessionId,
         model: fullModel,
         error: err.message
       };
-      updateHarnessState(tenantId, { status: 'idle', suggestions: errRes.suggestions });
+      updateHarnessState(tenantId, { status: 'idle' });
       return errRes;
     }
   }
@@ -807,7 +951,6 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
     return {
       ok: false,
       text: "💳 **Card Verification Required**: To access the complimentary LLM key pool on the Free tier, please verify your payment card in Account Settings or provide a custom API key (BYOK).",
-      suggestions: ["Verify Payment Card", "Provide Custom API Key"],
       sessionId,
       model: fullModel,
       error: "CARD_VERIFICATION_REQUIRED"
@@ -847,7 +990,9 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       const outTokens = result.usage?.outputTokens || Math.max(20, Math.round((result.text || '').length / 4));
       try { deductLlmCredits(tenantId, fullModel, inTokens, outTokens); } catch (_) {}
 
-      updateHarnessState(tenantId, { status: 'idle', suggestions: result.suggestions || [] });
+      updateHarnessState(tenantId, { status: 'idle' });
+      // Plan 4.1-C: Clear user actions after clean agent_end
+      try { clearUserActions(tenantId); } catch (_) {}
       return result;
     } catch (err: any) {
       const msg = (err.message || '').toLowerCase();
@@ -865,18 +1010,208 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   const limitRes = {
     ok: false,
     text: "Rate limit temporarily reached due to high platform traffic. Shared complimentary tokens are currently busy. Please wait 30 seconds or configure your custom API key (BYOK).",
-    suggestions: ["Retry request", "Configure custom API key"],
     sessionId,
     model: fullModel,
     error: "RATE_LIMIT_EXHAUSTED"
   };
-  updateHarnessState(tenantId, { status: 'idle', suggestions: limitRes.suggestions });
+  updateHarnessState(tenantId, { status: 'idle' });
   return limitRes;
+}
+
+export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (data: string) => void): Promise<PiAgentResponse> {
+  const tenantId = options.tenantId || 'default_user';
+  ensureUserHarness(tenantId);
+
+  const runCheck = checkUserCanRun(tenantId, options.customKey);
+  if (!runCheck.canRun) {
+    updateHarnessState(tenantId, { status: 'idle' });
+    const errRes = {
+      ok: false,
+      text: runCheck.reason || 'Monthly token quota exceeded.',
+      sessionId: options.sessionId || `session_${Date.now()}`,
+      model: options.model || 'gemini-3.6-flash',
+      error: 'quota_exceeded'
+    };
+    onChunk(`data: ${JSON.stringify(errRes)}\n\n`);
+    return errRes;
+  }
+
+  updateHarnessState(tenantId, {
+    status: 'running',
+    selected_model: options.model || 'gemini-3.6-flash',
+    agent_lang: options.agentLang || 'EN',
+    output_language: options.agentLang || 'EN',
+    web_search_enabled: options.webSearchEnabled ?? true
+  });
+
+  const userRoot = getTenantRoot(tenantId);
+  const execOpts = getPiExecutionOptions(tenantId, options.disableWorkspaceSkills, options.disableWorkspaceExtensions);
+
+  const sessionId = options.sessionId || `session_${Date.now()}`;
+  const rawModel = options.model || 'gemini-3.6-flash';
+
+  let fullModel = rawModel;
+  if (!rawModel.includes('/')) {
+    if (rawModel.startsWith('gemini') || rawModel.startsWith('gemma') || rawModel.startsWith('deep-research')) {
+      fullModel = `google/${rawModel}`;
+    } else if (rawModel.startsWith('claude')) {
+      fullModel = `anthropic/${rawModel}`;
+    } else if (rawModel.startsWith('gpt') || rawModel.startsWith('o1') || rawModel.startsWith('o3')) {
+      fullModel = `openai/${rawModel}`;
+    } else {
+      fullModel = `openrouter/${rawModel}`;
+    }
+  }
+
+  const provider = fullModel.split('/')[0];
+  syncPiUserAuthKeys(tenantId, options.customKey, provider);
+
+  const piBin = fs.existsSync(path.resolve(process.cwd(), 'node_modules/.bin/pi'))
+    ? path.resolve(process.cwd(), 'node_modules/.bin/pi')
+    : 'pi';
+
+  const apiKeyStrategy = options.customKey ? 'BYOK' : 'Key Pool Rotation';
+  const effectiveKey = options.customKey || (provider === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY) || process.env.GEMINI_API_KEY;
+
+  const env: Record<string, string> = {
+    PATH: `${path.resolve(process.cwd(), 'node_modules/.bin')}:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`,
+    HOME: process.env.HOME || '/tmp',
+    TMPDIR: process.env.TMPDIR || '/tmp',
+    NODE_ENV: process.env.NODE_ENV || 'production',
+    PI_CODING_AGENT_DIR: execOpts.piCodingAgentDir
+  };
+
+  if (effectiveKey) {
+    if (provider === 'google' || provider === 'gemini') {
+      env.GEMINI_API_KEY = effectiveKey;
+      env.GOOGLE_GENERATIVE_AI_API_KEY = effectiveKey;
+    } else if (provider === 'openrouter') {
+      env.OPENROUTER_API_KEY = effectiveKey;
+    } else if (provider === 'anthropic') {
+      env.ANTHROPIC_API_KEY = effectiveKey;
+    } else if (provider === 'openai') {
+      env.OPENAI_API_KEY = effectiveKey;
+    } else {
+      env.GEMINI_API_KEY = effectiveKey;
+    }
+  }
+
+  let promptWithLang = options.prompt;
+  if (options.agentLang === 'FR') {
+    promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in French (Français).]';
+  } else if (options.agentLang === 'AR') {
+    promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in Arabic (العربية).]';
+  } else if (options.agentLang === 'EN') {
+    promptWithLang += '\n\n[CRITICAL LANGUAGE DIRECTIVE: Write your entire response strictly and exclusively in English.]';
+  }
+
+  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+  const missionsPath = path.join(userRoot, 'missions.json');
+  const workspacePath = path.join(userRoot, 'workspace.json');
+  const harnessJsonPath2 = path.join(userRoot, 'harness.json');
+  const filePaths = [agentsMdPath, missionsPath, workspacePath, harnessJsonPath2]
+    .filter(p => fs.existsSync(p))
+    .map(p => `@${p}`)
+    .join(' ');
+  if (filePaths) {
+    promptWithLang = `${filePaths}\n${promptWithLang}`;
+  }
+
+  const args: string[] = [
+    '-p',
+    '--mode', 'json',
+    '--session-id', sessionId,
+    '--model', fullModel,
+    ...(options.thinkingLevel && options.thinkingLevel !== 'off' ? ['--thinking', options.thinkingLevel] : []),
+    ...execOpts.cliFlags,
+    promptWithLang
+  ];
+
+  const procKey = tenantId;
+  let daemon = activePiDaemons.get(procKey);
+  if (daemon && daemon.status !== 'stopped') {
+    if (daemon.sessionId !== sessionId || daemon.model !== fullModel) {
+      daemon.kill();
+      daemon = undefined;
+    }
+  }
+  if (!daemon || daemon.status === 'stopped') {
+    daemon = new PiDaemonProcess(tenantId, sessionId, fullModel, apiKeyStrategy);
+    activePiDaemons.set(procKey, daemon);
+  }
+  daemon.sessionId = sessionId;
+  daemon.model = fullModel;
+  daemon.status = 'busy';
+  daemon.lastActiveAt = new Date().toISOString();
+
+  return new Promise((resolve) => {
+    const child = spawn(piBin, args, { cwd: userRoot, env });
+    if (daemon) daemon.child = child;
+    activePiChildProcesses.set(procKey, child);
+
+    let accumulatedText = '';
+    let buffer = '';
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      buffer += chunk.toString('utf8');
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const parsed = JSON.parse(line);
+          onChunk(`data: ${JSON.stringify(parsed)}\n\n`);
+
+          if (parsed.type === 'turn_end' && parsed.message) {
+            const content = parsed.message.content;
+            if (typeof content === 'string') accumulatedText = content;
+            else if (Array.isArray(content)) {
+              accumulatedText = content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
+            }
+            if (parsed.message.usage) {
+              const inT = parsed.message.usage.input || 0;
+              const outT = parsed.message.usage.output || 0;
+              try { deductLlmCredits(tenantId, fullModel, inT, outT); } catch (_) {}
+            }
+          }
+        } catch (_) {
+          onChunk(`data: ${JSON.stringify({ type: 'message', content: line })}\n\n`);
+        }
+      }
+    });
+
+    child.on('close', (code) => {
+      if (daemon) daemon.status = 'idle';
+      updateHarnessState(tenantId, { status: 'idle' });
+      try { clearUserActions(tenantId); } catch (_) {}
+
+      const finalResponse: PiAgentResponse = {
+        ok: code === 0 || accumulatedText.length > 0,
+        text: accumulatedText || 'Agent turn completed.',
+        sessionId,
+        model: fullModel
+      };
+      resolve(finalResponse);
+    });
+
+    child.on('error', (err) => {
+      if (daemon) daemon.status = 'stopped';
+      updateHarnessState(tenantId, { status: 'idle' });
+      onChunk(`data: ${JSON.stringify({ ok: false, error: err.message })}\n\n`);
+      resolve({
+        ok: false,
+        text: `Error: ${err.message}`,
+        sessionId,
+        model: fullModel,
+        error: err.message
+      });
+    });
+  });
 }
 
 function parsePiJsonOutput(stdout: string, sessionId: string, model: string): PiAgentResponse {
   let finalText = '';
-  let suggestions: string[] = [];
   let usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
   let errorMessage: string | undefined = undefined;
 
@@ -916,28 +1251,13 @@ function parsePiJsonOutput(stdout: string, sessionId: string, model: string): Pi
     } catch (_) {}
   }
 
-  if (finalText) {
-    const suggestMatches = finalText.match(/\[SUGGEST:\s*([^\]|]+?)(?:\s*\|\s*([^\]]+?))?\]/gi);
-    if (suggestMatches) {
-      suggestions = suggestMatches.map(m => m.replace(/^\[SUGGEST:\s*/i, '').replace(/\]$/, '').split('|')[0].trim());
-    }
-    if (finalText.trim().startsWith('{') && finalText.trim().endsWith('}')) {
-      try {
-        const parsed = JSON.parse(finalText);
-        if (parsed.text) finalText = parsed.text;
-        if (Array.isArray(parsed.suggestions)) suggestions = parsed.suggestions;
-      } catch (_) {}
-    }
-  }
-
-  if (!suggestions || suggestions.length === 0) {
-    suggestions = ["Continue mission", "Review workspace state", "Show backlog priority"];
-  }
+  // Note: suggestions are no longer extracted from agent text.
+  // The agent writes suggestions directly to harness.json via its file write tools.
+  // The UI reads them from getHarnessState() after each turn completes.
 
   return {
     ok: !errorMessage,
     text: finalText || (errorMessage ? `Agent notice: ${errorMessage}` : "Task completed."),
-    suggestions,
     sessionId,
     model,
     usage,
@@ -973,7 +1293,6 @@ export function listPiSessions(tenantId: string = 'default_user'): PiSessionItem
         const lines = content.split('\n').filter(Boolean);
 
         let messageCount = 0;
-        let tokensUsed = 0;
         const history: { sender: 'user' | 'agent'; text: string; timestamp?: string }[] = [];
 
         for (const l of lines) {
@@ -994,7 +1313,6 @@ export function listPiSessions(tenantId: string = 'default_user'): PiSessionItem
                   timestamp: entry.timestamp ? new Date(entry.timestamp).toISOString() : stats.mtime.toISOString()
                 });
               }
-              if (entry.message?.usage?.totalTokens) tokensUsed += entry.message.usage.totalTokens;
             }
           } catch (_) {}
         }
@@ -1008,7 +1326,6 @@ export function listPiSessions(tenantId: string = 'default_user'): PiSessionItem
           createdAt: stats.birthtime.toISOString(),
           updatedAt: stats.mtime.toISOString(),
           messageCount,
-          tokensUsed,
           history
         });
       } catch (_) {}
@@ -1044,7 +1361,6 @@ export function createPiSession(tenantId: string = 'default_user', name?: string
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     messageCount: 0,
-    tokensUsed: 0,
     history: []
   };
 }
@@ -1066,6 +1382,22 @@ export function deletePiSession(tenantId: string = 'default_user', sessionId: st
     if (fs.existsSync(altPath)) { fs.unlinkSync(altPath); deleted = true; }
   }
   return deleted;
+}
+
+// Plan 3.3: Remove a review item by id
+export function removeReviewItem(tenantId: string = 'default_user', itemId: string): void {
+  const current = getHarnessState(tenantId);
+  const filtered = (current.review || []).filter((r: any) => r.id !== itemId);
+  updateHarnessState(tenantId, { review: filtered });
+}
+
+// Plan 3.3: Set feedback on a review item (marks as 'reviewed')
+export function setReviewItemFeedback(tenantId: string = 'default_user', itemId: string, feedback: string): void {
+  const current = getHarnessState(tenantId);
+  const updated = (current.review || []).map((r: any) =>
+    r.id === itemId ? { ...r, type: 'reviewed', feedback } : r
+  );
+  updateHarnessState(tenantId, { review: updated });
 }
 
 export const DEFAULT_PI_CLI_FALLBACK_MODELS: PiModelItem[] = [

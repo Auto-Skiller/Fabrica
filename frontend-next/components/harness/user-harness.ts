@@ -28,7 +28,6 @@ export interface UserHarnessExecutionResult {
   text: string;
   suggestions: string[];
   executionTimeMs?: number;
-  tokensUsed?: number;
 }
 
 export interface BusinessPlanTier {
@@ -127,8 +126,7 @@ export class UserHarnessService {
         ok: res.ok,
         text: res.text,
         suggestions: res.suggestions || [],
-        executionTimeMs,
-        tokensUsed: Math.round(options.message.length / 4 + (res.text?.length || 0) / 4)
+        executionTimeMs
       };
     } catch (err: any) {
       console.error('[UserHarnessService] Execution error:', err);

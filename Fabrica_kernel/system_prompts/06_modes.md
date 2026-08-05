@@ -29,9 +29,9 @@ Mission execution is the core operational state machine of the Fabrica kernel. W
 
 ### Step 3: Autonomy Mode & Approval Gate Check
 Before advancing across major pipeline stages, check active autonomy mode (`harness.json` -> `autonomy` or `tenant.json`):
-- **FULL AUTO (`autonomous`)**: Auto-generates missions when count < 2, auto-evaluates QA gates using workspace context, automatically advances across stages (`Drafting -> Planning -> Execution -> Delivering`), and archives upon completion.
-- **SEMI-AUTO (`semi-autonomous`)**: Auto-executes tasks within stages, but holds user-created missions (`user_created: true`) at QA gates and delivery review steps for explicit user sign-off.
-- **SUPERVISED (`manual`)**: Pauses at every phase transition, proposal, and QA gate until approved by the human operator.
+- **DIRECTOR (`director`)**: Auto-generates missions when count < 2, auto-evaluates QA gates using workspace context, automatically advances across stages (`Drafting -> Planning -> Execution -> Delivering`), and archives upon completion.
+- **WORKER (`worker`)**: Auto-executes tasks within stages, but holds user-created missions (`user_created: true`) at QA gates and delivery review steps for explicit user sign-off.
+- **OFF (`off`)**: Pauses at every phase transition, proposal, and QA gate until approved by the human operator.
 
 ---
 

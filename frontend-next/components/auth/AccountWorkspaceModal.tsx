@@ -428,7 +428,7 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
             }}
           >
             <span style={{ fontSize: '14px' }}>🔑</span>
-            <span>{dtxt.tokensTabLabel || 'Tokens & API Credentials'}</span>
+            <span>{dtxt.tokensTabLabel || 'Tokens & Methods'}</span>
           </button>
         </div>
 
@@ -596,6 +596,97 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
           {/* ========================================================================= */}
           {activeTab === 'tokens' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+              {/* Plan 1.6-B: Visual Method Selector Strip (4 Method Cards) */}
+              <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '2px' }}>
+                {/* Card 1: FREE */}
+                <div
+                  onClick={() => setTokenBillingMode('pool')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: tokenBillingMode === 'pool' ? '2px solid #10b981' : '1px solid var(--border-soft)',
+                    background: tokenBillingMode === 'pool' ? 'rgba(16, 185, 129, 0.12)' : 'var(--surface-alt)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'pool' ? '#10b981' : 'var(--text)' }}>🏊 FREE</span>
+                    {tokenBillingMode === 'pool' && <span style={{ fontSize: '7px', background: '#10b981', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>System Key Pool • 500k Free Tokens</span>
+                </div>
+
+                {/* Card 2: CREDIT */}
+                <div
+                  onClick={() => setTokenBillingMode('managed')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: tokenBillingMode === 'managed' ? '2px solid #f59e0b' : '1px solid var(--border-soft)',
+                    background: tokenBillingMode === 'managed' ? 'rgba(245, 158, 11, 0.12)' : 'var(--surface-alt)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'managed' ? '#f59e0b' : 'var(--text)' }}>🪙 CREDIT</span>
+                    {tokenBillingMode === 'managed' && <span style={{ fontSize: '7px', background: '#f59e0b', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Managed LLM Balance • Auto Routed</span>
+                </div>
+
+                {/* Card 3: PAUS */}
+                <div
+                  onClick={() => setTokenBillingMode('paug')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: tokenBillingMode === 'paug' ? '2px solid #8b5cf6' : '1px solid var(--border-soft)',
+                    background: tokenBillingMode === 'paug' ? 'rgba(139, 92, 246, 0.12)' : 'var(--surface-alt)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'paug' ? '#8b5cf6' : 'var(--text)' }}>⚡ PAUS</span>
+                    {tokenBillingMode === 'paug' && <span style={{ fontSize: '7px', background: '#8b5cf6', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Pay-As-You-Search • Metered Infra</span>
+                </div>
+
+                {/* Card 4: BYOK */}
+                <div
+                  onClick={() => setTokenBillingMode('byok')}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: tokenBillingMode === 'byok' ? '2px solid #06b6d4' : '1px solid var(--border-soft)',
+                    background: tokenBillingMode === 'byok' ? 'rgba(6, 182, 212, 0.12)' : 'var(--surface-alt)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: tokenBillingMode === 'byok' ? '#06b6d4' : 'var(--text)' }}>🔑 BYOK</span>
+                    {tokenBillingMode === 'byok' && <span style={{ fontSize: '7px', background: '#06b6d4', color: '#fff', padding: '1px 4px', borderRadius: '3px', fontWeight: 900 }}>ACTIVE</span>}
+                  </div>
+                  <span style={{ fontSize: '7.5px', color: 'var(--muted)', lineHeight: 1.2 }}>Bring Your Own Keys • 6 Providers</span>
+                </div>
+              </div>
               
               {/* LEFT COLUMN: Model Intelligence & BYOK Credentials */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

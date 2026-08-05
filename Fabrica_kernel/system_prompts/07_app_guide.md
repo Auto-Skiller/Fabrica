@@ -36,10 +36,10 @@ The application utilizes a classic three-panel responsive layout with a compact 
 - **Purpose**: Exposes global configuration controls, client settings, active domains, and system-wide performance indices.
 - **Components**:
   - **Autonomy Mode Selector**: Interactive dropdown binding to `harness.json` (`autonomy`) supporting three modes:
-    - **FULL AUTO**: Auto-generates new contextual missions, answers agent QA gates, executes development tasks, and hot-swaps compiled components.
-    - **SEMI-AUTO**: Auto-executes planned tasks while holding user-created missions at QA gates for explicit user review.
-    - **SUPERVISED**: Fully manual control requiring user approval for all phase transitions and QA gates.
-  - **5s Real-Time Workspace Polling**: When FULL AUTO is active, the dashboard polls backend state every 5 seconds to reflect background mission creation, task completions, and component deployments live.
+    - **DIRECTOR**: Auto-generates new contextual missions, answers agent QA gates, executes development tasks, and hot-swaps compiled components.
+    - **WORKER**: Auto-executes planned tasks while holding user-created missions at QA gates for explicit user review.
+    - **OFF**: Manual control requiring user approval for all phase transitions and QA gates.
+  - **5s Real-Time Workspace Polling**: When DIRECTOR is active, the dashboard polls backend state every 5 seconds to reflect background mission creation, task completions, and component deployments live.
   - **Recent Events Feed**: A micro-event timeline rendering the last 5 logs from `tenant.json` audit event stream.
   - **System Directories & Sources Flow**: Interactive Cytoscape dependency graph linking Inbox → Gateway → OS Prompts & Data.
 

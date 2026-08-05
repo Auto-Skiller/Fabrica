@@ -690,8 +690,23 @@ function BuiltInSkillCard({
       flexDirection: 'column',
       gap: '10px'
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text)' }}>
-        📁 {skillName}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text)' }}>
+          📁 {skillName}
+        </div>
+        {/* Kernel skills are always active — no toggle */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '3px 8px',
+          background: 'rgba(16, 185, 129, 0.1)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          borderRadius: '12px'
+        }}>
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981', flexShrink: 0 }} />
+          <span style={{ fontSize: '8px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Always Active</span>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', background: 'var(--surface)', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
@@ -723,7 +738,9 @@ function WorkspaceSkillCard({
   parents,
   onInspect,
   onRefresh,
-  showToast
+  showToast,
+  isEnabled,
+  onToggleEnabled
 }: {
   entityName: string;
   skillName: string;
@@ -731,6 +748,8 @@ function WorkspaceSkillCard({
   onInspect: () => void;
   onRefresh?: () => void;
   showToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  isEnabled?: boolean;
+  onToggleEnabled?: (skillName: string, enabled: boolean) => void;
 }) {
   const [folderName, setFolderName] = useState(skillName);
   const [files, setFiles] = useState<Array<{ name: string; path: string; type: 'file' | 'folder'; content?: string }>>([]);
@@ -840,15 +859,19 @@ function WorkspaceSkillCard({
     }
   };
 
+  const enabled = isEnabled !== false;
+
   return (
     <div style={{
       background: 'var(--surface-alt)',
-      border: '1px solid rgba(192, 132, 252, 0.4)',
+      border: `1px solid ${enabled ? 'rgba(192, 132, 252, 0.4)' : 'var(--border-soft)'}`,
       borderRadius: 'var(--radius-md)',
       padding: '12px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px'
+      gap: '10px',
+      opacity: enabled ? 1 : 0.55,
+      transition: 'opacity 0.2s, border-color 0.2s'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <input
@@ -867,6 +890,35 @@ function WorkspaceSkillCard({
             flex: 1
           }}
         />
+        {/* Per-skill enable/disable toggle */}
+        <button
+          title={enabled ? 'Disable skill' : 'Enable skill'}
+          onClick={() => onToggleEnabled && onToggleEnabled(skillName, !enabled)}
+          style={{
+            width: '36px',
+            height: '20px',
+            borderRadius: '10px',
+            border: 'none',
+            background: enabled ? 'linear-gradient(135deg, #10b981, #059669)' : 'var(--border-soft)',
+            cursor: 'pointer',
+            padding: 0,
+            position: 'relative',
+            flexShrink: 0,
+            transition: 'background 0.2s'
+          }}
+        >
+          <span style={{
+            position: 'absolute',
+            top: '2px',
+            left: enabled ? '18px' : '2px',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            background: '#fff',
+            transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+          }} />
+        </button>
         <button
           onClick={onInspect}
           style={{
@@ -941,6 +993,21 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
     else alert(msg);
   };
 
+  // Per-skill enabled state: persisted in harness.json via harnessApi.updateHarnessState
+  const [skillsEnabled, setSkillsEnabled] = useState<Record<string, boolean>>({});
+
+  const handleToggleSkill = async (skillName: string, enabled: boolean) => {
+    const updated = { ...skillsEnabled, [skillName]: enabled };
+    setSkillsEnabled(updated);
+    try {
+      const { harnessApi } = await import('./api');
+      await harnessApi.updateHarnessState({ skills_enabled: updated });
+      triggerToast(`Skill "${skillName}" ${enabled ? 'enabled' : 'disabled'}`, enabled ? 'success' : 'info');
+    } catch (e: any) {
+      console.error('[SkillsAndExtensions] Failed to save skill toggle:', e);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'skills' | 'extensions'>(initialTab || 'skills');
 
   useEffect(() => {
@@ -951,7 +1018,7 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'built-in' | 'workspace'>('all');
 
-  // Preset Integrations Enabled Map (persisted in localStorage)
+  // Preset Integrations Enabled Map (persisted in localStorage + harness.json server-side)
   const [enabledIntegrations, setEnabledIntegrations] = useState<Record<string, boolean>>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -974,11 +1041,18 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
     setEnabledIntegrations(prev => {
       const nextState = !prev[item.id];
       const updated = { ...prev, [item.id]: nextState };
+      // Persist locally
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem('fabrica_enabled_integrations', JSON.stringify(updated));
         } catch (e) {}
       }
+      // Persist server-side in harness.json so backend CLI builder can read it
+      import('./api').then(({ harnessApi }) => {
+        harnessApi.updateHarnessState({ integrations_enabled: updated }).catch(e =>
+          console.error('[SkillsAndExtensions] Failed to save integration toggle:', e)
+        );
+      });
       triggerToast(
         `${item.name} integration ${nextState ? 'enabled' : 'disabled'}`,
         nextState ? 'success' : 'info'
@@ -986,6 +1060,7 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
       return updated;
     });
   };
+
 
   const totalPresetCount = useMemo(() => {
     return PRESET_INTEGRATION_CATEGORIES.reduce((acc, cat) => acc + cat.items.length, 0);
@@ -1302,6 +1377,8 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
                     onInspect={() => openInspectModal('skill', s.parents, s.name)}
                     onRefresh={onRefresh}
                     showToast={triggerToast}
+                    isEnabled={skillsEnabled[s.name] !== false}
+                    onToggleEnabled={handleToggleSkill}
                   />
                 );
               }

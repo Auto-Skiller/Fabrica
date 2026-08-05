@@ -408,14 +408,19 @@ export function getTokenQuotaSummary(tenantId: string = 'default_user'): TokenQu
   };
 }
 
-export function verifyUserCard(
-  tenantId: string = 'default_user',
-  cardInfo: { cardLast4?: string; provider?: string } = {}
-): UserTierInfo {
-  return updateUserTier(tenantId, {
-    hasVerifiedCard: true,
-    cardVerified: true,
-    paymentVerified: true,
-    cardLast4: cardInfo.cardLast4 || '4242'
-  });
+export function checkUserCanRun(tenantId: string = 'default_user', customKey?: string): { canRun: boolean; reason?: string } {
+  if (customKey && customKey.trim().length > 0) {
+    return { canRun: true };
+  }
+
+  const quota = getTokenQuotaSummary(tenantId);
+  if (quota.isQuotaExceeded) {
+    return {
+      canRun: false,
+      reason: `Monthly token quota reached (${quota.usedTokens.toLocaleString()} / ${quota.monthlyQuota.toLocaleString()} tokens used). Please enter a custom BYOK API key or upgrade plan.`
+    };
+  }
+
+  return { canRun: true };
 }
+
