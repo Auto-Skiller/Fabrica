@@ -251,44 +251,17 @@ const SEVEN_STEPS_MAP = {
     { k: 'البحث 1', d: 'التحقق الخارجي مقارنة بتوثيق API.' },
     { k: 'التحليل 2', d: 'تجميع النتائج في خيارات عملية.' },
     { k: 'بوابة الجودة', d: 'ثلاثة خيارات متميزة مع توضيح السبب. يتوقف التنفيذ لحين اختيارك.', gate: true },
-    { k: 'التحليل 3', d: 'ربط اختيارك بتهيئة برمجية ملموسة.' },
-    { k: 'البحث 2', d: 'متابعة مستهدفة لمسارك المختار.' },
-    { k: 'التحليل 4', d: 'المخطط النهائي المسلم للتخطيط.' },
-  ]
-};
-
-const HARD_LAWS_MAP = {
-  EN: [
-    { t: 'Workspace-Owns-State', d: 'Every decision lives in the database. If execution stops, another agent picks up exactly where it left off.' },
-    { t: 'Brain-First Querying', d: 'Metadata is read before full files. Context recall doesn’t cost you time or tokens.' },
-    { t: 'Next-Actions Priority', d: 'Your explicit requests are the backlog’s top priority, always.' },
-    { t: 'Relational Write-Safety', d: 'Specific fields get patched, never whole objects overwritten. Capability counts are checked before and after every write.' },
-    { t: 'Zero-Guess References', d: 'No file path or database ID is ever guessed. Every reference traces back to a real record.' },
-    { t: 'Quality Gates', d: 'Every description must say what something does — never where it came from or when it was moved.' },
-  ],
-  FR: [
-    { t: 'L’Espace de Travail Possède l’État', d: 'Chaque décision réside dans la base de données. Si l’exécution s’arrête, un autre agent reprend exactement là où il s’est arrêté.' },
-    { t: 'Requête Prioritaire aux Métadonnées', d: 'Les métadonnées sont lues avant les fichiers complets. Le rappel du contexte n’épuise ni temps ni jetons.' },
-    { t: 'Priorité aux Actions Suivantes', d: 'Vos demandes explicites sont toujours la priorité absolue du backlog.' },
-    { t: 'Sécurité d’Écriture Relationnelle', d: 'Seuls les champs spécifiques sont mis à jour, jamais les objets entiers écrasés.' },
-    { t: 'Références Sans Tâtonnement', d: 'Aucun chemin de fichier ni ID n’est deviné. Chaque référence remonte à un enregistrement réel.' },
-    { t: 'Portes de Qualité', d: 'Chaque description doit expliquer ce que fait un élément — jamais son origine ou sa date de déplacement.' },
-  ],
-  AR: [
-    { t: 'مساحة العمل تمتلك الحالة', d: 'كل قرار محفوظ في قاعدة البيانات. إذا توقف التنفيذ، يستأنف مساعد آخر العمل من نفس النقطة.' },
-    { t: 'قراءة البيانات الوصفية أولاً', d: 'تُقرأ البيانات الوصفية قبل الملفات الكاملة. استرجاع السياق يوفر الوقت والموارد.' },
-    { t: 'أولوية الإجراءات التالية', d: 'طلباتك الصريحة هي دائمًا الأولوية الأولى في قائمة المهام.' },
-    { t: 'أمان الكتابة العلاقاتية', d: 'تحديث الحقول المحددة فقط وتجنب إعادة كتابة الكائنات بأكملها.' },
-    { t: 'مرجعيات مؤكدة بدون تخمين', d: 'لا يتم تخمين أي مسار ملف أو معرف قاعدة بيانات. كل مرجع يعود لسجل حقيقي.' },
-    { t: 'بوابات جودة معتمدة', d: 'يجب أن توضح كل وصف وظيفي ماذا يفعل العنصر بدقة.' },
+    { k: 'التحليل 3', d: 'ربط اختيارك بتهيئة برمجية محددة.' },
+    { k: 'البحث 2', d: 'متابعة مستهدفة بناءً على الخيار المحدد.' },
+    { k: 'التحليل 4', d: 'المخطط النهائي وتحويله للترميز.' },
   ]
 };
 
 const FAQS_MAP = {
   EN: [
     {
-      q: 'Does Fabrica generate static blueprints, or does it build actual systems?',
-      a: 'We build actual, fully functional systems. Beyond drafting layouts or workflow proposals, we set up, customize, and deploy relational ERP databases, active n8n automation pipelines, custom product codebases, and marketing trackers with real-time logging.',
+      q: 'Does Fabrica generate conceptual blueprints or build real working systems?',
+      a: 'We build real, fully functional systems. We provision relational ERP databases, active n8n automation pipelines, custom product codebases, and live telemetry.',
     },
     {
       q: 'What types of inputs can I provide to the harness?',
@@ -317,7 +290,7 @@ const FAQS_MAP = {
       a: 'Nous construisons de vrais systèmes entièrement fonctionnels : bases ERP relationnelles, pipelines d’automatisation n8n actifs, code de produit sur mesure et télémétrie en temps réel.',
     },
     {
-      q: 'Quels types de données puis-je fournir au système ?',
+      q: 'Quels types deQuels types de données puis-je fournir au système ?',
       a: 'Tout : des idées textuelles, des tableurs complexes, des schémas bruts, de la documentation API et du code existant. Fabrica traite cette complexité et établit la carte des dépendances.',
     },
     {
@@ -365,14 +338,31 @@ const FAQS_MAP = {
   ]
 };
 
+const HARD_LAWS_MAP = {
+  EN: [
+    { t: '1. Autonomous Pipeline', d: 'Structured 4-stage pipeline (Drafting ➔ Planning ➔ Execution ➔ Delivery) producing client deliverables.' },
+    { t: '2. Persistent Memory', d: 'Supabase RLS database keeps every project, document, and research log safe without context loss.' },
+    { t: '3. Audited Deliverables', d: 'Separates gathered research sources from finalized client-ready outputs in auditable folders.' },
+    { t: '4. Deep Research Engine', d: 'Queries live web sources and official APIs before drafting or proposing solutions.' },
+    { t: '5. 24/7 Background Autonomy', d: 'Missions, competitor scans, and pipeline checks run continuously after closing the site.' },
+    { t: '6. Zero Setup Interface', d: '100% UI-controlled workspace with swappable LLM brains (Gemini, Claude, OpenRouter).', }
+  ],
+  FR: [
+    { t: '1. Pipeline Autonome', d: 'Pipeline structuré en 4 étapes (Brouillon ➔ Planification ➔ Exécution ➔ Livraison).', }
+  ],
+  AR: [
+    { t: '1. مسار عمل مستقل', d: 'خط إنتاج من 4 مراحل (المسودة ➔ التخطيط ➔ التنفيذ ➔ التسليم) لمخرجات فائقة.', }
+  ]
+};
+
 const LANDING_TEXT = {
   EN: {
     nav: { matrix: 'The Matrix', systems: 'Pipelines', workspace: 'Workspace', deepResearch: 'Deep Research', faqs: 'FAQs', openDashboard: 'Open Dashboard' },
     hero: {
       tag: 'Business-First Agentic Operating System',
-      h1: 'Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.',
-      sub: 'AI knows how to reason. Fabrica gives it the 24/7 autonomous business pipeline.',
-      desc: 'Stop prompting. Draft, plan, execute, and verify — from a single Dashboard, with zero technical setup.',
+      h1: 'Run on 24/7 AI Autonomy and Scale. Draft, plan, execute, and verify -- Monitor from a single Dashboard, with zero technical setup.',
+      sub: 'AI knows how to reason, output is SLOP.\nStop prompting. Fabrica is your Next AI EXIT.',
+      desc: 'if you still run Business & Coding sessions manualy with 80-hour work weeks, files & spreadsheets !',
       launchBtn: 'Launch Your Workspace',
       seeBuildsBtn: 'See How The Pipeline Works'
     },
@@ -398,9 +388,9 @@ const LANDING_TEXT = {
     nav: { matrix: 'La Matrice', systems: 'Pipelines', workspace: 'Espace de Travail', deepResearch: 'Recherche Approfondie', faqs: 'FAQs', openDashboard: 'Ouvrir le Tableau de Bord' },
     hero: {
       tag: 'Système d\'Exploitation Autonome Métier',
-      h1: 'TRANSFORMEZ VOS SYSTÈMES BRUTS EN LIVRABLES CLIENTS AUDITÉS VIA DES OPÉRATIONS AUTONOMES.',
-      sub: 'L’IA sait raisonner. Fabrica lui donne le pipeline métier autonome 24/7.',
-      desc: 'Fini les prompts sans fin. Rédigez, planifiez, exécutez et vérifiez — depuis un seul Tableau de Bord, sans aucune configuration technique.',
+      h1: 'Exécutez sur l\'IA 24/7 Autonomie et Échelle. Rédigez, planifiez, exécutez et vérifiez -- Surveillez depuis un seul Tableau de bord, sans aucune configuration technique.',
+      sub: 'L\'IA sait raisonner, le résultat est de la SLOP.\nArrêtez les prompts. Fabrica est votre Prochain AI EXIT.',
+      desc: 'si vous gérez encore des sessions Business & Coding manuellement avec des semaines de 80h, des fichiers & tableurs !',
       launchBtn: 'Lancer Votre Espace de Travail',
       seeBuildsBtn: 'Découvrir Le Pipeline'
     },
@@ -414,7 +404,7 @@ const LANDING_TEXT = {
       researchTitle: 'Sources Officielles & Recherches Extraites à Chaque Session',
       researchSub: 'Le mode Recherche Approfondie interroge les sources officielles en direct avant toute création de livrable.',
       alwaysOnTag: 'Continuité Opérationnelle Continue',
-      alwaysOnTitle: 'Des Missions Qui Continuent Après la Fermeture du Site',
+      alwaysOnTitle: 'Des Missions Qui Continueront Après la Fermeture du Site',
       alwaysOnSub: 'Les rondes de recherche et les vérifications de pipeline s’exécutent en arrière-plan selon votre planning.',
       lawsTag: 'Six Lois Du Moteur Autonome',
       lawsTitle: 'Noyau d’Agent & Architecture Métier',
@@ -426,9 +416,9 @@ const LANDING_TEXT = {
     nav: { matrix: 'مصفوفة العمل', systems: 'مسارات العمل', workspace: 'مساحة العمل', deepResearch: 'البحث العميق', faqs: 'الأسئلة الشائعة', openDashboard: 'فتح لوحة التحكم' },
     hero: {
       tag: 'نظام تشغيل مستقل مخصص للأعمال',
-      h1: 'حوّل أنظمة عملك الخام إلى مخرجات مدققة وجاهزة لعملائك عبر عمليات مستقلة.',
-      sub: 'الذكاء الاصطناعي يعرف كيف يحلل. Fabrica تمنحه مسار العمل التجاري المستقل على مدار الساعة.',
-      desc: 'توقف عن التوجيه المستمر. أنشئ، خطط، نفذ، وتأكد — من لوحة تحكم واحدة، بدون أي تعقيدات تقنية.',
+      h1: 'انطلق مع الذكاء الاصطناعي 24/7 استقلالية وتوسع. صمّم، خطّط، نفّذ، ودقّق -- راقب من لوحة تحكم واحدة، وبدون أي تعقيدات تقنية.',
+      sub: 'الذكاء الاصطناعي يعرف كيف يفكر، والمخرجات العادية سطحية.\nتوقف عن التوجيه. Fabrica هو خروجك القادم بالذكاء الاصطناعي AI EXIT.',
+      desc: 'إذا كنت ما زلت تدير جلسات الأعمال والبرمجة يدويًا بأسابيع عمل 80 ساعة، مع الملفات وجداول البيانات !',
       launchBtn: 'بدء استخدام مساحة العمل',
       seeBuildsBtn: 'استكشف كيف يعمل خط الإنتاج'
     },
@@ -1194,20 +1184,20 @@ export default function Home() {
               if (uiLang === 'FR') {
                 return (
                   <>
-                    TRANSFORMEZ VOS <span className={spanAmber}>SYSTÈMES BRUTS</span> EN <span className={spanGreen}>LIVRABLES CLIENTS AUDITÉS</span> VIA DES <span className={spanAmber}>OPÉRATIONS AUTONOMES</span>.
+                    Exécutez sur l'IA 24/7 <span className={spanAmber}>Autonomie et Échelle</span>. Rédigez, planifiez, exécutez et vérifiez -- <span className={spanGreen}>Surveillez</span> depuis un seul Tableau de bord, sans aucune configuration technique.
                   </>
                 );
               }
               if (uiLang === 'AR') {
                 return (
                   <>
-                    حوّل <span className={spanAmber}>أنظمة عملك الخام</span> إلى <span className={spanGreen}>مخرجات مدققة وجاهزة</span> لعملائك عبر <span className={spanAmber}>عمليات مستقلة</span>.
+                    انطلق مع الذكاء الاصطناعي 24/7 <span className={spanAmber}>استقلالية وتوسع</span>. صمّم، خطّط، نفّذ، ودقّق -- <span className={spanGreen}>راقب</span> من لوحة تحكم واحدة، وبدون أي تعقيدات تقنية.
                   </>
                 );
               }
               return (
                 <>
-                  Turn <span className={spanAmber}>RAW BUSINESS SYSTEMS</span> into <span className={spanGreen}>AUDITED CLIENT DELIVERABLES</span> via <span className={spanAmber}>AUTONOMOUS OPERATIONS</span>.
+                  Run on 24/7 AI <span className={spanAmber}>Autonomy and Scale</span>. Draft, plan, execute, and verify -- <span className={spanGreen}>Monitor</span> from a single Dashboard, with zero technical setup.
                 </>
               );
             })()}
@@ -1215,30 +1205,54 @@ export default function Home() {
           <p className="text-sm sm:text-base md:text-lg font-bold text-slate-600 leading-relaxed">
             {(() => {
               const spanBlue = "text-sky-700 bg-sky-500/10 border border-sky-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
+              const spanRose = "text-rose-700 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
+              const spanAmber = "text-amber-700 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
+              const spanGreen = "text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
               if (uiLang === 'FR') {
                 return (
                   <>
-                    L’IA sait <span className={spanBlue}>raisonner</span>. Fabrica lui donne le <span className={spanBlue}>pipeline métier autonome 24/7</span>.
+                    L'IA sait <span className={spanBlue}>raisonner</span>, le résultat est de la <span className={spanRose}>SLOP</span>. Arrêtez les <span className={spanAmber}>prompts</span>. Fabrica est votre Prochain <span className={spanGreen}>AI EXIT</span>.
                   </>
                 );
               }
               if (uiLang === 'AR') {
                 return (
                   <>
-                    الذكاء الاصطناعي يعرف <span className={spanBlue}>كيف يحلل</span>. Fabrica تمنحه <span className={spanBlue}>مسار العمل التجاري المستقل على مدار الساعة</span>.
+                    الذكاء الاصطناعي يعرف كيف <span className={spanBlue}>يفكر</span>، والمخرجات العادية <span className={spanRose}>سطحية (SLOP)</span>. توقف عن <span className={spanAmber}>التوجيه</span>. Fabrica هو خروجك القادم <span className={spanGreen}>AI EXIT</span>.
                   </>
                 );
               }
               return (
                 <>
-                  AI knows how to <span className={spanBlue}>reason</span>. Fabrica gives it the <span className={spanBlue}>24/7 autonomous business pipeline</span>.
+                  AI knows how to <span className={spanBlue}>reason</span>, output is <span className={spanRose}>SLOP</span>. Stop <span className={spanAmber}>prompting</span>. Fabrica is your Next <span className={spanGreen}>AI EXIT</span>.
                 </>
               );
             })()}
           </p>
 
           <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
-            {txt.hero.desc}
+            {(() => {
+              const spanAmber = "text-amber-700 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md inline-block mx-0.5 font-black";
+              if (uiLang === 'FR') {
+                return (
+                  <>
+                    si vous gérez encore des sessions <span className={spanAmber}>Business & Coding</span> manuellement avec des semaines de 80h, des fichiers & tableurs !
+                  </>
+                );
+              }
+              if (uiLang === 'AR') {
+                return (
+                  <>
+                    إذا كنت ما زلت تدير جلسات <span className={spanAmber}>الأعمال والبرمجة</span> يدويًا بأسابيع عمل 80 ساعة، مع الملفات وجداول البيانات !
+                  </>
+                );
+              }
+              return (
+                <>
+                  if you still run <span className={spanAmber}>Business & Coding</span> sessions manualy with 80-hour work weeks, files & spreadsheets !
+                </>
+              );
+            })()}
           </p>
 
           <div className="flex flex-wrap gap-2 pt-1 font-mono">

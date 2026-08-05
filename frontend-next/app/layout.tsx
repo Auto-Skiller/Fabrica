@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Fabrica — Watch your company get built.",
-  description: "AI knows HOW to build. It just doesn't know WHAT. Drop in your spreadsheets, files, and processes — Fabrica learns how your business works and builds real systems to run it on.",
+  description: "Stop prompting if you run Business & Coding sessions manualy with 80-hour work weeks, files & spreadsheets.\nRun on 24/7 AI Autonomy and Scale. Draft, plan, execute, and verify -- Monitor from a single Dashboard, with zero technical setup.\nFabrica. your Next AI EXIT.",
 };
 
 const safeFetchScript = `

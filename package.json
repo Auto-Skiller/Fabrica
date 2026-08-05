@@ -1,7 +1,7 @@
 {
-  "name": "fabrica-saas",
+  "name": "fabrica",
   "version": "1.0.0",
-  "description": "Fabrica SaaS - AI Business Systems Dashboard & Sync Daemon",
+  "description": "Stop prompting if you run Business & Coding sessions manualy with 80-hour work weeks, files & spreadsheets.\nRun on 24/7 AI Autonomy and Scale. Draft, plan, execute, and verify -- Monitor from a single Dashboard, with zero technical setup.\nFabrica. your Next AI EXIT.",
   "main": "server.ts",
   "type": "module",
   "workspaces": [

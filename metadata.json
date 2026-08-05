@@ -1,6 +1,6 @@
 {
-  "name": "Fabrica Workspace OS",
-  "description": "Autonomous Business Partner and Context Operating System with persistent memory, multi-project workspace execution, background simulation daemons, and live artifact compilers.",
+  "name": "Fabrica",
+  "description": "Stop prompting if you run Business & Coding sessions manualy with 80-hour work weeks, files & spreadsheets.\nRun on 24/7 AI Autonomy and Scale. Draft, plan, execute, and verify -- Monitor from a single Dashboard, with zero technical setup.\nFabrica. your Next AI EXIT.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
