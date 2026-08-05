@@ -6,33 +6,50 @@
 These laws are non-negotiable operational requirements enforced on every single execution turn. 
 
 ## LAW 1: Workspace-Owns-State
-Every decision, plan, research outcome, user response, and configuration MUST be mirrored directly in the workspace database (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/Sources/`, `workspace/Deliverables/`). You are forbidden from keeping critical state inside temporary workspace files or harness scratchpads. If a process stops, another agent must be able to boot up, read the workspace stores, and continue exactly where you left off.
+- **WHAT**: Mirror every decision, plan, research finding, user response, and configuration directly into persistent workspace files (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/Sources/`, `workspace/Deliverables/`).
+- **HOW**: Write JSON state updates directly to workspace files using file tools or API helpers immediately upon completing an operational step.
+- **WHY**: Ensures multi-tenant persistence and zero context loss across multi-day agent runs.
+- **WHEN**: Enforced on every single turn before finishing execution.
 
 ## LAW 2: Brain-First Database Querying
-The metadata in `workspace.json` (including `sources`, `deliverables`, `pendings`, `actions`, and `action_items` with attributes `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`) and `missions.json` describes the contents, maturity, readability, and operational triggers of files and code modules. Always fetch high-level index records and item metadata before reading full file contents. This preserves bandwidth and minimizes token consumption during multi-step runs.
+- **WHAT**: Read high-level index metadata in `workspace.json` and `missions.json` before reading full file contents.
+- **HOW**: Use `view_file` or `grep_search` on `workspace.json` / `missions.json` to extract item paths, types, and triggers first.
+- **WHY**: Minimizes token usage and preserves context window bandwidth during deep research loops.
+- **WHEN**: Whenever searching for existing sources, deliverables, or mission parameters.
 
 ## LAW 3: Next-Actions Priority
-Every turn must end with an explicit check of next steps.
-- **The Backlog Principle**: The `harness.json` backlog and `tenant.json` audit event stream are your source of user intent. Treat explicit user requests or mission tasks as top priority.
-- **Critical Fix Override**: The only issue that can supersede the user backlog is a critical infrastructure error (e.g., database schema mismatch, broken network connection, compilation failure). Resolve critical failures first, then immediately yield to backlog.
+- **WHAT**: End every turn by evaluating top-priority backlog tasks from `harness.json` or active missions.
+- **HOW**: Inspect `harness.json` backlog items (`type: 'suggested' | 'validated'`) and execution steps in `missions.json`.
+- **WHY**: Guarantees that agent actions remain strictly aligned with human intent and mission goals.
+- **WHEN**: At the start and end of every agent execution turn.
 
 ## LAW 4: Relational Write-Safety (No Overwrites)
-When updating structured records (e.g., updating a tool's capabilities or a mission's QA state):
-- **Patch Specific Fields**: Perform target updates of specific JSON properties or columns. Never load, modify locally, and dump the entire object back if it leads to flattening other keys or wiping existing descriptions.
-- **Metadata Check**: If writing a new capability, guarantee that existing sibling capabilities are preserved. Count non-empty semantic descriptions before and after the write. If the count decreases, reject the write, restore previous state, and report the issue.
+- **WHAT**: Perform targeted JSON property updates without clobbering sibling keys or descriptions.
+- **HOW**: Parse JSON objects, update specific fields, and verify description counts before writing back to disk.
+- **WHY**: Prevents accidental data loss or record corruption during concurrent or multi-turn updates.
+- **WHEN**: Whenever modifying structured records in workspace store files.
 
 ## LAW 5: Zero-Guess References
-You are strictly forbidden from guessing file paths, database IDs, or schema tables. All UUIDs and file paths must trace back to explicit records retrieved in `AGENTS.md`, `workspace.json`, `missions.json`, `Sources/`, or `Deliverables/`. If a query returns empty or a path is not found, HALT immediately, perform a lookup query, and self-repair before proceeding.
+- **WHAT**: Use only verified, explicit file paths, database IDs, and schema names.
+- **HOW**: Trace all UUIDs and file paths back to explicit records retrieved in `AGENTS.md`, `workspace.json`, `missions.json`, `Sources/`, or `Deliverables/`.
+- **WHY**: Eliminates hallucinated paths, broken imports, and file-not-found errors.
+- **WHEN**: Whenever referencing or attempting to edit any file in the workspace.
 
 ## LAW 6: Quality Gates for Descriptions
-All data or system descriptions generated by the agent must pass strict semantic checks:
-- **`contains` Fields**: Must describe what the file actually does or explains (e.g., "Calculates compound interest formulas and provides table data"). It must NEVER describe the file's state, location, or origin (e.g., NOT "moved from raw", "uploaded yesterday", or "file inside database").
-- **`when_to_use` Fields**: Must contain concrete, practical use-cases (e.g., "Use when the client requests an interactive projection of multi-year debt amortization"). It must NEVER be a generic placeholder.
-- **`description` Fields**: Must provide a substantive summary.
+- **WHAT**: Enforce strict semantic quality on all item metadata fields (`contains`, `when_to_use`, `description`).
+- **HOW**: Ensure `contains` explains functionality (NOT location), `when_to_use` specifies real use cases, and `description` provides substantive summaries.
+- **WHY**: Guarantees clean vector indexing and accurate LLM discovery.
+- **WHEN**: Whenever creating or updating items in `workspace.json` or `missions.json`.
 
 ## LAW 7: Skill-Driven Domain Workflow Execution
-All domain-specific step-by-step procedures, business guidelines, specialized frameworks, and task rules MUST be delegated to modular **Skills** (`.pi/skills/` or `Fabrica_kernel/skills/`). The root kernel prompt provides universal execution mechanics and loop control; the agent MUST load and follow the relevant skill's `SKILL.md` when executing domain-specific tasks rather than relying on hardcoded rules in global system prompts.
+- **WHAT**: Delegate domain-specific procedures, business frameworks, and coding tasks to modular **Skills**.
+- **HOW**: Call `view_file` on the target skill's `SKILL.md` (in `.pi/skills/` or `Fabrica_kernel/skills/`) before generating domain outputs.
+- **WHY**: Keeps global prompts domain-agnostic while executing specialized business procedures cleanly.
+- **WHEN**: Whenever executing tasks requiring domain-specific guidelines or multi-step procedures.
 
 ## LAW 8: Loop & EFFORT Compliance
-When executing missions, the agent MUST strictly adhere to the defined 4-stage looped pipeline engine (`Drafting -> Planning -> Execution -> Delivering`), active EFFORT parameters (Low: 1 round, Medium: 2 rounds, High: 3 rounds, Deep: 5 rounds), and active system approval gate controls (DIRECTOR, WORKER, OFF). You are forbidden from skipping required loops or bypassing approval gates.
+- **WHAT**: Adhere strictly to the 4-stage pipeline (`Drafting -> Planning -> Execution -> Delivering`), active EFFORT level (Low: 1, Medium: 2, High: 3, Deep: 5 rounds), and autonomy mode (`director`, `worker`, `off`).
+- **HOW**: Check active `autonomy` mode and EFFORT parameters in `harness.json` before advancing pipeline stages.
+- **WHY**: Prevents bypassing required verification loops or unauthorized phase progression.
+- **WHEN**: At every stage boundary and gate transition.
 

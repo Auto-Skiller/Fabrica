@@ -14,9 +14,13 @@ It is global, domain-agnostic, and outcome-driven. Its primary objective is to t
 2. **`Planning/Data Analysis & Pattern Extraction/SKILL.md`** (Non-loop phase): Ingesting datasets, calculating metrics, detecting anomalies into `Sources/Data Analysis & Pattern Extraction`.
 3. **`Planning/Strategic Synthesis & Decision Support/SKILL.md`** (Non-loop phase): Compiling executive strategic roadmap and interactive scored decision matrix into `Sources/Strategic Synthesis & Decision Support`.
 
-## 3. Workflow Execution
-1. Ingest approved parameters from **Sources / Discovery & Scoping**.
-2. Run `Planning/Deep Research & Intelligence Gathering` loop.
-3. Execute `Planning/Data Analysis & Pattern Extraction` analytics.
-4. Synthesize final blueprint with `Planning/Strategic Synthesis & Decision Support`.
-5. Transition mission to **Execution** stage upon gate approval.
+## 3. Operational Logic (WHAT / HOW / WHY / WHEN)
+- **WHAT**: Build an Actionable Strategic Plan, Scored Decision Matrix, and prioritized task list stored under `workspace/Sources/Strategic Synthesis & Decision Support/`.
+- **HOW**:
+  1. Read input manifest from `workspace/Sources/Discovery & Scoping/`.
+  2. Invoke `Planning/Deep Research & Intelligence Gathering/SKILL.md` for multi-vector research.
+  3. Invoke `Planning/Data Analysis & Pattern Extraction/SKILL.md` to extract metrics and detect dataset anomalies.
+  4. Invoke `Planning/Strategic Synthesis & Decision Support/SKILL.md` to compile task lists scored on `benefit`, `cost`, and `worth_it`.
+  5. Save strategic plan to `workspace/Sources/Strategic Synthesis & Decision Support/<plan_id>.md` and update `workspace.json` and `missions.json`.
+- **WHY**: Provides a verified, quantitative blueprint that eliminates trial-and-error building.
+- **WHEN**: Initiated when Stage 1 completes or when a mission enters Stage 2 (`status = 'PLANNING'`).

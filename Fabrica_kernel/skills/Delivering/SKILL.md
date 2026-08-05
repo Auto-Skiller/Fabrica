@@ -12,12 +12,13 @@ It is global, domain-agnostic, and outcome-driven. Its primary objective is to p
 ## 2. Stage Structure & Sub-Skills
 - **`Delivering/pipeline_Delivering_Review/SKILL.md`**: Present production deliverables for user review, handle feedback loops, and promote accepted items to `Deliverables/Completed`.
 
-## 3. Workflow Execution
-1. Ingest verified deliverable items sitting in **Deliverables / Reviews**.
-2. Present work to the user with release notes and verification proof.
-3. Handle gate decision:
-   - **User Accepts**: Move item to **Deliverables / Completed** and archive mission.
-   - **User Feedback (Not Accepted)**:
-     - Work is **ALWAYS moved to Deliverables / Executions**.
-     - Allow user to select a **Custom Entry** (any loop or stage feedback entry point) to continue processing the full loop from that entry point based on feedback.
-     - If no custom entry point is selected, default to continuing the full **Execution loop**.
+## 3. Operational Logic (WHAT / HOW / WHY / WHEN)
+- **WHAT**: Present verified production deliverables to the human operator for review, process approval or feedback, and promote accepted items to `workspace/Deliverables/Completed/`.
+- **HOW**:
+  1. Ingest verified deliverable items sitting in `workspace/Deliverables/Reviews/`.
+  2. Present release notes, test results, and deliverable summaries to the user.
+  3. Process user gate response:
+     - **IF APPROVED**: Relocate item to `workspace/Deliverables/Completed/`, update `workspace.json`, and set mission `status = 'archive'`.
+     - **IF REJECTED / FEEDBACK**: Relocate item back to `workspace/Deliverables/Executions/` and route feedback to the designated target loop (or default to Execution loop).
+- **WHY**: Ensures human sign-off before archiving production work and closing the mission lifecycle.
+- **WHEN**: Initiated when Stage 3 completes or when a mission enters Stage 4 (`status = 'DELIVERING'`).

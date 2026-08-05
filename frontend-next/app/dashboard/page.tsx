@@ -2222,6 +2222,8 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [agentSuggestions, setAgentSuggestions] = useState<string[]>([]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
   const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number } | null>(null);
+  const [contextPickerAttachedItems, setContextPickerAttachedItems] = useState<AttachedContextItem[]>([]);
+  const [isContextPickerOpen, setIsContextPickerOpen] = useState<boolean>(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
   const lastSendTimeRef = useRef<number>(0);
@@ -3256,10 +3258,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [realtimeTableFilter, setRealtimeTableFilter] = useState<string>('all');
   const [realtimeEventFilter, setRealtimeEventFilter] = useState<string>('all');
   const [autonomyLevel, setAutonomyLevel] = useState<'off' | 'director' | 'worker'>(
-    () => (localStorage.getItem('fabrica_autonomy_level') as any) || 'director'
+    () => (typeof window !== 'undefined' ? (localStorage.getItem('fabrica_autonomy_level') as any) || 'director' : 'director')
   );
   const [thinkingLevel, setThinkingLevel] = useState<'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'>(
-    () => (localStorage.getItem('fabrica_thinking_level') as any) || 'low'
+    () => (typeof window !== 'undefined' ? (localStorage.getItem('fabrica_thinking_level') as any) || 'low' : 'low')
   );
   const [autonomyInterval, setAutonomyInterval] = useState<number>(20);
   const [isAutonomyOn, setIsAutonomyOn] = useState<boolean>(true);
@@ -3275,24 +3277,6 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [uiLang, setUiLang] = useState<'EN' | 'FR' | 'AR'>('EN');
   const dtxt = DASHBOARD_TEXT[uiLang] || DASHBOARD_TEXT.EN;
   const [agentLang, setAgentLang] = useState<'EN' | 'FR' | 'AR'>('EN');
-
-  // Plan 1.3: Non-English language selection warning toast
-  const handleAgentLangChange = (newLang: 'EN' | 'FR' | 'AR') => {
-    if (newLang !== 'EN') {
-      setToast({ message: '⚠️ Non-English output consumes more tokens due to tokenizer overhead. Keep English for lowest token cost.', type: 'info', isOpen: true });
-    }
-    setAgentLang(newLang);
-    localStorage.setItem('fabrica_agent_lang', newLang);
-    harnessApi.updateHarnessState({ agent_lang: newLang, output_language: newLang });
-  };
-
-  const [selectedExtraSources, setSelectedExtraSources] = useState<AttachedContextItem[]>([]);
-  const [isContextPickerOpen, setIsContextPickerOpen] = useState<boolean>(false);
-  const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number }>({
-    tokensUsed: 0,
-    maxTokens: 200000,
-    percentUsed: 0
-  });
 
   // Load theme and initial dismiss state on client mount
   useEffect(() => {
@@ -5635,17 +5619,17 @@ ${isDirector ? `
   const handleSendChat = async (msgOverride?: string) => {
     let msg = (msgOverride || chatMessage).trim();
     if (!msg) {
-      if (selectedExtraSources.length === 0) return;
+      if (contextPickerAttachedItems.length === 0) return;
       msg = 'Evaluate attached context items and assist.';
     }
 
     // Plan 1.1-B: Attach extra context items to prompt
-    if (selectedExtraSources.length > 0) {
-      const contextBlock = selectedExtraSources.map(item =>
+    if (contextPickerAttachedItems.length > 0) {
+      const contextBlock = contextPickerAttachedItems.map(item =>
         item.path ? `@${item.path}` : `[ATTACHED ${item.type.toUpperCase()}: ${item.label}]\n${item.content}`
       ).join('\n\n');
       msg = `${contextBlock}\n\n${msg}`;
-      setSelectedExtraSources([]);
+      setContextPickerAttachedItems([]);
     }
 
     lastSendTimeRef.current = Date.now();
@@ -8537,14 +8521,16 @@ ${isDirector ? `
                     </div>
 
                     {/* Chat Input Top Border Divider */}
-                    <div style={{ width: '100%', marginBottom: '4px', position: 'relative' }}>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '1px',
-                          background: 'var(--border-soft)',
-                          marginTop: '4px',
-                      {/* Plan 1.1-B: Attached Extra Context Chips */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '1px',
+                        background: 'var(--border-soft)',
+                        marginTop: '4px',
+                        marginBottom: '4px',
+                      }}
+                    />
+                    {/* Plan 1.1-B: Attached Extra Context Chips */}
                       {selectedExtraSources.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                           {selectedExtraSources.map((item) => (
@@ -8895,6 +8881,7 @@ ${isDirector ? `
                           <option value="high">🧠 HIGH</option>
                           <option value="xhigh">🧠 XHIGH</option>
                           <option value="max">🧠 MAX</option>
+                        </select>
                         {/* Plan 1.1-B: + Context Picker Button */}
                         <button
                           type="button"
@@ -8907,9 +8894,9 @@ ${isDirector ? `
                             fontSize: '14px',
                             fontWeight: 900,
                             borderRadius: '4px',
-                            border: selectedExtraSources.length > 0 ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
-                            background: selectedExtraSources.length > 0 ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-alt)',
-                            color: selectedExtraSources.length > 0 ? 'var(--accent)' : 'var(--text-bright)',
+                            border: contextPickerAttachedItems.length > 0 ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
+                            background: contextPickerAttachedItems.length > 0 ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-alt)',
+                            color: contextPickerAttachedItems.length > 0 ? 'var(--accent)' : 'var(--text-bright)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -8951,8 +8938,7 @@ ${isDirector ? `
                         )}
                       </div>
                     </div>
-            </div>
-            </div>
+                  </div>
         </section>
       </aside>
 
@@ -18359,12 +18345,13 @@ ${isDirector ? `
             </div>
           </div>
         </div>
+      )}
 
       {/* Plan 1.1-B: Context Picker Modal */}
       <ContextPickerModal
         isOpen={isContextPickerOpen}
         onClose={() => setIsContextPickerOpen(false)}
-        onAttach={(items) => setSelectedExtraSources(prev => [...prev, ...items])}
+        onAttach={(items) => setContextPickerAttachedItems(prev => [...prev, ...items])}
         missions={missions}
         rawDataList={rawDataList}
         systemComponents={systemComponents}

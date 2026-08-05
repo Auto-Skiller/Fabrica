@@ -44,12 +44,16 @@ A Standard mission can link to any combination of `raw_data` or `system_componen
 
 ---
 
-## 3. FLEXIBLE DRAFTING PIPELINE
-For Standard missions, the agent is permitted to compress the multi-step drafting process:
-- **Direct Drafting**: Ingest the user's quick brief.
-- **Shorthand Scoping**: Formulate the plan directly within a single concise scoping cycle.
-- **Immediate Execution**: Flip the status to Execution (or auto-execute under autonomy mode) and apply the changes.
-- **Final Reporting**: Summarize the output, verify changes, and archive the card.
+## 3. OPERATIONAL LOGIC (WHAT / HOW / WHY / WHEN)
+- **WHAT**: Fast-path task execution, one-off fixes, visual updates, configuration patches, or recurring maintenance rounds without mandatory 4-stage pipeline overhead.
+- **HOW**:
+  1. Parse brief and target files/assets.
+  2. Formulate quick plan directly without deep research unless modifying core database schemas.
+  3. Execute task changes and run build/lint verification.
+  4. Record updates in `workspace/Deliverables/Executions/` and update `missions.json` and `workspace.json`.
+  5. Check `rounds.status` and `rounds.persistent` to handle recurring maintenance iterations.
+- **WHY**: Provides maximum execution speed for simple, non-architectural tasks while keeping workspace stores synchronized.
+- **WHEN**: Initiated for standard missions (`type = 'standard'`), quick pipeline jumps, or recurring maintenance schedules.
 
 ---
 
