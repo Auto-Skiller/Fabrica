@@ -61,10 +61,16 @@ Fabrica is built specifically for operators who need repeatable research ➔ ana
   * **Real-time 5s Polling**: Automatically streams background mission creation and deliverable progress to the screen.
 * **Panel B (Missions Board & Chat)**:
   * Horizontal project board managing work across 4 status stages (**Drafting**, **Planning**, **Execution**, **Delivery**).
+  * **Top-Bar Minimizing Toggle**: Collapses section into a top bar displaying live metrics (total missions, stage breakdown, high-priority count).
   * High-density **Quick Injections Panel**: 2-card prompt suggestions grid directly under chat controls.
 * **Panel C (50/50 Split Storage & Artifacts View)**:
   * Expanded dual-column layout providing equal 50% width columns for **Sources** (`raw_data`) and **Deliverables** (`system_components`).
+  * **Top-Bar Minimizing Toggle**: Collapses section into a right sidebar displaying live metrics (total subsystems count, document count).
   * Sub-section search filters, import/export triggers, and D3 force-directed dependency visualization toggles.
+* **Live App Preview & Code Editor**:
+  * **Top-Bar Minimizing Toggle**: Collapses both Preview and Editor into a bottom bar displaying live metrics (Preview status indicator, active file path).
+  * **Sub-System Filtered Dropdown**: Editor dropdown filters dynamically to show only files and folders inside the currently selected sub-system (e.g. `workspace/Data Analysis & Pattern Extraction/`).
+  * Cleaned top-bar layout with removal of "⚡ Live Sync" text label.
 
 ### 2. Enterprise Modular Backend Engine & Interactive Daemon Architecture
 * **Interactive Daemon Session & Strict Single Daemon Policy (`src/core/harness.ts`)**: Migrated all execution pathways from static `pi -p --mode json` commands to persistent interactive daemon sessions (`PiDaemonProcess`). Enforces a strict 1:1 binding per tenant ID with zero concurrent daemon threads per tenant.

@@ -2,6 +2,15 @@
 
 All notable changes to Fabrica are documented here. Format: newest first.
 
+## 2026-08-06 09:40 — Sub-System Filtered Editor, Collapsible Section Panels with Metrics & System Prompts Audit
+- **Sub-System Filtered Editor Dropdown:** Updated the code editor files/folders dropdown to dynamically scope items to the currently active sub-system folder (e.g. `workspace/Data Analysis & Pattern Extraction/`).
+- **Clean Editor Top Bar:** Removed the "⚡ Live Sync" text label from the editor top bar for a cleaner developer surface.
+- **Section Minimizing Controls & Metrics:** Added interactive minimizing icons to:
+  - Missions HQ top bar (collapses section into a top bar displaying live metrics: total missions count, stage breakdown across Drafting/Planning/Execution/Delivery, and high priority count).
+  - Workspace Subsystem top bar (collapses section into a right sidebar displaying live metrics: total subsystems count, document count).
+  - Preview & Editor top bar (collapses both sections into a bottom bar displaying live status indicators: Preview status, active file path).
+- **System Prompts & Kernel Audit:** Audited all 7 system prompts (`01_identity.md` through `07_app_guide.md`), `README.md`, and skills against the current Node.js / Express 4 / Next.js 16 modular architecture. Synchronized layout specs, data structures, and pipeline definitions.
+
 ## 2026-07-10 01:37 — Seed EXECUTE-phase pillars + evolution_objectives (AUTO-MODE #13)
 - Inbox INGEST+SEED confirmed DRAINED & correctly reconciled: 3 raw dirs on disk
   (best uses=9f, capabilities=687f, complex systems=758f — no raw shrinkage), 0 phantoms,

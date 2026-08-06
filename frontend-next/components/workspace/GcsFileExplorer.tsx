@@ -200,6 +200,7 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
+  const [autoMonitor, setAutoMonitor] = useState<boolean>(true);
 
   // Toggle directory expansion
   const toggleFolder = (folderPath: string) => {
@@ -483,6 +484,30 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
+                      type="button"
+                      onClick={() => setAutoMonitor(!autoMonitor)}
+                      title={`Auto Monitor is ${autoMonitor ? 'ENABLED' : 'DISABLED'} - Click to toggle`}
+                      style={{
+                        backgroundColor: autoMonitor ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface)',
+                        border: `1px solid ${autoMonitor ? 'var(--status-success)' : 'var(--border-soft)'}`,
+                        color: autoMonitor ? 'var(--status-success)' : 'var(--text-muted)',
+                        borderRadius: '3px',
+                        padding: '1px 5px',
+                        fontSize: '8px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        userSelect: 'none',
+                        transition: 'all 0.15s ease',
+                        lineHeight: 1
+                      }}
+                    >
+                      <span style={{ fontSize: '7.5px' }}>{autoMonitor ? '⚡' : '⚪'}</span>
+                      <span>Monitor {autoMonitor ? 'ON' : 'OFF'}</span>
+                    </button>
+                    <button
                       onClick={handleCopyContent}
                       style={{
                         backgroundColor: copiedNotification ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface)',
@@ -576,25 +601,25 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
           right: 0,
           bottom: 0,
           zIndex: 99999,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(5px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(3px)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
+          justifyContent: 'flex-end',
+          padding: '40px 280px 20px 20px'
         }}
         onClick={() => setIsEditorModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '880px',
-              maxWidth: '92vw',
-              height: '82vh',
+              width: '750px',
+              maxWidth: 'calc(100vw - 310px)',
+              height: 'calc(100vh - 80px)',
               backgroundColor: '#0f172a',
               border: '1px solid #334155',
               borderRadius: '8px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+              boxShadow: '-10px 0 30px rgba(0, 0, 0, 0.5), 0 25px 50px -12px rgba(0, 0, 0, 0.6)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden'

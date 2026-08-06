@@ -45,6 +45,7 @@ The application utilizes a classic three-panel responsive layout with a compact 
 
 ### PANEL B: Middle Section (The Missions Board Tracker & Chat)
 - **Purpose**: The primary project management board where the user tracks work progression, communicates with the agent, and executes workflows.
+- **Top-Bar Minimizing Control**: Features a minimizing toggle icon on the right of the Missions HQ header. When minimized, collapses the Missions board into a top bar displaying live relevant metrics (total mission count, stage breakdown across Drafting/Planning/Execution/Delivery, high-priority count).
 - **Vertical Rows (The 5 Types)**:
   - `Standard`
   - `Build Idea`
@@ -60,6 +61,7 @@ The application utilizes a classic three-panel responsive layout with a compact 
 
 ### PANEL C: Right Section (Sources & Deliverables Management - 50/50 Split)
 - **Purpose**: Explicitly designed to manage data inputs, scoping parameters, research, strategic plans, execution outputs, reviews, completed release deliverables, and flagged action items with full metadata support (`type`, `level`, `description`, `when_to_use`, `triggers`, `flagged_as_action`).
+- **Top-Bar Minimizing Control**: Features a minimizing toggle icon on the left of the Workspace top-bar. When minimized, collapses the workspace section into a right sidebar displaying live relevant metrics (total subsystem count, total document/artifact count).
 - **Dual Section Layout**:
   - Fully expanded flex-stretch container dividing **Sources** (`Discovery & Scoping`, `Deep Research`, `Data Analysis`, `Strategic Synthesis`) and **Deliverables** (`Executions`, `Reviews`, `Completed`) into equal 50% width columns.
   - **Action Items Tracking**: Dedicated `action_items` index collection in `workspace.json` tracks items requiring execution action.
@@ -67,6 +69,12 @@ The application utilizes a classic three-panel responsive layout with a compact 
   - **Sub-section Controls**:
     - **Sources (Left 50%)**: Contains source sub-section filter, semantic search input, import button, and list/graph view toggles.
     - **Deliverables (Right 50%)**: Contains deliverable stage filter, search input, export button, and deployment/approval controls.
+
+### LIVE APP PREVIEW & EDITOR SECTION
+- **Purpose**: Live application code preview and interactive code editor for inspecting and editing workspace deliverables and scripts.
+- **Top-Bar Minimizing Control**: Features a minimizing toggle icon on the right of the Editor top-bar. When minimized, collapses both the Preview and Editor sections into a bottom bar displaying live metrics (Preview status indicator, active file path).
+- **Sub-System Filtered Dropdown**: The files and folders dropdown in the Editor top-bar filters dynamically to display ONLY the files and folders inside the currently selected sub-system (e.g., if editing a file from Data Analysis & Pattern Extraction, the dropdown shows only items inside `workspace/Data Analysis & Pattern Extraction/`).
+- **Clean Editor Top Bar**: Cleaned top-bar layout with the removal of "⚡ Live Sync" text label for a uncluttered developer interface.
 
 ### CONSOLIDATED 2-SECTION ACCOUNT & API CREDENTIALS MODAL
 - **Structure**: All account, workspace, billing, BYOK credentials, model routing, load balancer, and PAUG features are consolidated into **EXACTLY TWO (2)** top-level sections:

@@ -9,6 +9,7 @@ interface LiveAppPreviewProps {
   runnerUrl?: string;
   containerState?: ContainerState;
   onPrewarm?: () => void;
+  onMinimizeLeft?: () => void;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
   runnerUrl,
   containerState = 'warm',
   onPrewarm,
+  onMinimizeLeft,
   className = ''
 }) => {
   const safeTenant = tenantId.toLowerCase().replace(/[^a-z0-9_\-]/g, '-');
@@ -196,7 +198,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
           </span>
         </div>
 
-        {/* External Link */}
+        {/* External Link & Optional Minimize Left */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
           <a
             href={currentUrl}
@@ -219,6 +221,32 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
           >
             ↗️
           </a>
+          {onMinimizeLeft && (
+            <button
+              type="button"
+              onClick={onMinimizeLeft}
+              title="Minimize Live Preview to the left"
+              style={{
+                height: '20px',
+                minWidth: '20px',
+                padding: '0 5px',
+                fontSize: '9px',
+                fontWeight: 800,
+                backgroundColor: '#1e293b',
+                border: '1px solid #334155',
+                color: '#38bdf8',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: '4px',
+                flexShrink: 0
+              }}
+            >
+              ◀
+            </button>
+          )}
         </div>
       </div>
 

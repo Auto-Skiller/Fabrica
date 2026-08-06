@@ -4,5 +4,6 @@ export * from './drive-api';
 export * from './drive-auth';
 export * from './github-api';
 export * from './GcsFileExplorer';
+export * from './InlineCodeEditor';
 export * from './LiveAppPreview';
 export * from './RightPanel';
