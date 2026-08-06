@@ -125,7 +125,7 @@ Fabrica/
 * **Frontend Framework**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide React
 * **Graph & Data Visualization**: Cytoscape.js, D3.js, Recharts
 * **Backend Server**: Node.js 22, Express 4, `tsx` / Esbuild
-* **Database & Persistence**: Supabase PostgreSQL (Row-Level Security), Local Schema Fallbacks
+* **Authentication & Persistence**: Supabase Auth, Tenant-Isolated JSON Storage & Local Schema Fallbacks
 * **Storage & RAG Search**: Google Cloud Storage (CMEK), Vertex AI Search Discovery Engine
 * **Code Execution**: Node.js `vm` (Isolated Virtual Machine Context)
 

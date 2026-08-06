@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
+import { Auth, ThemeSupa } from '../../components/auth';
 
 function renderDashboardMock() {
   return (
@@ -1389,11 +1390,12 @@ export default function LogPage() {
                         }}
                       >
                         <option value="">Role...</option>
-                        <option value="founder">Founder / CEO</option>
-                        <option value="lead">Lead Architect</option>
-                        <option value="engineer">Engineer</option>
-                        <option value="pm">Product Mgr</option>
-                        <option value="ops">DevOps / SRE</option>
+                        <option value="founder">Founder / CEO / Solopreneur</option>
+                        <option value="consultant">Independent Consultant / Agency Owner</option>
+                        <option value="architect">Lead Architect / System Engineer</option>
+                        <option value="pm">Product Manager / Business Lead</option>
+                        <option value="operator">Autonomous AI Operator</option>
+                        <option value="freelancer">Freelancer / Builder</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -1423,11 +1425,12 @@ export default function LogPage() {
                     }}
                   >
                     <option value="">Select a primary use case...</option>
-                    <option value="Architecting & simulating agent specs">Architecting & simulating agent specs</option>
-                    <option value="Personal project exploration">Personal project exploration</option>
-                    <option value="Enterprise multi-tenant integration">Enterprise multi-tenant integration</option>
-                    <option value="Academic research / Learning">Academic research / Learning</option>
-                    <option value="Other SaaS development">Other SaaS development</option>
+                    <option value="24/7 Autonomous AI Business & Coding Pipelines">24/7 Autonomous AI Business & Coding Pipelines</option>
+                    <option value="Building Client Deliverables & Market Research">Building Client Deliverables & Market Research</option>
+                    <option value="Solopreneur Operations & Product Engineering">Solopreneur Operations & Product Engineering</option>
+                    <option value="Multi-Tenant SaaS Systems & Agent Architecture">Multi-Tenant SaaS Systems & Agent Architecture</option>
+                    <option value="Rapid Prototyping & Business Automation">Rapid Prototyping & Business Automation</option>
+                    <option value="Learning & Exploring AI Autonomy">Learning & Exploring AI Autonomy</option>
                   </select>
                 </div>
 
@@ -1460,12 +1463,12 @@ export default function LogPage() {
 
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-                  gap: '14px',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '16px',
                   alignItems: 'stretch',
                   marginTop: '10px'
                 }}>
-                  {/* Free Plan */}
+                  {/* Free Starter Tier */}
                   <div 
                     onClick={() => {
                       setSelectedPlan('free');
@@ -1485,71 +1488,30 @@ export default function LogPage() {
                     }}
                   >
                     <div style={{ marginBottom: '14px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
-                        Free Beta
+                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.04em' }}>
+                        Free Starter Tier ($0)
                       </span>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '6px' }}>
-                        <b style={{ fontSize: '22px', fontWeight: 900, color: '#1c1c1e' }}>$0</b>
+                        <b style={{ fontSize: '24px', fontWeight: 900, color: '#1c1c1e' }}>$0</b>
                         <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ month</span>
                       </div>
                       <p style={{ margin: '6px 0 0', fontSize: '9px', color: '#64748b', lineHeight: 1.4 }}>
-                        Perfect for workspace drafting & quick solo evaluations.
+                        Powered exclusively by our shared multi-key load balancer pool.
                       </p>
                     </div>
 
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }}></div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '8.5px', color: '#475569', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Shared sandbox environment</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>20 AI spec pipelines/mo</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>BYOK or Managed Credits</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Community forum support</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#10b981' }}>✓</b> <span><b>Shared Multi-Key Key Pool</b> (Gemini 3.6 Flash, Llama 3.3 70B, DeepSeek R1)</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#10b981' }}>✓</b> <span><b>$0 Card Verification</b> anti-bot safeguard (No charge)</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#10b981' }}>✓</b> <span>Automatic round-robin failover & rate-limit lock isolation</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#10b981' }}>✓</b> <span>2 active workspace blueprints</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#10b981' }}>✓</b> <span>Community forum support</span></div>
                     </div>
                   </div>
 
-                  {/* Dedicated PAUG Plan */}
-                  <div 
-                    onClick={() => {
-                      setSelectedPlan('paug');
-                      localStorage.setItem(`fabrica_ob_plan_${user?.id || 'default'}`, 'paug');
-                    }}
-                    style={{
-                      background: selectedPlan === 'paug' ? '#ffffff' : '#fcfcfc',
-                      border: selectedPlan === 'paug' ? '2.5px solid #3b82f6' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '20px 16px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      position: 'relative',
-                      boxShadow: selectedPlan === 'paug' ? '0 12px 24px rgba(59, 130, 246, 0.12)' : 'none',
-                      transition: 'all 0.15s ease-in-out'
-                    }}
-                  >
-                    <div style={{ marginBottom: '14px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#3b82f6', letterSpacing: '0.04em' }}>
-                        Dedicated PAUG
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '6px' }}>
-                        <b style={{ fontSize: '22px', fontWeight: 900, color: '#1c1c1e' }}>$15</b>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ month</span>
-                      </div>
-                      <p style={{ margin: '6px 0 0', fontSize: '9px', color: '#64748b', lineHeight: 1.4 }}>
-                        Pay-as-you-go exact cost dedicated resources & DB.
-                      </p>
-                    </div>
-
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }}></div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '8.5px', color: '#475569', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Private isolated DB instance</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Dedicated storage bucket</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Isolated runner space</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Zero-config auto maintenance</span></div>
-                    </div>
-                  </div>
-
-                  {/* Power User Plan */}
+                  {/* Developer Pro Plan (At Cost) */}
                   <div 
                     onClick={() => {
                       setSelectedPlan('power');
@@ -1584,33 +1546,35 @@ export default function LogPage() {
                       letterSpacing: '0.06em',
                       boxShadow: '0 4px 10px rgba(204, 122, 74, 0.25)'
                     }}>
-                      ⭐ Best Value
+                      At Cost (0% Platform Profit)
                     </div>
 
                     <div style={{ marginBottom: '14px', marginTop: '2px' }}>
                       <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#CC7A4A', letterSpacing: '0.04em' }}>
-                        Power User
+                        Developer Pro (At Cost)
                       </span>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '6px' }}>
-                        <b style={{ fontSize: '24px', fontWeight: 900, color: '#1c1c1e' }}>$49</b>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ month</span>
+                        <b style={{ fontSize: '24px', fontWeight: 900, color: '#1c1c1e' }}>$15</b>
+                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ mo pass-through</span>
                       </div>
                       <p style={{ margin: '6px 0 0', fontSize: '9px', color: '#64748b', lineHeight: 1.4 }}>
-                        Ideal for active builders & advanced automated triggers.
+                        Pure pass-through cost model. Zero profit markup taken on token or container usage.
                       </p>
                     </div>
 
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }}></div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '8.5px', color: '#475569', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Unlimited active projects</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>500 AI spec pipelines/mo</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Dedicated runtime proxies</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Priority SLA chat support</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span><b>0% Platform Profit</b> — Direct raw API provider billing</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span><b>BYOK (Bring Your Own Key)</b> direct key registration</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span><b>Dedicated Throughput Pipeline</b> (Bypasses shared pool queues)</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span>Direct access to Gemini 1.5 Pro, Claude 3.5 & GPT-4o</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span>Unlimited projects & full token usage telemetry</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#CC7A4A' }}>✓</b> <span>Priority Email & Discord support</span></div>
                     </div>
                   </div>
 
-                  {/* Enterprise Plan */}
+                  {/* Enterprise Pass-Through Plan */}
                   <div 
                     onClick={() => {
                       setSelectedPlan('enterprise');
@@ -1618,37 +1582,38 @@ export default function LogPage() {
                     }}
                     style={{
                       background: selectedPlan === 'enterprise' ? '#ffffff' : '#fcfcfc',
-                      border: selectedPlan === 'enterprise' ? '2.5px solid #8b5cf6' : '1px solid #e2e8f0',
+                      border: selectedPlan === 'enterprise' ? '2.5px solid #6366f1' : '1px solid #e2e8f0',
                       borderRadius: '12px',
                       padding: '20px 16px',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       position: 'relative',
-                      boxShadow: selectedPlan === 'enterprise' ? '0 12px 24px rgba(139, 92, 246, 0.12)' : 'none',
+                      boxShadow: selectedPlan === 'enterprise' ? '0 12px 24px rgba(99, 102, 241, 0.12)' : 'none',
                       transition: 'all 0.15s ease-in-out'
                     }}
                   >
                     <div style={{ marginBottom: '14px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#8b5cf6', letterSpacing: '0.04em' }}>
-                        Enterprise Custom
+                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#6366f1', letterSpacing: '0.04em' }}>
+                        Enterprise Pass-Through
                       </span>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '6px' }}>
-                        <b style={{ fontSize: '22px', fontWeight: 900, color: '#1c1c1e' }}>$249</b>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ month</span>
+                        <b style={{ fontSize: '24px', fontWeight: 900, color: '#1c1c1e' }}>$99</b>
+                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>/ mo base infra</span>
                       </div>
                       <p style={{ margin: '6px 0 0', fontSize: '9px', color: '#64748b', lineHeight: 1.4 }}>
-                        Built for multi-region teams & dedicated high-custom nodes.
+                        Dedicated container cluster & custom pass-through billing at 0% margin.
                       </p>
                     </div>
 
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '10px 0' }}></div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '8.5px', color: '#475569', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Full scale multi-tenancy</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>Unlimited AI spec executions</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>0.5s cold-start warm pooling</span></div>
-                      <div style={{ display: 'flex', gap: '6px' }}><b>✓</b> <span>24/7 Dedicated Account Engineer</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#6366f1' }}>✓</b> <span><b>Dedicated single-tenant container node cluster</b></span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#6366f1' }}>✓</b> <span><b>Custom SLA & dedicated solution engineering team</b></span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#6366f1' }}>✓</b> <span>Enterprise SSO, SAML, Audit Logs & GCS export</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#6366f1' }}>✓</b> <span>Zero rate limits with 100% provider key pass-through</span></div>
+                      <div style={{ display: 'flex', gap: '6px' }}><b style={{ color: '#6366f1' }}>✓</b> <span>24/7 Priority phone & SLA support</span></div>
                     </div>
                   </div>
                 </div>

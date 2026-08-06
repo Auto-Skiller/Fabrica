@@ -26,38 +26,44 @@ export interface PiProviderGroup {
 }
 
 export const FABRICA_POOL_MODELS = [
-  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Allocation)' },
-  { id: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nvidia Nemotron 3 Ultra 550B (Free)' },
-  { id: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free', name: 'Nvidia Nemotron 3 Super 120B (Free)' },
-  { id: 'openrouter/poolside/laguna-s-2.1:free', name: 'Poolside Laguna S 2.1 (Free)' },
-  { id: 'openrouter/google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B IT (Free)' }
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Pool)' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Free Pool)' },
+  { id: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nvidia Nemotron 3 Ultra 550B (Free Pool)' },
+  { id: 'openrouter/poolside/laguna-s-2.1:free', name: 'Poolside Laguna S 2.1 (Free Pool)' }
 ];
 
 export const DEFAULT_PI_CLI_MODELS: PiCliModelItem[] = [
   // Google
   { provider: 'google', model: 'gemini-3.6-flash', fullModel: 'google/gemini-3.6-flash', context: '1.0M', maxOutput: '65.5K', thinking: true, images: true },
+  { provider: 'google', model: 'gemini-2.5-pro', fullModel: 'google/gemini-2.5-pro', context: '2.0M', maxOutput: '65.5K', thinking: true, images: true },
   { provider: 'google', model: 'gemini-2.0-flash', fullModel: 'google/gemini-2.0-flash', context: '1.0M', maxOutput: '8.2K', thinking: false, images: true },
   { provider: 'google', model: 'gemma-4-31b-it', fullModel: 'google/gemma-4-31b-it', context: '262.1K', maxOutput: '32.8K', thinking: true, images: true },
+
+  // Anthropic
+  { provider: 'anthropic', model: 'claude-3-7-sonnet', fullModel: 'anthropic/claude-3-7-sonnet', context: '200K', maxOutput: '64K', thinking: true, images: true },
+  { provider: 'anthropic', model: 'claude-3-5-sonnet-latest', fullModel: 'anthropic/claude-3-5-sonnet-latest', context: '200K', maxOutput: '8K', thinking: true, images: true },
+  { provider: 'anthropic', model: 'claude-3-5-haiku-latest', fullModel: 'anthropic/claude-3-5-haiku-latest', context: '200K', maxOutput: '8K', thinking: false, images: false },
+  { provider: 'anthropic', model: 'claude-3-opus-latest', fullModel: 'anthropic/claude-3-opus-latest', context: '200K', maxOutput: '4K', thinking: false, images: true },
+
+  // OpenAI
+  { provider: 'openai', model: 'gpt-4o', fullModel: 'openai/gpt-4o', context: '128K', maxOutput: '4K', thinking: false, images: true },
+  { provider: 'openai', model: 'gpt-4o-mini', fullModel: 'openai/gpt-4o-mini', context: '128K', maxOutput: '16K', thinking: false, images: true },
+  { provider: 'openai', model: 'o1', fullModel: 'openai/o1', context: '200K', maxOutput: '100K', thinking: true, images: true },
+  { provider: 'openai', model: 'o3-mini', fullModel: 'openai/o3-mini', context: '200K', maxOutput: '100K', thinking: true, images: false },
+
+  // DeepSeek
+  { provider: 'deepseek', model: 'deepseek-chat', fullModel: 'deepseek/deepseek-chat', context: '64K', maxOutput: '8K', thinking: false, images: false },
+  { provider: 'deepseek', model: 'deepseek-reasoner', fullModel: 'deepseek/deepseek-reasoner', context: '64K', maxOutput: '8K', thinking: true, images: false },
+
+  // Groq
+  { provider: 'groq', model: 'llama-3.3-70b-versatile', fullModel: 'groq/llama-3.3-70b-versatile', context: '128K', maxOutput: '8K', thinking: false, images: false },
+  { provider: 'groq', model: 'llama-3.1-8b-instant', fullModel: 'groq/llama-3.1-8b-instant', context: '128K', maxOutput: '8K', thinking: false, images: false },
 
   // OpenRouter
   { provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet', fullModel: 'openrouter/anthropic/claude-3.5-sonnet', context: '200K', maxOutput: '8K', thinking: true, images: true },
   { provider: 'openrouter', model: 'deepseek/deepseek-r1', fullModel: 'openrouter/deepseek/deepseek-r1', context: '128K', maxOutput: '8K', thinking: true, images: false },
   { provider: 'openrouter', model: 'openai/gpt-4o', fullModel: 'openrouter/openai/gpt-4o', context: '128K', maxOutput: '4K', thinking: false, images: true },
-
-  // Anthropic
-  { provider: 'anthropic', model: 'claude-3-5-sonnet-latest', fullModel: 'anthropic/claude-3-5-sonnet-latest', context: '200K', maxOutput: '8K', thinking: true, images: true },
-  { provider: 'anthropic', model: 'claude-3-5-haiku-latest', fullModel: 'anthropic/claude-3-5-haiku-latest', context: '200K', maxOutput: '8K', thinking: false, images: false },
-
-  // OpenAI
-  { provider: 'openai', model: 'gpt-4o', fullModel: 'openai/gpt-4o', context: '128K', maxOutput: '4K', thinking: false, images: true },
-  { provider: 'openai', model: 'gpt-4o-mini', fullModel: 'openai/gpt-4o-mini', context: '128K', maxOutput: '16K', thinking: false, images: true },
-
-  // Groq
-  { provider: 'groq', model: 'llama-3.3-70b-versatile', fullModel: 'groq/llama-3.3-70b-versatile', context: '128K', maxOutput: '8K', thinking: false, images: false },
-
-  // DeepSeek
-  { provider: 'deepseek', model: 'deepseek-chat', fullModel: 'deepseek/deepseek-chat', context: '64K', maxOutput: '8K', thinking: false, images: false },
-  { provider: 'deepseek', model: 'deepseek-reasoner', fullModel: 'deepseek/deepseek-reasoner', context: '64K', maxOutput: '8K', thinking: true, images: false }
+  { provider: 'openrouter', model: 'nvidia/nemotron-3-ultra-550b-a55b:free', fullModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', context: '128K', maxOutput: '8K', thinking: false, images: false }
 ];
 
 export const PROVIDER_METADATA: Record<string, { name: string; badge: string; badgeColor: string; description: string }> = {

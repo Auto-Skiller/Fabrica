@@ -202,7 +202,7 @@ const PERSONAS_MAP = {
 
 const PAIN_PROMISE_MAP = {
   EN: [
-    { pain: 'Generic AI chats forget client context the moment you start a new conversation.', fix: 'Persistent Business Memory: Supabase RLS database keeps every project, document, and research log safe with zero context drift.' },
+    { pain: 'Generic AI chats forget client context the moment you start a new conversation.', fix: 'Persistent Business Memory: Local multi-tenant storage keeps every project, document, and research log safe with zero context drift.' },
     { pain: 'Single AI text guesses force you to manually review and re-prompt every answer.', fix: 'Structured QA Gates: 3 distinct strategic paths with trade-offs presented before execution moves forward.' },
     { pain: 'Spending hours writing complex prompts and formatting outputs into client files.', fix: 'Business-First Pipelines: Automatic 4-stage pipeline (Drafting ➔ Planning ➔ Execution ➔ Delivery) producing client-ready deliverables.' },
     { pain: 'Complex technical integrations and API setups required to connect AI to real business tasks.', fix: 'Zero Technical Setup: 100% UI-controlled workspace with swappable model brain (Gemini, Claude, OpenRouter) and pre-built integrations.' },
@@ -210,7 +210,7 @@ const PAIN_PROMISE_MAP = {
     { pain: 'No audit trail or folder organization for research sources vs final client files.', fix: 'Structured Storage Layer: Dedicated folders per phase (Sources for scoping/research/synthesis & Deliverables for execution/reviews).' },
   ],
   FR: [
-    { pain: 'Les chats IA génériques oublient le contexte client dès que vous commencez une nouvelle conversation.', fix: 'Mémoire Métier Persistante : la base Supabase RLS conserve chaque projet, document et recherche sans aucune perte.' },
+    { pain: 'Les chats IA génériques oublient le contexte client dès que vous commencez une nouvelle conversation.', fix: 'Mémoire Métier Persistante : le stockage multi-tenant local conserve chaque projet, document et recherche sans aucune perte.' },
     { pain: 'Une simple prédiction IA vous oblige à vérifier et réécrire manuellement chaque réponse.', fix: 'Portes QA Structurées : 3 voies stratégiques distinctes avec arbitrages présentées avant toute exécution.' },
     { pain: 'Passer des heures à rédiger des prompts complexes et à mettre en forme les livrables clients.', fix: 'Pipelines Métier : pipeline automatique en 4 étapes (Brouillon ➔ Planification ➔ Exécution ➔ Livraison) produisant des livrables prêts.' },
     { pain: 'Incitations et intégrations techniques complexes requises pour lier l\'IA aux tâches d\'entreprise.', fix: 'Zéro Configuration Technique : espace 100% contrôlé par l\'UI avec choix de modèles (Gemini, Claude, OpenRouter).' },
@@ -341,7 +341,7 @@ const FAQS_MAP = {
 const HARD_LAWS_MAP = {
   EN: [
     { t: '1. Autonomous Pipeline', d: 'Structured 4-stage pipeline (Drafting ➔ Planning ➔ Execution ➔ Delivery) producing client deliverables.' },
-    { t: '2. Persistent Memory', d: 'Supabase RLS database keeps every project, document, and research log safe without context loss.' },
+    { t: '2. Persistent Memory', d: 'Tenant-isolated multi-tenant storage keeps every project, document, and research log safe without context loss.' },
     { t: '3. Audited Deliverables', d: 'Separates gathered research sources from finalized client-ready outputs in auditable folders.' },
     { t: '4. Deep Research Engine', d: 'Queries live web sources and official APIs before drafting or proposing solutions.' },
     { t: '5. 24/7 Background Autonomy', d: 'Missions, competitor scans, and pipeline checks run continuously after closing the site.' },
@@ -726,7 +726,7 @@ const CONCIERGE_TRANSLATIONS = {
       { q: "How does the 4-stage autonomous pipeline work?", a: "Fabrica operates a continuous 4-stage loop: Drafting ➔ Planning ➔ Execution ➔ Delivery. Your AI model reasons through tasks while Fabrica maintains persistent state, audit trails, and client deliverables 24/7." },
       { q: "Can I use Fabrica with zero technical setup?", a: "Yes! Fabrica is engineered for non-technical solopreneurs, independent consultants, small agencies, and growth teams. You control the entire 24/7 pipeline from a single intuitive Dashboard." },
       { q: "What client deliverables can Fabrica generate?", a: "Market research reports, competitive audits, client proposals, strategy matrices, growth playbooks, and automated client deliverables with full verification audit logs." },
-      { q: "How are my business systems & data protected?", a: "Tenant-isolated Supabase storage with Row Level Security ensures your raw business systems and client deliverables are strictly isolated, audited, and exportable anytime." }
+      { q: "How are my business systems & data protected?", a: "Tenant-isolated workspace storage with Supabase Authentication ensures your raw business systems and client deliverables are strictly isolated, audited, and exportable anytime." }
     ]
   },
   FR: {
@@ -746,7 +746,7 @@ const CONCIERGE_TRANSLATIONS = {
       { q: "Comment fonctionne le pipeline autonome en 4 étapes ?", a: "Fabrica exécute une boucle continue en 4 étapes : Brouillon ➔ Planification ➔ Exécution ➔ Livraison. L'IA raisonne tandis que Fabrica maintient l'état et la traçabilité 24/7." },
       { q: "Puis-je l'utiliser sans aucune compétence technique ?", a: "Oui ! Fabrica est conçu pour les solopreneurs, consultants et petites agences non-techniques. Vous contrôlez tout depuis un Tableau de Bord unique." },
       { q: "Quels types de livrables Fabrica peut-il générer ?", a: "Rapports d'étude de marché, audits concurrentiels, propositions clients, matrices de stratégie et playbooks de croissance avec journal d'audit vérifié." },
-      { q: "Comment mes données et livrables sont-ils sécurisés ?", a: "Le stockage isolé Supabase avec Row Level Security garantit que vos systèmes et livrables clients sont protégés et exportables à tout moment." }
+      { q: "Comment mes données et livrables sont-ils sécurisés ?", a: "Le stockage isolé avec l'authentification Supabase garantit que vos systèmes et livrables clients sont protégés et exportables à tout moment." }
     ]
   },
   AR: {
@@ -766,7 +766,7 @@ const CONCIERGE_TRANSLATIONS = {
       { q: "كيف يعمل مسار العمل المستقل من 4 مراحل؟", a: "تعمل Fabrica عبر حلقة متصلة من 4 مراحل: المسودة ← التخطيط ← التنفيذ ← التسليم. يحلل الذكاء الاصطناعي المهام بينما تحافظ Fabrica على استمرارية العمل والتدقيق على مدار الساعة." },
       { q: "هل يمكنني استخدامه بدون أي خبرة تقنية؟", a: "نعم! تم تصميم Fabrica خصيصًا للرواد المستقلين والمستشارين والوكالات بدون أي تعقيدات تقنية، وتدير كل شيء من لوحة تحكم واحدة." },
       { q: "ما هي المخرجات التي يمكن لـ Fabrica إنشاؤها؟", a: "تقارير أبحاث السوق، دراسات المنافسين، عروض العملاء، مصفوفات الاستراتيجية، وخطط النمو مع سجلات تدقيق وتحقق كاملة." },
-      { q: "كيف تتم حماية بياناتي ومخرجات عملائي؟", a: "يضمن التخزين المعزول عبر Supabase RLS أمان وسرية أنظمتك ومخرجاتك بالكامل، مع إمكانية تصديرها في أي وقت." }
+      { q: "كيف تتم حماية بياناتي ومخرجات عملائي؟", a: "يضمن التخزين المعزول المصحوب بمصادقة Supabase أمان وسرية أنظمتك ومخرجاتك بالكامل، مع إمكانية تصديرها في أي وقت." }
     ]
   }
 };
@@ -1494,12 +1494,12 @@ export default function Home() {
                     <div className="rounded-lg bg-slate-950 border border-[#CC7A4A]/50 flex flex-col gap-1 relative" style={{ paddingLeft: '5px', paddingRight: '5px', paddingBottom: '5px', paddingTop: '5px' }}>
                       <span className="text-[9px] text-[#CC7A4A] uppercase">Router Layer</span>
                       <span className="text-white font-bold flex items-center gap-1" style={{ paddingRight: '5px', paddingLeft: '5px' }}>⚡ Gateway Node</span>
-                      <span className="text-[9.5px] text-slate-400">Model abstraction + RLS scope</span>
+                      <span className="text-[9.5px] text-slate-400">Model abstraction + Auth scope</span>
                     </div>
                     <div className="rounded-lg bg-slate-950 border border-slate-800 flex flex-col gap-1" style={{ paddingTop: '5px', paddingLeft: '5px', paddingBottom: '5px' }}>
                       <span className="text-[9px] text-slate-500 uppercase">Persistence</span>
                       <span className="text-purple-400 font-bold flex items-center gap-1">🗄️ OS Prompts/Data</span>
-                      <span className="text-[9.5px] text-slate-400">Relational Supabase engine</span>
+                      <span className="text-[9.5px] text-slate-400">Tenant-isolated JSON engine</span>
                     </div>
                   </div>
                 </div>

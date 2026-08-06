@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
+import { Auth, ThemeSupa } from '../../components/auth';
 import { api, harnessApi } from '../../components/api';
 import { RuntimeYaml } from '../../components/harness/types';
 
@@ -2408,73 +2409,9 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [selectedRealtimeEvent, setSelectedRealtimeEvent] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!supabase || !isRealtimeActive) return;
-
-    const activeChannels: any[] = [];
-
-    // Table names to subscribe to
-    const tablesToSubscribe = Object.entries(realtimeSubscriptions)
-      .filter(([_, isEnabled]) => isEnabled)
-      .map(([tableName]) => tableName);
-
-    tablesToSubscribe.forEach((tableName) => {
-      try {
-        const channelName = `realtime-changes-${tableName}`;
-        const channel = supabase
-          .channel(channelName)
-          .on(
-            'postgres_changes' as any,
-            {
-              event: '*',
-              schema: 'public',
-              table: tableName,
-            },
-            (payload: any) => {
-              console.log(`[Supabase Realtime] Change detected in ${tableName}:`, payload);
-              
-              const newEvent = {
-                id: (payload.commit_timestamp || Date.now().toString()) + '-' + Math.random().toString(36).substr(2, 5),
-                timestamp: new Date().toISOString(),
-                table: tableName,
-                eventType: payload.eventType,
-                newPayload: payload.new,
-                oldPayload: payload.old,
-              };
-
-              setRealtimeEvents((prev) => [newEvent, ...prev].slice(0, 100));
-
-              // Add a system log to the SSE console as well, for unified visibility
-              setEvents((prev) => [
-                `[Realtime] DB ${payload.eventType} on table "${tableName}" at ${new Date().toLocaleTimeString()}`,
-                ...prev
-              ].slice(0, 200));
-
-              // Auto-sync UI if enabled and the change affects raw_data or system_components
-              if (autoSyncUi && (tableName === 'raw_data' || tableName === 'system_components')) {
-                fetchWorkspaceData();
-              }
-            }
-          )
-          .subscribe((status: any) => {
-            console.log(`[Supabase Realtime] Subscription status for ${tableName}: ${status}`);
-          });
-
-        activeChannels.push(channel);
-      } catch (err) {
-        console.error(`Failed to subscribe to ${tableName}:`, err);
-      }
-    });
-
-    return () => {
-      activeChannels.forEach((channel) => {
-        try {
-          supabase.removeChannel(channel);
-        } catch (err) {
-          console.warn('Error removing channel:', err);
-        }
-      });
-    };
-  }, [isRealtimeActive, realtimeSubscriptions, autoSyncUi]);
+    // Supabase is strictly used for Auth; no DB channel subscriptions needed
+    return;
+  }, []);
 
   // Relational Database & Multi-Project Custom States for Right Column
   const [rawDataList, setRawDataList] = useState<any[]>([]);
@@ -5640,18 +5577,17 @@ ${isDirector ? `
     const controller = new AbortController();
     chatAbortControllerRef.current = controller;
 
-    const updatedHistory = [
-      ...chatHistory,
-      { sender: 'user' as const, text: msg }
-    ];
-    setChatHistory(updatedHistory);
+    const userMessage = { sender: 'user' as const, text: msg };
+    const agentMessage = { sender: 'agent' as const, text: '' };
+
+    const formattedHistory = chatHistory.map(h => ({
+      sender: h.sender === 'user' ? 'user' : 'model',
+      text: h.text
+    }));
+
+    setChatHistory(prev => [...prev, userMessage, agentMessage]);
 
     try {
-      const formattedHistory = updatedHistory.slice(0, -1).map(h => ({
-        sender: h.sender === 'user' ? 'user' : 'model',
-        text: h.text
-      }));
-
       const tenantKey = user?.id || activeEntity || 'default_user';
       const activeCustomKey = customApiKey && customApiKey.trim().length > 0 ? customApiKey.trim() : undefined;
 
@@ -5669,8 +5605,12 @@ ${isDirector ? `
         controller.signal,
         thinkingLevel,
         (chunkData: any) => {
-          if (chunkData.type === 'message' && typeof chunkData.content === 'string') {
+          if (typeof chunkData.delta === 'string') {
+            accumulatedStreamText += chunkData.delta;
+          } else if (chunkData.type === 'message' && typeof chunkData.content === 'string') {
             accumulatedStreamText += chunkData.content;
+          } else if (chunkData.type === 'thinking' && typeof chunkData.content === 'string') {
+            // Optional thinking stream tracking
           } else if (chunkData.type === 'turn_end' && chunkData.message) {
             const content = chunkData.message.content;
             if (typeof content === 'string') accumulatedStreamText = content;
@@ -5688,8 +5628,14 @@ ${isDirector ? `
                 percentUsed: Math.min(100, Math.round((total / maxT) * 100))
               });
             }
-          } else if (chunkData.text) {
-            accumulatedStreamText = chunkData.text;
+          } else if (typeof chunkData.text === 'string' && chunkData.text.length > 0) {
+            if (chunkData.text.length >= accumulatedStreamText.length) {
+              accumulatedStreamText = chunkData.text;
+            } else if (accumulatedStreamText === '') {
+              accumulatedStreamText = chunkData.text;
+            } else {
+              accumulatedStreamText += chunkData.text;
+            }
           }
 
           if (accumulatedStreamText) {
@@ -5698,6 +5644,8 @@ ${isDirector ? `
               const lastIdx = updated.length - 1;
               if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
                 updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
+              } else {
+                updated.push({ sender: 'agent', text: accumulatedStreamText });
               }
               return updated;
             });
@@ -5707,17 +5655,20 @@ ${isDirector ? `
 
       fetchUserTierData();
       if (res.ok) {
-        if (accumulatedStreamText) {
+        const finalText = accumulatedStreamText || res.text || '';
+        if (finalText) {
           setChatHistory(prev => {
             const updated = [...prev];
             const lastIdx = updated.length - 1;
             if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
-              updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
+              updated[lastIdx] = { sender: 'agent', text: finalText };
+            } else {
+              updated.push({ sender: 'agent', text: finalText });
             }
             return updated;
           });
         }
-        const lowerText = (res.text || accumulatedStreamText || '').toLowerCase();
+        const lowerText = (finalText || '').toLowerCase();
         if (
           lowerText.includes('no key') ||
           lowerText.includes('api key') ||
@@ -5737,6 +5688,8 @@ ${isDirector ? `
           const lastIdx = updated.length - 1;
           if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
             updated[lastIdx] = { sender: 'agent', text: errorMsg };
+          } else {
+            updated.push({ sender: 'agent', text: errorMsg });
           }
           return updated;
         });
@@ -5750,7 +5703,16 @@ ${isDirector ? `
         return;
       }
       const errText = err.message || 'Check connection settings.';
-      setChatHistory(prev => [...prev, { sender: 'agent', text: `Failed to stream response: ${errText}` }]);
+      setChatHistory(prev => {
+        const updated = [...prev];
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+          updated[lastIdx] = { sender: 'agent', text: `Failed to stream response: ${errText}` };
+        } else {
+          updated.push({ sender: 'agent', text: `Failed to stream response: ${errText}` });
+        }
+        return updated;
+      });
       setIsAccountWindowOpen(true);
       setToast({ message: `Agent API Error: ${errText}`, type: 'error', isOpen: true });
     } finally {
@@ -6111,17 +6073,9 @@ ${isDirector ? `
   };
 
   const renderModelOptions = () => {
-    if (tokenBillingMode === 'managed' || tokenBillingMode === 'paug') {
-      return (
-        <option value="managed">
-          Managed — no model selection
-        </option>
-      );
-    }
-
     if (tokenBillingMode === 'pool') {
       return (
-        <optgroup label="🏊 Fabrica System Pool (Free Allocation)" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+        <optgroup label="🏊 Fabrica System Pool (Free Tier)" style={{ background: 'var(--surface)', color: 'var(--text)' }}>
           {FABRICA_POOL_MODELS.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -6140,29 +6094,30 @@ ${isDirector ? `
       return true;
     });
 
-    if (!activeProviders || activeProviders.length === 0) {
-      return (
-        <option value="gemini-3.6-flash">
-          google/gemini-3.6-flash (Agent CLI Default)
-        </option>
-      );
-    }
-
     return (
       <>
-        {activeProviders.map((prov) => (
-          <optgroup
-            key={prov.id}
-            label={`${prov.name} — [${prov.badge}]`}
-            style={{ background: 'var(--surface)', color: 'var(--text)' }}
-          >
-            {prov.models.map((m: any) => (
-              <option key={m.id} value={m.id}>
-                {m.name || m.id}
-              </option>
-            ))}
-          </optgroup>
-        ))}
+        {(tokenBillingMode === 'managed' || tokenBillingMode === 'paug') && (
+          <option value="managed">⚡ Auto System Routed (Managed)</option>
+        )}
+        {(!activeProviders || activeProviders.length === 0) ? (
+          <option value="gemini-3.6-flash">
+            google/gemini-3.6-flash (Agent CLI Default)
+          </option>
+        ) : (
+          activeProviders.map((prov) => (
+            <optgroup
+              key={prov.id}
+              label={`${prov.name} — [${prov.badge}]`}
+              style={{ background: 'var(--surface)', color: 'var(--text)' }}
+            >
+              {prov.models.map((m: any) => (
+                <option key={m.id} value={m.id}>
+                  {m.name || m.id}
+                </option>
+              ))}
+            </optgroup>
+          ))
+        )}
       </>
     );
   };
@@ -8032,31 +7987,28 @@ ${isDirector ? `
                   <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, paddingLeft: '2px', paddingRight: '2px', paddingTop: '0px', paddingBottom: '0px' }}>
                     {/* Model Selector */}
                     <select
-                      value={tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'managed' : chatModel}
-                      disabled={tokenBillingMode === 'managed' || tokenBillingMode === 'paug'}
+                      value={chatModel}
                       onChange={(e) => {
-                        if (e.target.value !== 'managed') {
-                          handleModelChange(e.target.value);
-                        }
+                        handleModelChange(e.target.value);
                       }}
-                      title={tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? "Managed — no model selection (system routed)" : "Select AI Model"}
+                      title="Select AI Model"
                       style={{
                         background: 'var(--surface-alt)',
                         border: '1px solid var(--border-soft)',
                         borderRadius: '4px',
-                        color: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'var(--muted)' : 'var(--accent)',
+                        color: 'var(--accent)',
                         fontSize: '7.5px',
                         fontFamily: 'var(--mono)',
                         fontWeight: 800,
                         outline: 'none',
-                        cursor: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 'not-allowed' : 'pointer',
+                        cursor: 'pointer',
                         padding: '0px 2px',
-                        maxWidth: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? '120px' : '80px',
+                        maxWidth: '120px',
                         height: '18px',
                         textTransform: 'uppercase',
                         textOverflow: 'ellipsis',
                         overflow: 'hidden',
-                        opacity: tokenBillingMode === 'managed' || tokenBillingMode === 'paug' ? 0.7 : 1
+                        opacity: 1
                       }}
                     >
                       {renderModelOptions()}
@@ -8626,12 +8578,11 @@ ${isDirector ? `
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
                         onKeyDown={(e) => {
-                          // Shift+Enter = send, bare Enter = insert newline (Plan 1.1-C)
+                          // Shift+Enter sends message, Enter inserts a new line
                           if (e.key === 'Enter' && e.shiftKey) {
                             e.preventDefault();
                             handleSendChat();
                           }
-                          // bare Enter: let textarea handle naturally (inserts \n)
                         }}
                         onMouseUp={(e) => {
                           const target = e.currentTarget;
@@ -11508,7 +11459,7 @@ ${isDirector ? `
                       
                       {!supabase ? (
                         <div style={{ color: 'var(--muted)', fontSize: '8.5px', lineHeight: '1.4' }}>
-                          ⚠️ Supabase is not configured yet. Set <code style={{ color: 'var(--accent-2)' }}>NEXT_PUBLIC_SUPABASE_URL</code> and <code style={{ color: 'var(--accent-2)' }}>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in environment variables to enable active database subscriptions.
+                          ⚠️ Supabase is not configured yet. Set <code style={{ color: 'var(--accent-2)' }}>NEXT_PUBLIC_SUPABASE_URL</code> and <code style={{ color: 'var(--accent-2)' }}>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in environment variables to enable Supabase Authentication.
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

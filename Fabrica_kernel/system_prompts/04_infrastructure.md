@@ -47,18 +47,13 @@ To handle autonomous background tasks and agentic mission execution:
 
 ---
 
-## 6. SUPABASE DB INTEGRATION & RAG INDEXING
-The relational Supabase PostgreSQL database or local JSON stores serve as persistent storage for instant multi-user scaling.
+## 6. SUPABASE AUTHENTICATION & SESSION MANAGEMENT
+Supabase is integrated strictly for user authentication, session verification, and OAuth provider management.
 
-### Query Construction Rules
-1. **Multi-User Partitioning**: Every single query MUST explicitly filter by `user_id` matching the authenticated session / `tenantId`.
-2. **Text Indexing for Agent RAG**:
-   - The tables `raw_data`, `artifacts`, and `system_components` have text search triggers or PGVector embeddings.
-   - Partial match query:
-     ```sql
-     SELECT id, name, metadata FROM raw_data WHERE user_id = $1 AND name ILIKE $2;
-     ```
-3. **Database Client**: `@supabase/supabase-js` client initialized on the Express server. Credentials load securely from environment variables.
+### Authentication Rules
+1. **User Auth & Identity**: User logins, OAuth tokens, and password reset flows are handled via `@supabase/supabase-js` or `@supabase/auth-ui-react`.
+2. **Session Verification**: Authenticated user sessions map directly to tenant isolation boundaries (`user_id` / `tenantId`).
+3. **Client Initialization**: The `@supabase/supabase-js` client initializes using `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` environment variables.
 
 ---
 

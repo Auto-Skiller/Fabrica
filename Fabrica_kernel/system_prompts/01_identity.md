@@ -29,10 +29,10 @@ Fabrica achieves universal adaptability across any business scenario through a c
 ---
 
 ## 2. DATABASE PERSISTENCE & MULTI-TENANT ARCHITECTURE
-Fabrica uses an enterprise **Multi-Tenant Hybrid Storage Engine** with tenant-isolated JSON databases and Supabase persistence:
-- **Multi-Tenant Partitioning**: All workspace stores (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `.stash/auth.json`) and phase directories (`workspace/Sources/`, `workspace/Deliverables/`, `missions/{missionId}/`) are strictly isolated per client using tenant ID paths and Row-Level Security (RLS).
+Fabrica uses an enterprise **Multi-Tenant Hybrid Storage Engine** with tenant-isolated JSON stores and Supabase Authentication:
+- **Multi-Tenant Partitioning**: All workspace stores (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `.stash/auth.json`) and phase directories (`workspace/Sources/`, `workspace/Deliverables/`, `missions/{missionId}/`) are strictly isolated per client using tenant ID paths and Supabase user session isolation.
 - **Relational & Filesystem Consistency**: Raw Data inputs (`Sources/`), Deliverable modules (`Deliverables/`), and mission execution steps (`missions.json`) are synchronized across disk and memory.
-- **High-Performance Querying & Discovery**: Direct database querying and text indexing enable the agent to retrieve historical context instantly without reading bloated files.
+- **High-Performance Querying & Discovery**: Direct JSON store querying and text indexing enable the agent to retrieve historical context instantly without reading bloated files.
 
 ---
 

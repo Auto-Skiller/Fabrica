@@ -88,8 +88,18 @@ export const harnessApi = {
               else if (Array.isArray(content)) {
                 accumulatedText = content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
               }
+            } else if (typeof parsed.delta === 'string') {
+              accumulatedText += parsed.delta;
+            } else if (parsed.type === 'message' && typeof parsed.content === 'string') {
+              accumulatedText += parsed.content;
             } else if (parsed.text) {
-              accumulatedText = parsed.text;
+              if (parsed.text.length >= accumulatedText.length && accumulatedText.length > 0) {
+                accumulatedText = parsed.text;
+              } else if (accumulatedText === '') {
+                accumulatedText = parsed.text;
+              } else {
+                accumulatedText += parsed.text;
+              }
             }
           } catch (_) {}
         }

@@ -8,7 +8,7 @@ This guide defines what a "Tool" is in the Fabrica Business OS, how tools are re
 ## 1. TOOLS VS INTERNAL WORKFLOWS
 It is critical to distinguish between the two structural layers in the kernel:
 - **Internal Workflows**: Workflows (`analytics`, `research`, `build`, etc.) are operational guidelines that govern *how* the agent thinks, plans, and structures its execution. They are part of the core product and reside read-only in the agent kernel.
-- **Tools**: Tools are functional *extensions* or *integrations* (plugins, MCP servers, domain skills, secondary agents, execution engines) that the agent uses to interact with the outside world. Tools reside in the client workspace, are declared in the Supabase `tools` table, and can be activated or deactivated by the user.
+- **Tools**: Tools are functional *extensions* or *integrations* (plugins, MCP servers, domain skills, secondary agents, execution engines) that the agent uses to interact with the outside world. Tools reside in the client workspace, are declared in workspace stores or configuration files, and can be activated or deactivated by the user.
 
 ---
 
