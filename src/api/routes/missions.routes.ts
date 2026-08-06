@@ -13,21 +13,21 @@ const router = Router();
 
 // GET /api/missions — List all missions
 router.get('/', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const missions = getMissions(tenantId);
   res.json({ ok: true, missions });
 });
 
 // GET /api/missions/data — List missions with pendings & actions
 router.get('/data', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const storeData = getMissionsData(tenantId);
   res.json({ ok: true, ...storeData });
 });
 
 // POST /api/missions/create — Create new mission
 router.post('/create', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { title, objective, type } = req.body || {};
   if (!title || !objective) {
     res.status(400).json({ ok: false, error: 'Title and objective are required.' });
@@ -39,7 +39,7 @@ router.post('/create', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/missions/update — Update mission
 router.post('/update', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { id, ...updates } = req.body || {};
   if (!id) {
     res.status(400).json({ ok: false, error: 'Mission ID is required.' });
@@ -55,7 +55,7 @@ router.post('/update', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/missions/delete — Delete mission
 router.post('/delete', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { id } = req.body || {};
   if (!id) {
     res.status(400).json({ ok: false, error: 'Mission ID is required.' });

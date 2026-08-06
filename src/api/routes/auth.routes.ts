@@ -14,21 +14,21 @@ const router = Router();
 
 // GET /api/auth/tier — Get user tier and token quota summary
 router.get('/tier', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const tier = getUserTier(tenantId);
   res.json({ ok: true, tier });
 });
 
 // GET /api/auth/quota — Get token quota summary
 router.get('/quota', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const quota = getTokenQuotaSummary(tenantId);
   res.json({ ok: true, quota });
 });
 
 // POST /api/auth/verify-card — Verify payment card for free tier complimentary access
 router.post('/verify-card', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { cardLast4, provider } = req.body || {};
   const updatedTier = verifyUserCard(tenantId, { cardLast4, provider });
   res.json({ ok: true, message: 'Card verified successfully.', tier: updatedTier });
@@ -36,7 +36,7 @@ router.post('/verify-card', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/auth/byok — Update custom BYOK API key
 router.post('/byok', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { customApiKey, customProvider } = req.body || {};
   const updated = updateUserTier(tenantId, {
     customApiKey,

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../components/auth/supabase';
 
 /* ----------------------------------------------------------------------
    FABRICA LOGO
@@ -1019,9 +1021,77 @@ function ConciergeChatbot({ agentLang = 'EN' }: { agentLang?: 'EN' | 'FR' | 'AR'
    MAIN PAGE
 ---------------------------------------------------------------------- */
 export default function Home() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [uiLang, setUiLang] = useState<'EN' | 'FR' | 'AR'>('EN');
   const [agentLang, setAgentLang] = useState<'EN' | 'FR' | 'AR'>('EN');
+
+  useEffect(() => {
+    let active = true;
+
+    const checkUserSession = async () => {
+      let currentUser: any = null;
+
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('fabrica_sandbox_user') : null;
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+        } catch (e) {
+          localStorage.removeItem('fabrica_sandbox_user');
+        }
+      }
+
+      if (supabase) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            currentUser = session.user;
+          }
+        } catch (err) {
+          console.warn('[landing] Session check error:', err);
+        }
+      }
+
+      if (active && currentUser) {
+        const key = `fabrica_onboarding_completed_${currentUser.id}`;
+        const completed = localStorage.getItem(key) === 'true';
+        if (completed) {
+          router.push('/dashboard');
+        } else {
+          router.push('/onboard');
+        }
+      }
+    };
+
+    checkUserSession();
+
+    let subscription: any = null;
+    if (supabase) {
+      try {
+        const { data } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!active) return;
+          const user = session?.user;
+          if (user) {
+            const key = `fabrica_onboarding_completed_${user.id}`;
+            const completed = localStorage.getItem(key) === 'true';
+            if (completed) {
+              router.push('/dashboard');
+            } else {
+              router.push('/onboard');
+            }
+          }
+        });
+        subscription = data.subscription;
+      } catch (e) {
+        console.warn('[landing] Auth state change error:', e);
+      }
+    }
+
+    return () => {
+      active = false;
+      if (subscription) subscription.unsubscribe();
+    };
+  }, [router]);
 
   useEffect(() => {
     setMounted(true);

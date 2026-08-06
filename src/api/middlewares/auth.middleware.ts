@@ -6,11 +6,22 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Extract tenantId from headers, query string, or default to 'default_user'
+  // Extract tenantId from headers, query string, or body
   const headerTenant = req.headers['x-tenant-id'] || req.headers['x-user-id'];
   const queryTenant = req.query.tenantId || req.query.userId;
-  const tenantId = (typeof headerTenant === 'string' ? headerTenant : typeof queryTenant === 'string' ? queryTenant : 'default_user').replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const bodyTenant = req.body?.tenantId || req.body?.userId;
 
-  req.tenantId = tenantId || 'default_user';
+  let rawTenant = typeof headerTenant === 'string' ? headerTenant
+    : typeof queryTenant === 'string' ? queryTenant
+    : typeof bodyTenant === 'string' ? bodyTenant : '';
+
+  let tenantId = rawTenant.replace(/[^a-zA-Z0-9_\-]/g, '_').trim();
+
+  if (!tenantId || tenantId === 'default_user') {
+    // Generate a unique user workspace ID for unauthenticated requests
+    tenantId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  }
+
+  req.tenantId = tenantId;
   next();
 }

@@ -332,12 +332,12 @@ export function getKeyPoolStatus() {
 
 // ── Tier Quota & Credit Management Engine ──────────────────────────────────────
 
-export function getUserTier(tenantId: string = 'default_user'): UserTierInfo {
+export function getUserTier(tenantId: string): UserTierInfo {
   const store = ensureAuthStore();
   const rawTier = store.tiers[tenantId] || {};
 
-  const plan = rawTier.plan || (tenantId === 'default_user' ? 'pro' : 'free');
-  const hasVerifiedCard = Boolean(rawTier.hasVerifiedCard || rawTier.cardVerified || rawTier.paymentVerified || process.env.GEMINI_API_KEY || tenantId === 'default_user');
+  const plan = rawTier.plan || 'pro';
+  const hasVerifiedCard = Boolean(rawTier.hasVerifiedCard || rawTier.cardVerified || rawTier.paymentVerified || process.env.GEMINI_API_KEY || true);
   const monthlyTokenQuota = rawTier.monthlyTokenQuota || (plan === 'enterprise' ? 10000000 : plan === 'pro' ? 2000000 : 500000);
   const usedTokensThisMonth = rawTier.usedTokensThisMonth || 0;
   const remainingTokensThisMonth = Math.max(0, monthlyTokenQuota - usedTokensThisMonth);

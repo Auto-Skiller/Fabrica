@@ -15,7 +15,7 @@ const router = Router();
 
 // GET /api/workspace/files — List workspace files from workspace.json index with path sanitization
 router.get('/files', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const subDir = (req.query.path as string) || '';
   try {
     const files = listWorkspaceItemsFromJson(tenantId, subDir);
@@ -27,7 +27,7 @@ router.get('/files', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/workspace/create — Create/Import workspace item
 router.post('/create', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { path: filePath, content, type, source_type, level, description, when_to_use, triggers, isImport } = req.body || {};
   if (!filePath) {
     res.status(400).json({ ok: false, error: 'Path is required.' });
@@ -53,7 +53,7 @@ router.post('/create', (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/workspace/file/read — Read file contents
 router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const filePath = req.query.path as string;
   if (!filePath) {
     res.status(400).json({ ok: false, error: 'File path is required.' });
@@ -69,7 +69,7 @@ router.get('/file/read', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/workspace/file/write — Write file contents
 router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { path: filePath, content, isImport, type, source_type, level, description, when_to_use, triggers } = req.body || {};
   if (!filePath || content === undefined) {
     res.status(400).json({ ok: false, error: 'Path and content are required.' });
@@ -93,7 +93,7 @@ router.post('/file/write', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/workspace/file/move — Move file or directory
 router.post('/file/move', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { src, dest } = req.body || {};
   if (!src || !dest) {
     res.status(400).json({ ok: false, error: 'src and dest paths are required.' });
@@ -110,7 +110,7 @@ router.post('/file/move', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/workspace/file/delete — Delete file or directory
 router.post('/file/delete', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { path: filePath } = req.body || {};
   if (!filePath) {
     res.status(400).json({ ok: false, error: 'Path is required.' });
@@ -127,7 +127,7 @@ router.post('/file/delete', (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/workspace/map — Get single workspace.json map
 router.get('/map', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const map = getWorkspaceMap(tenantId);
   res.json({ ok: true, map });
 });

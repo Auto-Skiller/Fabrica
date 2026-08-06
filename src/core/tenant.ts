@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { ensureUserHarness, runPiAgent } from './harness.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
 
@@ -81,8 +82,8 @@ export interface AuditLogEvent {
 
 // ── Tenant Workspace Root Helper ───────────────────────────────────────────────
 
-export function getTenantRoot(tenantId: string = 'default_user'): string {
-  const safeTenant = tenantId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+export function getTenantRoot(tenantId: string): string {
+  const safeTenant = (tenantId || 'usr_anon').replace(/[^a-zA-Z0-9_\-]/g, '_');
   const userRoot = path.resolve(process.cwd(), 'workspaces', safeTenant);
   if (!fs.existsSync(userRoot)) {
     fs.mkdirSync(userRoot, { recursive: true });
@@ -90,13 +91,186 @@ export function getTenantRoot(tenantId: string = 'default_user'): string {
   return userRoot;
 }
 
-export function resolveTenantPath(tenantId: string = 'default_user', targetPath: string = ''): string {
+export function resolveTenantPath(tenantId: string, targetPath: string = ''): string {
   const userRoot = getTenantRoot(tenantId);
   const resolved = path.resolve(userRoot, targetPath);
   if (!resolved.startsWith(userRoot)) {
     throw new Error(`Security Violation: Path traversal attempt blocked outside tenant workspace boundary (${userRoot}).`);
   }
   return resolved;
+}
+
+export function isTenantInitialized(tenantId: string): boolean {
+  const safeTenant = tenantId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  const userRoot = path.resolve(process.cwd(), 'workspaces', safeTenant);
+  const tenantJsonPath = path.join(userRoot, 'tenant.json');
+  if (!fs.existsSync(userRoot) || !fs.existsSync(tenantJsonPath)) {
+    return false;
+  }
+  try {
+    const data = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+    return Boolean(data.is_initialized);
+  } catch (_) {
+    return false;
+  }
+}
+
+export function ensureTenantFilesAndFolders(tenantId: string): string {
+  const userRoot = getTenantRoot(tenantId);
+  fs.mkdirSync(userRoot, { recursive: true });
+
+  const tenantJsonPath = path.join(userRoot, 'tenant.json');
+  if (!fs.existsSync(tenantJsonPath)) {
+    fs.writeFileSync(tenantJsonPath, JSON.stringify({
+      tenant_id: tenantId,
+      name: `Tenant (${tenantId})`,
+      plan: "Professional",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: { language: "EN", internet_access: true },
+      subscription: { plan: "Professional", active: true },
+      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
+      logs: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: "system",
+          event: "Workspace Initialized",
+          details: "Unified audit event stream initialized in tenant.json."
+        }
+      ]
+    }, null, 2), 'utf8');
+  }
+
+  const harnessJsonPath = path.join(userRoot, 'harness.json');
+  if (!fs.existsSync(harnessJsonPath)) {
+    fs.writeFileSync(harnessJsonPath, JSON.stringify({
+      tenant_id: tenantId,
+      status: "idle",
+      selected_model: "gemini-3.6-flash",
+      autonomy: "director",
+      autonomy_interval: 20,
+      agent_lang: "EN",
+      output_language: "EN",
+      web_search_enabled: true,
+      suggestions: [],
+      suggestion_cards: [],
+      backlogs: [],
+      backlog: [],
+      review_queues: [],
+      review: [],
+      new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] },
+      last_active: new Date().toISOString()
+    }, null, 2), 'utf8');
+  }
+
+  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  if (!fs.existsSync(singleMissionsPath)) {
+    fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
+  }
+
+  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  if (!fs.existsSync(workspaceJsonPath)) {
+    fs.writeFileSync(workspaceJsonPath, JSON.stringify({
+      sources: {},
+      deliverables: {},
+      last_synced_at: new Date().toISOString()
+    }, null, 2), 'utf8');
+  }
+
+  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
+  if (!fs.existsSync(agentsMdPath)) {
+    fs.writeFileSync(agentsMdPath, '', 'utf8');
+  }
+
+  const workspaceDir = path.join(userRoot, 'workspace');
+  const workspaceDirs = [
+    'Discovery & Scoping',
+    'Deep Research & Intelligence Gathering',
+    'Data Analysis & Pattern Extraction',
+    'Strategic Synthesis & Decision Support',
+    'Executions',
+    'Reviews',
+    'Completed'
+  ];
+
+  for (const d of workspaceDirs) {
+    fs.mkdirSync(path.join(workspaceDir, d), { recursive: true });
+  }
+
+  const missionsDir = path.join(userRoot, 'missions');
+  fs.mkdirSync(missionsDir, { recursive: true });
+
+  return userRoot;
+}
+
+export function initializeUserTenant(tenantId: string = 'default_user'): { ok: boolean; userRoot: string; piDir: string } {
+  // Step 1: tenant.ts creates the user directory and initial files/folders
+  const userRoot = ensureTenantFilesAndFolders(tenantId);
+
+  // Step 2: harness.ts triggers the first time harness initialization
+  ensureUserHarness(tenantId);
+
+  const piDir = path.join(userRoot, '.pi');
+
+  // Step 3: Mark tenant as initialized, but agent_initialized as false
+  updateTenantProfile(tenantId, { is_initialized: true, agent_initialized: false } as any);
+
+  return { ok: true, userRoot, piDir };
+}
+
+export function isAgentInitialized(tenantId: string = 'default_user'): boolean {
+  const userRoot = getTenantRoot(tenantId);
+  const tenantJsonPath = path.join(userRoot, 'tenant.json');
+
+  if (fs.existsSync(tenantJsonPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      if (data.agent_initialized !== true) {
+        return false;
+      }
+    } catch (_) {
+      return false;
+    }
+  } else {
+    return false;
+  }
+
+  const piDir = path.join(userRoot, '.pi');
+  if (fs.existsSync(piDir)) {
+    const piSkillsDir = path.join(piDir, 'skills');
+    if (!fs.existsSync(piSkillsDir)) {
+      fs.mkdirSync(piSkillsDir, { recursive: true });
+    }
+    return true;
+  }
+  return false;
+}
+
+export async function startUserAgent(tenantId: string = 'default_user'): Promise<{ ok: boolean; agentInitialized: boolean; message: string }> {
+  const userRoot = getTenantRoot(tenantId);
+
+  try {
+    // Trigger agent CLI targeting user tenant directory (cwd: userRoot)
+    await runPiAgent({ tenantId, prompt: 'Agent initialization handshake.' });
+  } catch (err: any) {
+    console.warn('Agent CLI trigger warning:', err?.message || err);
+  }
+
+  // Check for .pi/ in userRoot
+  const piDir = path.join(userRoot, '.pi');
+  if (fs.existsSync(piDir)) {
+    // Creates the skills folder
+    const piSkillsDir = path.join(piDir, 'skills');
+    if (!fs.existsSync(piSkillsDir)) {
+      fs.mkdirSync(piSkillsDir, { recursive: true });
+    }
+    updateTenantProfile(tenantId, { agent_initialized: true } as any);
+    return { ok: true, agentInitialized: true, message: 'Agent initialized successfully.' };
+  } else {
+    updateTenantProfile(tenantId, { agent_initialized: false } as any);
+    return { ok: false, agentInitialized: false, message: 'Agent initialization failed: .pi directory not found after agent trigger.' };
+  }
 }
 
 // ── Database Engine (db.ts Merger) ──────────────────────────────────────────────

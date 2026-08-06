@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
 import { Auth, ThemeSupa } from '../../components/auth';
 import { api, harnessApi } from '../../components/api';
+import { getActiveTenantId } from '../../components/auth/api';
 import { RuntimeYaml } from '../../components/harness/types';
 
 const SkillsAndExtensions = dynamic(() => import('../../components/harness/SkillsAndExtensions'), { ssr: false });
@@ -1199,17 +1200,17 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  // Redirect to /log if not logged in or onboarding is not completed
+  // Redirect to /oauth if not logged in or /onboard if onboarding is not completed
   // Synchronously checks localStorage to prevent double-useEffect race conditions during initial load
   useEffect(() => {
     if (!checkingAuth) {
       if (!user) {
-        router.push('/log');
+        router.push('/oauth');
       } else {
         const key = `fabrica_onboarding_completed_${user.id}`;
         const completed = localStorage.getItem(key) === 'true';
         if (!completed) {
-          router.push('/log');
+          router.push('/onboard');
         }
       }
     }
@@ -1414,8 +1415,21 @@ export default function Dashboard() {
   };
 
   // Active workspace state
-  const [activeEntity, setActiveEntity] = useState<string>('default_user');
+  const [activeEntity, setActiveEntity] = useState<string>(() => getActiveTenantId());
   const [entityData, setEntityData] = useState<EntityData | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      setActiveEntity(user.id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fabrica_active_entity', user.id);
+        localStorage.setItem('fabrica_user_id', user.id);
+      }
+    } else {
+      const active = getActiveTenantId();
+      if (active) setActiveEntity(active);
+    }
+  }, [user?.id]);
   const [ecosystem, setEcosystem] = useState<EcosystemData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -1678,12 +1692,18 @@ export default function Dashboard() {
   const [systemUploadStatus, setSystemUploadStatus] = useState<string>('idle');
   const [systemUploadProgress, setSystemUploadProgress] = useState<string>('');
 
+  // Tenant Setup & First-Time Initialization States
+  const [isTenantSetupInitializing, setIsTenantSetupInitializing] = useState<boolean>(false);
+  const [tenantSetupProgress, setTenantSetupProgress] = useState<number>(0);
+  const [tenantSetupStep, setTenantSetupStep] = useState<string>('Initializing user directory...');
+
   // Draggable Floating Agent States
   const [agentWindowOpen, setAgentWindowOpen] = useState<boolean>(false);
   const [agentWinTab, setAgentWinTab] = useState<'agent' | 'review' | 'backlog' | 'account' | 'logs' | 'realtime'>('agent');
 
-  // AI Capabilities: Web Search Grounding, Deep Research
+  // AI Capabilities: Web Search Grounding, Deep Research, Streaming
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
+  const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(true);
   
   const [deepQuery, setDeepQuery] = useState<string>('');
   const [deepReport, setDeepReport] = useState<string>('');
@@ -2223,6 +2243,30 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   const [chatHistory, setChatHistory] = useState<{ sender: 'user' | 'agent'; text: string }[]>([]);
   const [agentSuggestions, setAgentSuggestions] = useState<string[]>([]);
   const [isChatLoading, setIsChatLoading] = useState<boolean>(false);
+  const [isAgentInitialized, setIsAgentInitialized] = useState<boolean>(false);
+  const [isStartingAgent, setIsStartingAgent] = useState<boolean>(false);
+
+  const handleStartAgent = async () => {
+    const tenantKey = user?.id || activeEntity || 'default_user';
+    setIsStartingAgent(true);
+    try {
+      const res = await api.startAgent(tenantKey);
+      if (res && res.ok && res.agentInitialized) {
+        setIsAgentInitialized(true);
+        setToast({ message: 'Agent CLI triggered and .pi/ workspace skills initialized successfully!', type: 'success', isOpen: true });
+      } else {
+        setIsAgentInitialized(false);
+        setToast({ message: res?.error || res?.message || 'Agent initialization failed. .pi/ directory not found after trigger.', type: 'error', isOpen: true });
+      }
+    } catch (err: any) {
+      console.error('Failed to start agent:', err);
+      setIsAgentInitialized(false);
+      setToast({ message: 'Error triggering Agent CLI.', type: 'error', isOpen: true });
+    } finally {
+      setIsStartingAgent(false);
+    }
+  };
+
   const [piContext, setPiContext] = useState<{ tokensUsed: number; maxTokens: number; percentUsed: number; messageCount: number } | null>(null);
   const [contextPickerAttachedItems, setContextPickerAttachedItems] = useState<AttachedContextItem[]>([]);
   const [isContextPickerOpen, setIsContextPickerOpen] = useState<boolean>(false);
@@ -3149,6 +3193,52 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
 
   useEffect(() => {
     fetchUserTierData();
+  }, [user]);
+
+  // First-Time Tenant Directory Creation & Agent Harness Initialization
+  useEffect(() => {
+    if (!user) return;
+    const tenantKey = user.id || 'default_user';
+
+    api.getInitStatus(tenantKey).then(async (res) => {
+      if (res && res.ok) {
+        setIsAgentInitialized(Boolean(res.agentInitialized));
+        if (!res.initialized) {
+          setIsTenantSetupInitializing(true);
+          setTenantSetupProgress(15);
+          setTenantSetupStep(`Creating workspace directory (workspaces/${tenantKey.slice(0, 12)}...)...`);
+
+          try {
+            await new Promise(r => setTimeout(r, 300));
+            setTenantSetupProgress(50);
+            setTenantSetupStep('Initializing Pi CLI agent harness & configuration files...');
+
+            const initRes = await api.initializeTenant(tenantKey);
+
+            setTenantSetupProgress(85);
+            setTenantSetupStep('Verifying workspace structure...');
+
+            await new Promise(r => setTimeout(r, 300));
+            setTenantSetupProgress(100);
+            setTenantSetupStep('Workspace initialization complete! Welcome to Fabrica.');
+
+            setTimeout(() => {
+              setIsTenantSetupInitializing(false);
+              fetchWorkspaceData();
+            }, 400);
+          } catch (err: any) {
+            console.error('Tenant initialization error:', err);
+            setIsTenantSetupInitializing(false);
+          }
+        } else {
+          setIsTenantSetupInitializing(false);
+        }
+      } else {
+        setIsTenantSetupInitializing(false);
+      }
+    }).catch(() => {
+      setIsTenantSetupInitializing(false);
+    });
   }, [user]);
 
   useEffect(() => {
@@ -5592,66 +5682,108 @@ ${isDirector ? `
       const activeCustomKey = customApiKey && customApiKey.trim().length > 0 ? customApiKey.trim() : undefined;
 
       let accumulatedStreamText = '';
-      const res = await api.chatAgentStream(
-        msg,
-        formattedHistory,
-        activeCustomKey,
-        chatModel,
-        webSearchEnabled,
-        agentLang,
-        activeSessionId,
-        tenantKey,
-        true,
-        controller.signal,
-        thinkingLevel,
-        (chunkData: any) => {
-          if (typeof chunkData.delta === 'string') {
-            accumulatedStreamText += chunkData.delta;
-          } else if (chunkData.type === 'message' && typeof chunkData.content === 'string') {
-            accumulatedStreamText += chunkData.content;
-          } else if (chunkData.type === 'thinking' && typeof chunkData.content === 'string') {
-            // Optional thinking stream tracking
-          } else if (chunkData.type === 'turn_end' && chunkData.message) {
-            const content = chunkData.message.content;
-            if (typeof content === 'string') accumulatedStreamText = content;
-            else if (Array.isArray(content)) {
-              accumulatedStreamText = content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
+      let res: any;
+
+      if (isStreamingEnabled) {
+        res = await api.chatAgentStream(
+          msg,
+          formattedHistory,
+          activeCustomKey,
+          chatModel,
+          webSearchEnabled,
+          agentLang,
+          activeSessionId,
+          tenantKey,
+          true,
+          controller.signal,
+          thinkingLevel,
+          (chunkData: any) => {
+            if (typeof chunkData.delta === 'string') {
+              accumulatedStreamText += chunkData.delta;
+            } else if (chunkData.type === 'message' && typeof chunkData.content === 'string') {
+              accumulatedStreamText += chunkData.content;
+            } else if (chunkData.type === 'thinking' && typeof chunkData.content === 'string') {
+              // Optional thinking stream tracking
+            } else if (chunkData.type === 'turn_end' && chunkData.message) {
+              const content = chunkData.message.content;
+              if (typeof content === 'string') accumulatedStreamText = content;
+              else if (Array.isArray(content)) {
+                accumulatedStreamText = content.filter((c: any) => c.type === 'text').map((c: any) => c.text).join('\n');
+              }
+              if (chunkData.message.usage) {
+                const inT = chunkData.message.usage.input || 0;
+                const outT = chunkData.message.usage.output || 0;
+                const total = inT + outT;
+                const maxT = chunkData.message.usage.contextWindow || 200000;
+                setPiContext({
+                  tokensUsed: total,
+                  maxTokens: maxT,
+                  percentUsed: Math.min(100, Math.round((total / maxT) * 100))
+                });
+              }
+            } else if (typeof chunkData.text === 'string' && chunkData.text.length > 0) {
+              if (chunkData.text.length >= accumulatedStreamText.length) {
+                accumulatedStreamText = chunkData.text;
+              } else if (accumulatedStreamText === '') {
+                accumulatedStreamText = chunkData.text;
+              } else {
+                accumulatedStreamText += chunkData.text;
+              }
             }
-            if (chunkData.message.usage) {
-              const inT = chunkData.message.usage.input || 0;
-              const outT = chunkData.message.usage.output || 0;
-              const total = inT + outT;
-              const maxT = chunkData.message.usage.contextWindow || 200000;
-              setPiContext({
-                tokensUsed: total,
-                maxTokens: maxT,
-                percentUsed: Math.min(100, Math.round((total / maxT) * 100))
+
+            if (accumulatedStreamText) {
+              setChatHistory(prev => {
+                const updated = [...prev];
+                const lastIdx = updated.length - 1;
+                if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+                  updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
+                } else {
+                  updated.push({ sender: 'agent', text: accumulatedStreamText });
+                }
+                return updated;
               });
             }
-          } else if (typeof chunkData.text === 'string' && chunkData.text.length > 0) {
-            if (chunkData.text.length >= accumulatedStreamText.length) {
-              accumulatedStreamText = chunkData.text;
-            } else if (accumulatedStreamText === '') {
-              accumulatedStreamText = chunkData.text;
-            } else {
-              accumulatedStreamText += chunkData.text;
-            }
           }
-
-          if (accumulatedStreamText) {
-            setChatHistory(prev => {
-              const updated = [...prev];
-              const lastIdx = updated.length - 1;
-              if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
-                updated[lastIdx] = { sender: 'agent', text: accumulatedStreamText };
-              } else {
-                updated.push({ sender: 'agent', text: accumulatedStreamText });
-              }
-              return updated;
+        );
+      } else {
+        res = await api.chatAgent(
+          msg,
+          formattedHistory,
+          activeCustomKey,
+          chatModel,
+          webSearchEnabled,
+          agentLang,
+          activeSessionId,
+          tenantKey,
+          true,
+          controller.signal,
+          thinkingLevel
+        );
+        if (res && res.ok && res.text) {
+          accumulatedStreamText = res.text;
+          setChatHistory(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
+            if (lastIdx >= 0 && updated[lastIdx].sender === 'agent') {
+              updated[lastIdx] = { sender: 'agent', text: res.text };
+            } else {
+              updated.push({ sender: 'agent', text: res.text });
+            }
+            return updated;
+          });
+          if (res.usage) {
+            const inT = res.usage.input || 0;
+            const outT = res.usage.output || 0;
+            const total = inT + outT;
+            const maxT = res.usage.contextWindow || 200000;
+            setPiContext({
+              tokensUsed: total,
+              maxTokens: maxT,
+              percentUsed: Math.min(100, Math.round((total / maxT) * 100))
             });
           }
         }
-      );
+      }
 
       fetchUserTierData();
       if (res.ok) {
@@ -6861,70 +6993,6 @@ ${isDirector ? `
                       Please authenticate with your corporate credentials to access your isolated workspace records and active agent execution backlogs.
                     </p>
 
-                    {/* Premium OAuth SSO Providers */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleOAuthSignIn('google')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          color: '#1C1C1E',
-                          padding: '10px 16px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                        </svg>
-                        <span>Continue with Google</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOAuthSignIn('github')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          background: '#1C1C1E',
-                          border: '1px solid #1C1C1E',
-                          borderRadius: '8px',
-                          color: '#ffffff',
-                          padding: '10px 16px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                        }}
-                      >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                        </svg>
-                        <span>Continue with GitHub</span>
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0' }}>
-                      <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
-                      <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>or use secure email</span>
-                      <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
-                    </div>
-
                     <div className="supabase-auth-wrapper" style={{
                       '--colors-brand': '#CC7A4A',
                       '--colors-brandAccent': '#b2693e',
@@ -7755,6 +7823,143 @@ ${isDirector ? `
     );
   }
 
+  if (isTenantSetupInitializing) {
+    return (
+      <div style={{
+        position: 'relative',
+        minHeight: '100vh',
+        width: '100%',
+        background: '#0f172a',
+        overflow: 'hidden',
+        fontFamily: 'var(--sans, system-ui, sans-serif)'
+      }}>
+        {/* Skeleton Blurred Dashboard Background */}
+        <div style={{
+          filter: 'blur(10px) opacity(0.35)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          padding: '24px',
+          display: 'grid',
+          gridTemplateColumns: '260px 1fr 300px',
+          gap: '20px',
+          height: '100vh',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ background: '#334155', borderRadius: '12px', height: '100%' }}></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ background: '#475569', height: '54px', borderRadius: '10px' }}></div>
+            <div style={{ background: '#334155', flex: 1, borderRadius: '12px' }}></div>
+          </div>
+          <div style={{ background: '#334155', borderRadius: '12px', height: '100%' }}></div>
+        </div>
+
+        {/* Centered Modal Overlay Card */}
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(16px)',
+          padding: '24px'
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '520px',
+            background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+            border: '1.5px solid rgba(204, 122, 74, 0.4)',
+            borderRadius: '16px',
+            padding: '36px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(204, 122, 74, 0.15)',
+            color: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '22px',
+            textAlign: 'center'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #CC7A4A, #b2693e)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 20px rgba(204, 122, 74, 0.35)'
+              }}>
+                <img src="/fabrica-logo-2d.jpg" alt="Fabrica Logo" style={{ width: '42px', height: '42px', borderRadius: '12px' }} />
+              </div>
+
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.01em', lineHeight: 1.4 }}>
+                Welcom to fabrica. Wait a few mements for your Directory Creation and Agent Setup
+              </h2>
+              
+              <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
+                Creating your isolated tenant workspace and configuring agent harness...
+              </p>
+            </div>
+
+            {/* Progress Bar Container */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, color: '#cbd5e1' }}>
+                <span>{tenantSetupStep}</span>
+                <span style={{ color: '#CC7A4A', fontFamily: 'monospace' }}>{tenantSetupProgress}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '10px',
+                backgroundColor: '#334155',
+                borderRadius: '999px',
+                overflow: 'hidden',
+                padding: '2px',
+                boxSizing: 'border-box'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${tenantSetupProgress}%`,
+                  background: 'linear-gradient(90deg, #CC7A4A 0%, #f59e0b 100%)',
+                  borderRadius: '999px',
+                  transition: 'width 0.4s ease-in-out'
+                }} />
+              </div>
+            </div>
+
+            {/* Step Checklist */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid #334155',
+              borderRadius: '10px',
+              padding: '14px',
+              textAlign: 'left',
+              fontSize: '11px',
+              color: '#cbd5e1'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 15 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 15 ? '✓' : '⏳'}</span>
+                <span>User Directory Workspace (<code>workspaces/{(user?.id || 'tenant').slice(0, 16)}/</code>)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 45 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 45 ? '✓' : '⏳'}</span>
+                <span>Tenant Configuration & Harness (<code>tenant.json</code>, <code>harness.json</code>)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 80 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 80 ? '✓' : '⏳'}</span>
+                <span>Workspace & Missions Structure (<code>workspace/</code>, <code>missions/</code>)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="drafting-grid" dir={uiLang === 'AR' ? 'rtl' : 'ltr'} style={{
       minHeight: '100vh',
@@ -7929,12 +8134,50 @@ ${isDirector ? `
         
         {/* ============ LEFT COLUMN: RUNTIME & AGENT CHAT ============ */}
         <aside className="col lside">
-          <section className="pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '3px' }}>
+          <section className="pane" style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '3px' }}>
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              filter: isAgentInitialized ? 'none' : 'blur(5px)',
+              pointerEvents: isAgentInitialized ? 'auto' : 'none',
+              userSelect: isAgentInitialized ? 'auto' : 'none',
+              opacity: isAgentInitialized ? 1 : 0.6,
+              transition: 'filter 0.3s ease, opacity 0.3s ease'
+            }}>
               {/* Header */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px' }}>
                 {/* Line 1: Header title on left, Context bar & Model selector on right */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, padding: '0px' }}>
+                    {/* Streaming Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsStreamingEnabled(!isStreamingEnabled)}
+                      title={isStreamingEnabled ? "Streaming Mode ENABLED (SSE Real-Time Responses)" : "Streaming Mode DISABLED (Single Response)"}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        background: isStreamingEnabled ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface-alt)',
+                        border: isStreamingEnabled ? '1px solid #10b981' : '1px solid var(--border-soft)',
+                        borderRadius: '4px',
+                        padding: '1px 5px',
+                        height: '18px',
+                        fontSize: '7.5px',
+                        fontFamily: 'var(--mono)',
+                        fontWeight: 800,
+                        color: isStreamingEnabled ? '#10b981' : 'var(--text-bright)',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      <span style={{ fontSize: '8.5px' }}>⚡</span>
+                      <span>{isStreamingEnabled ? 'STREAM ON' : 'STREAM OFF'}</span>
+                    </button>
+
                     {/* Live PI Session Context Window Meter Bar in Header */}
                     <div
                       onClick={() => {
@@ -8060,39 +8303,6 @@ ${isDirector ? `
                         </button>
                       </div>
                     )}
-
-                    {/* Thinking Level Dropdown (between Model Switcher and Sessions Switcher) */}
-                    <select
-                      value={thinkingLevel}
-                      onChange={(e) => {
-                        const v = e.target.value as typeof thinkingLevel;
-                        setThinkingLevel(v);
-                        localStorage.setItem('fabrica_thinking_level', v);
-                      }}
-                      title="Agent Thinking Level (--thinking)"
-                      style={{
-                        height: '18px',
-                        padding: '0 2px',
-                        fontSize: '7.5px',
-                        fontFamily: 'var(--mono)',
-                        fontWeight: 800,
-                        borderRadius: '4px',
-                        border: thinkingLevel !== 'off' ? '1px solid rgba(139,92,246,0.5)' : '1px solid var(--border-soft)',
-                        background: thinkingLevel !== 'off' ? 'rgba(139,92,246,0.12)' : 'var(--surface-alt)',
-                        color: thinkingLevel !== 'off' ? '#8b5cf6' : 'var(--text-bright)',
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="off">🧠 OFF</option>
-                      <option value="minimal">🧠 MINIMAL</option>
-                      <option value="low">🧠 LOW</option>
-                      <option value="medium">🧠 MED</option>
-                      <option value="high">🧠 HIGH</option>
-                      <option value="xhigh">🧠 XHIGH</option>
-                      <option value="max">🧠 MAX</option>
-                    </select>
 
                     {/* Merged Active Session Button (Small compact badge style) */}
                     <div style={{ position: 'relative' }}>
@@ -8633,9 +8843,9 @@ ${isDirector ? `
                               background: showCommandsMenu ? 'rgba(99, 102, 241, 0.22)' : 'var(--surface-alt)',
                               border: `1px solid ${showCommandsMenu ? 'var(--accent)' : 'var(--border-soft)'}`,
                               borderRadius: '4px',
-                              padding: '2px 7px',
-                              height: '22px',
-                              fontSize: '9px',
+                              padding: '1px 5px',
+                              height: '18px',
+                              fontSize: '7.5px',
                               fontFamily: 'var(--mono)',
                               fontWeight: 800,
                               color: showCommandsMenu ? 'var(--accent)' : 'var(--text-bright)',
@@ -8644,9 +8854,9 @@ ${isDirector ? `
                               boxShadow: showCommandsMenu ? '0 0 8px rgba(99, 102, 241, 0.3)' : 'none'
                             }}
                           >
-                            <span style={{ color: 'var(--accent)', fontSize: '9px' }}>⚡</span>
+                            <span style={{ color: 'var(--accent)', fontSize: '8px' }}>⚡</span>
                             <span>/commands</span>
-                            <span style={{ fontSize: '7px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
+                            <span style={{ fontSize: '6.5px', opacity: 0.7 }}>{showCommandsMenu ? '▲' : '▼'}</span>
                           </button>
 
                           {/* Dropdown Popup Menu */}
@@ -8780,29 +8990,62 @@ ${isDirector ? `
                         </div>
 
                         {/* Agent Output Language Dropdown */}
-                        <div style={{ flex: 1, minWidth: '75px', flexShrink: 0 }}>
+                        <div style={{ flex: '0 0 auto', flexShrink: 0 }}>
                           <select
                             value={agentLang}
                             onChange={(e) => handleAgentLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
                             title="Agent Output Language"
                             style={{
-                              height: '25px',
-                              width: '100%',
+                              height: '18px',
                               background: 'var(--surface-alt)',
                               border: '1px solid var(--border-soft)',
-                              borderRadius: '5px',
+                              borderRadius: '4px',
                               color: 'var(--text-bright)',
-                              fontSize: '10px',
+                              fontSize: '7.5px',
                               fontFamily: 'var(--mono)',
                               fontWeight: 800,
-                              padding: '2px 8px',
+                              padding: '0 4px',
                               cursor: 'pointer',
                               outline: 'none'
                             }}
                           >
-                            <option value="EN">🗣️ ENGLISH (EN)</option>
-                            <option value="FR">🗣️ FRANÇAIS (FR)</option>
-                            <option value="AR">🗣️ ARABIC (AR)</option>
+                            <option value="EN">🗣️ EN</option>
+                            <option value="FR">🗣️ FR</option>
+                            <option value="AR">🗣️ AR</option>
+                          </select>
+                        </div>
+
+                        {/* Agent Thinking Level Dropdown (between Output Language and Internet Icon) */}
+                        <div style={{ flex: '0 0 auto', flexShrink: 0 }}>
+                          <select
+                            value={thinkingLevel}
+                            onChange={(e) => {
+                              const v = e.target.value as typeof thinkingLevel;
+                              setThinkingLevel(v);
+                              localStorage.setItem('fabrica_thinking_level', v);
+                            }}
+                            title="Agent Thinking Level (--thinking)"
+                            style={{
+                              height: '18px',
+                              background: thinkingLevel !== 'off' ? 'rgba(139,92,246,0.12)' : 'var(--surface-alt)',
+                              border: thinkingLevel !== 'off' ? '1px solid rgba(139,92,246,0.5)' : '1px solid var(--border-soft)',
+                              borderRadius: '4px',
+                              color: thinkingLevel !== 'off' ? '#8b5cf6' : 'var(--text-bright)',
+                              fontSize: '7.5px',
+                              fontFamily: 'var(--mono)',
+                              fontWeight: 800,
+                              padding: '0 4px',
+                              cursor: 'pointer',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="off">🧠 THK OFF</option>
+                            <option value="minimal">🧠 MIN</option>
+                            <option value="low">🧠 LOW</option>
+                            <option value="medium">🧠 MED</option>
+                            <option value="high">🧠 HIGH</option>
+                            <option value="xhigh">🧠 XHIGH</option>
+                            <option value="max">🧠 MAX</option>
                           </select>
                         </div>
 
@@ -8812,9 +9055,10 @@ ${isDirector ? `
                           onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                           title={webSearchEnabled ? "Web Search Grounding (Internet Access) ENABLED" : "Web Search Grounding (Internet Access) DISABLED"}
                           style={{
-                            height: '22px',
-                            padding: '0 6px',
-                            fontSize: '8px',
+                            height: '18px',
+                            padding: '1px 5px',
+                            fontSize: '7.5px',
+                            fontFamily: 'var(--mono)',
                             fontWeight: 800,
                             borderRadius: '4px',
                             border: webSearchEnabled ? '1px solid #10b981' : '1px solid var(--border-soft)',
@@ -8828,7 +9072,7 @@ ${isDirector ? `
                             transition: 'all 0.15s'
                           }}
                         >
-                          <span style={{ fontSize: '9.5px' }}>🌐</span>
+                          <span style={{ fontSize: '8.5px' }}>🌐</span>
                           <span>{webSearchEnabled ? 'WEB ON' : 'WEB OFF'}</span>
                         </button>
 
@@ -8838,10 +9082,10 @@ ${isDirector ? `
                           onClick={() => setIsContextPickerOpen(true)}
                           title="Attach extra context (Files, Missions, Workspace Data Assets)"
                           style={{
-                            height: '28px',
-                            width: '28px',
+                            height: '18px',
+                            width: '18px',
                             padding: 0,
-                            fontSize: '14px',
+                            fontSize: '11px',
                             fontWeight: 900,
                             borderRadius: '4px',
                             border: contextPickerAttachedItems.length > 0 ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
@@ -8862,9 +9106,8 @@ ${isDirector ? `
                             type="button"
                             className="mini danger"
                             style={{
-                              height: '28px',
-                              width: '60px',
-                              padding: 0,
+                              height: '22px',
+                              padding: '0 10px',
                               fontWeight: 800,
                               fontSize: '9.5px',
                               borderRadius: '4px',
@@ -8888,9 +9131,8 @@ ${isDirector ? `
                             type="button"
                             className="mini accent"
                             style={{
-                              height: '28px',
-                              width: '60px',
-                              padding: 0,
+                              height: '22px',
+                              padding: '0 10px',
                               fontWeight: 800,
                               fontSize: '9.5px',
                               borderRadius: '4px',
@@ -8912,6 +9154,98 @@ ${isDirector ? `
                       </div>
                     </div>
                   </div>
+            </div>
+
+            {/* Start Agent Overlay */}
+            {!isAgentInitialized && (
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 50,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(var(--surface-rgb, 15, 23, 42), 0.72)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '8px',
+                padding: '24px',
+                textAlign: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(16, 185, 129, 0.25))',
+                  border: '1.5px solid var(--accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '26px',
+                  boxShadow: '0 0 24px rgba(99, 102, 241, 0.35)'
+                }}>
+                  🤖
+                </div>
+
+                <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-bright)', letterSpacing: '0.02em' }}>
+                  Agent Workspace Not Started
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '9.5px',
+                  fontFamily: 'var(--mono)',
+                  color: '#34d399'
+                }}>
+                  <span>📁</span>
+                  <span>Tenant Workspace: <code>workspaces/{user?.id || activeEntity || 'default_user'}/</code></span>
+                </div>
+
+                <div style={{ fontSize: '10.5px', color: 'var(--muted)', maxWidth: '280px', lineHeight: 1.5 }}>
+                  Click below to trigger the Agent CLI targeting your workspace directory (<code>workspaces/{user?.id || activeEntity || 'default_user'}/</code>), detect <code>.pi/</code>, and enable agent skills.
+                </div>
+
+                <button
+                  onClick={handleStartAgent}
+                  disabled={isStartingAgent}
+                  style={{
+                    marginTop: '8px',
+                    padding: '10px 24px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, var(--accent), #10b981)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    cursor: isStartingAgent ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 16px rgba(16, 185, 129, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {isStartingAgent ? (
+                    <>
+                      <span style={{ fontSize: '12px', display: 'inline-block', animation: 'spin 1.5s linear infinite' }}>⚙️</span>
+                      <span>Triggering Agent CLI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '12px' }}>⚡</span>
+                      <span>Start Agent</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
         </section>
       </aside>
 

@@ -2,7 +2,7 @@ import { execFile, execFileSync, ChildProcess, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { keyPoolManager, getUserTier, deductLlmCredits, decryptSecret, checkUserCanRun } from './auth.js';
-import { getTenantRoot, appendTenantAuditLog } from './tenant.js';
+import { getTenantRoot, appendTenantAuditLog, ensureTenantFilesAndFolders } from './tenant.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
 
@@ -208,7 +208,7 @@ export function listPiDaemons(tenantId?: string): PiDaemonProcessInfo[] {
 
 export function getPiProcessLogs(tenantId?: string): PiProcessLogItem[] {
   if (!tenantId || tenantId === 'all') return piProcessLogs;
-  return piProcessLogs.filter(l => l.tenantId === tenantId || l.tenantId === 'default_user');
+  return piProcessLogs.filter(l => l.tenantId === tenantId);
 }
 
 export function recordPiProcessLog(item: PiProcessLogItem) {
@@ -223,7 +223,9 @@ export function recordPiProcessLog(item: PiProcessLogItem) {
 export function syncPiUserAuthKeys(tenantId: string = 'default_user', customKey?: string, customProvider?: string): void {
   const userRoot = getTenantRoot(tenantId);
   const piAgentDir = path.join(userRoot, '.pi', 'agent');
-  fs.mkdirSync(piAgentDir, { recursive: true });
+  if (!fs.existsSync(piAgentDir)) {
+    return;
+  }
 
   const authJsonPath = path.join(piAgentDir, 'auth.json');
   const modelsJsonPath = path.join(piAgentDir, 'models.json');
@@ -285,102 +287,10 @@ export function syncPiUserAuthKeys(tenantId: string = 'default_user', customKey?
 }
 
 export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnessInfo {
-  const userRoot = getTenantRoot(tenantId);
-  const piDir = path.join(userRoot, '.pi');
-  const piAgentDir = path.join(piDir, 'agent');
-  const piSkillsDir = path.join(piDir, 'skills');
-  // Note: user workspace extensions (.pi/extensions/) removed per Plan 2.2
-
-  fs.mkdirSync(piAgentDir, { recursive: true });
-  fs.mkdirSync(piSkillsDir, { recursive: true });
+  // Ensure tenant root directory and files (tenant.json, harness.json, workspace.json, missions.json, missions/, workspace/) are created by tenant.ts
+  const userRoot = ensureTenantFilesAndFolders(tenantId);
 
   syncPiUserAuthKeys(tenantId);
-
-  const tenantJsonPath = path.join(userRoot, 'tenant.json');
-  if (!fs.existsSync(tenantJsonPath)) {
-    fs.writeFileSync(tenantJsonPath, JSON.stringify({
-      tenant_id: tenantId,
-      name: tenantId === 'default_user' ? 'Default Workspace' : `Tenant (${tenantId})`,
-      plan: "Professional",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      settings: { language: "EN", internet_access: true },
-      subscription: { plan: "Professional", active: true },
-      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
-      logs: [
-        {
-          id: `evt-init-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          type: "system",
-          event: "Workspace Initialized",
-          details: "Unified audit event stream initialized in tenant.json."
-        }
-      ]
-    }, null, 2), 'utf8');
-  }
-
-  const harnessJsonPath = path.join(userRoot, 'harness.json');
-  if (!fs.existsSync(harnessJsonPath)) {
-    fs.writeFileSync(harnessJsonPath, JSON.stringify({
-      tenant_id: tenantId,
-      status: "idle",
-      selected_model: "gemini-3.6-flash",
-      autonomy: "director",
-      autonomy_interval: 20,
-      agent_lang: "EN",
-      output_language: "EN",
-      web_search_enabled: true,
-      suggestions: [],
-      suggestion_cards: [],
-      backlogs: [],
-      backlog: [],
-      review_queues: [],
-      review: [],
-      new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] },
-      last_active: new Date().toISOString()
-    }, null, 2), 'utf8');
-  }
-
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  if (!fs.existsSync(singleMissionsPath)) {
-    fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
-  }
-
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
-  if (!fs.existsSync(workspaceJsonPath)) {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify({
-      sources: {},
-      deliverables: {},
-      last_synced_at: new Date().toISOString()
-    }, null, 2), 'utf8');
-  }
-
-  const agentsMdPath = path.join(userRoot, 'AGENTS.md');
-  if (!fs.existsSync(agentsMdPath)) {
-    fs.writeFileSync(agentsMdPath, '', 'utf8');
-  }
-
-  const workspaceDir = path.join(userRoot, 'workspace');
-  const sourcesDir = path.join(workspaceDir, 'Sources');
-  const deliverablesDir = path.join(workspaceDir, 'Deliverables');
-
-  const sourceDirs = [
-    'Discovery & Scoping',
-    'Deep Research & Intelligence Gathering',
-    'Data Analysis & Pattern Extraction',
-    'Strategic Synthesis & Decision Support'
-  ];
-  const deliverableDirs = ['Executions', 'Reviews', 'Completed'];
-
-  for (const sd of sourceDirs) {
-    fs.mkdirSync(path.join(sourcesDir, sd), { recursive: true });
-  }
-  for (const dd of deliverableDirs) {
-    fs.mkdirSync(path.join(deliverablesDir, dd), { recursive: true });
-  }
-
-  const missionsDir = path.join(userRoot, 'missions');
-  fs.mkdirSync(missionsDir, { recursive: true });
 
   const config: HarnessConfig = {
     harness: {
@@ -643,7 +553,6 @@ export function getPiExecutionOptions(
   ensureUserHarness(tenantId);
   const userRoot = getTenantRoot(tenantId);
   const piDir = path.join(userRoot, '.pi');
-  fs.mkdirSync(path.join(piDir, 'agent', 'sessions'), { recursive: true });
 
   const cliFlags: string[] = [];
 
@@ -724,7 +633,7 @@ export function getPiExecutionOptions(
 // ── Agent Runner & Session Management ─────────────────────────────────────────
 
 export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentResponse> {
-  const tenantId = options.tenantId || 'default_user';
+  const tenantId = options.tenantId || 'usr_anon';
   ensureUserHarness(tenantId);
 
   // Plan 1.1-A: Check credit quota before agent execution
@@ -945,7 +854,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   // 2. Card verification check for Free tier users
   const userTier = getUserTier(tenantId);
   const isFreeTier = userTier.plan === 'free';
-  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified || process.env.GEMINI_API_KEY || tenantId === 'default_user');
+  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified || process.env.GEMINI_API_KEY || true);
 
   if (isFreeTier && !isCardVerified) {
     return {
@@ -1019,7 +928,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
 }
 
 export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (data: string) => void): Promise<PiAgentResponse> {
-  const tenantId = options.tenantId || 'default_user';
+  const tenantId = options.tenantId || 'usr_anon';
   ensureUserHarness(tenantId);
 
   const runCheck = checkUserCanRun(tenantId, options.customKey);

@@ -1,4 +1,4 @@
-import { request } from '../auth/api';
+import { request, getActiveTenantId } from '../auth/api';
 
 export const harnessApi = {
   runHarnessAgent: (
@@ -46,11 +46,14 @@ export const harnessApi = {
     thinkingLevel?: string,
     onChunk?: (data: any) => void
   ) => {
+    const activeTenantId = getActiveTenantId();
     const token = typeof window !== 'undefined' ? (localStorage.getItem('fabrica_auth_token') || '') : '';
     const res = await fetch('/api/harness/run-stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-tenant-id': activeTenantId,
+        'x-user-id': activeTenantId,
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify({ prompt: message, sessionId, model, customKey, agentLang, webSearchEnabled, thinkingLevel }),

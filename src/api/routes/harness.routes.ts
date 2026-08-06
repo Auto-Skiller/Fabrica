@@ -24,7 +24,7 @@ const router = Router();
 
 // POST /api/harness/run-stream — Stream prompt execution via SSE
 router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { prompt, sessionId, model, customKey, agentLang, webSearchEnabled, thinkingLevel } = req.body || {};
 
   if (!prompt) {
@@ -63,7 +63,7 @@ router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/harness/run — Run prompt with Pi agent
 router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { prompt, sessionId, model, customKey, agentLang, webSearchEnabled, thinkingLevel } = req.body || {};
 
   if (!prompt) {
@@ -95,14 +95,14 @@ router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/harness/daemons — List active daemon process(es)
 router.get('/daemons', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const daemons = listPiDaemons(tenantId);
   res.json({ ok: true, daemons });
 });
 
 // POST /api/harness/stop — Stop active agent process
 router.post('/stop', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { sessionId } = req.body || {};
   const stopped = stopPiAgent(tenantId, sessionId);
   res.json({ ok: stopped });
@@ -110,14 +110,14 @@ router.post('/stop', (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/harness/sessions — List sessions
 router.get('/sessions', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const sessions = listPiSessions(tenantId);
   res.json({ ok: true, sessions });
 });
 
 // POST /api/harness/sessions/create — Create new session
 router.post('/sessions/create', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { name } = req.body || {};
   const session = createPiSession(tenantId, name);
   res.json({ ok: true, session });
@@ -125,7 +125,7 @@ router.post('/sessions/create', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/harness/sessions/delete — Delete session
 router.post('/sessions/delete', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { sessionId } = req.body || {};
   if (!sessionId) {
     res.status(400).json({ ok: false, error: 'sessionId is required.' });
@@ -143,7 +143,7 @@ router.get('/models', (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/harness/logs — Get process execution logs
 router.get('/logs', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const logs = getPiProcessLogs(tenantId);
   res.json({ ok: true, logs });
 });
@@ -231,21 +231,21 @@ router.get('/skills', (_req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/harness/config — Get harness config
 router.get('/config', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const info = ensureUserHarness(tenantId);
   res.json({ ok: true, config: info.config });
 });
 
 // GET /api/harness/state — Get harness realtime json state
 router.get('/state', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const state = getHarnessState(tenantId);
   res.json({ ok: true, harness: state });
 });
 
 // POST /api/harness/state — Update harness realtime json state
 router.post('/state', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const updates = req.body || {};
   const updated = updateHarnessState(tenantId, updates);
   res.json({ ok: true, harness: updated });
@@ -253,7 +253,7 @@ router.post('/state', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/harness/user-action — Append a user action to new_user_actions in harness.json
 router.post('/user-action', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { category, action } = req.body || {};
   if (!category || !action) {
     res.status(400).json({ ok: false, error: 'category and action are required.' });
@@ -265,7 +265,7 @@ router.post('/user-action', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/harness/reviews/ignore — Remove a pending review item
 router.post('/reviews/ignore', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { itemId } = req.body || {};
   if (!itemId) { res.status(400).json({ ok: false, error: 'itemId is required.' }); return; }
   removeReviewItem(tenantId, itemId);
@@ -274,7 +274,7 @@ router.post('/reviews/ignore', (req: AuthenticatedRequest, res: Response) => {
 
 // POST /api/harness/reviews/feedback — Set feedback on review item (marks as reviewed)
 router.post('/reviews/feedback', (req: AuthenticatedRequest, res: Response) => {
-  const tenantId = req.tenantId || 'default_user';
+  const tenantId = req.tenantId!;
   const { itemId, feedback } = req.body || {};
   if (!itemId) { res.status(400).json({ ok: false, error: 'itemId is required.' }); return; }
   setReviewItemFeedback(tenantId, itemId, feedback || '');
