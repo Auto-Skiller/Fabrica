@@ -1188,7 +1188,7 @@ export default function Home() {
       {/* NAV */}
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="w-full max-w-7xl mx-auto px-6 md:px-12 h-16 flex items-center justify-between">
-          <FabricaLogo className="w-10 h-10" style={{ marginLeft: '5px' }} />
+          <div style={{ marginLeft: '5px' }}><FabricaLogo className="w-10 h-10" /></div>
           <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wide text-slate-600">
             <a href="#matrix" className="hover:text-[#1C1C1E] transition-colors">{txt.nav.matrix}</a>
             <a href="#systems" className="hover:text-[#1C1C1E] transition-colors">{txt.nav.systems}</a>

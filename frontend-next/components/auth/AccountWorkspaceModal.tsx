@@ -720,10 +720,10 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                     )}
 
                     {/* Provider Selection (Hidden when Fabrica-Pool is selected) */}
-                    {tokenBillingMode !== 'pool' && (
+                    {(tokenBillingMode as string) !== 'pool' && (
                       <>
                         {(() => {
-                          const availableProviders = (tokenBillingMode === 'byok' && showOnlyFree)
+                          const availableProviders = ((tokenBillingMode as string) === 'byok' && showOnlyFree)
                             ? PI_AGENT_PROVIDERS.filter(p => p.id === 'google' || p.id === 'openrouter' || p.id === 'groq')
                             : PI_AGENT_PROVIDERS;
 
@@ -805,13 +805,13 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                         value={chatModel}
                         onChange={(e) => handleModelChange(e.target.value)}
                       >
-                        {tokenBillingMode === 'pool' ? (
+                        {(tokenBillingMode as string) === 'pool' ? (
                           FABRICA_POOL_MODELS.map((m) => (
                             <option key={m.id} value={m.id}>
                               {m.name}
                             </option>
                           ))
-                        ) : tokenBillingMode === 'byok' && showOnlyFree ? (
+                        ) : (tokenBillingMode as string) === 'byok' && showOnlyFree ? (
                           (() => {
                             if (selectedProvider === 'google') {
                               return <option value="gemini-3.6-flash">Gemini 3.6 Flash (Free Tier)</option>;
@@ -837,12 +837,12 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
 
                     {/* Active Model Intel - Adaptive to Selected Provider & Billing Mode */}
                     {(() => {
-                      const currentProv = tokenBillingMode === 'pool'
+                      const currentProv = (tokenBillingMode as string) === 'pool'
                         ? { name: 'Fabrica System Key Pool', badgeColor: '#10b981' }
                         : (PI_AGENT_PROVIDERS.find(p => p.id === selectedProvider) || PI_AGENT_PROVIDERS[0]);
                       const meta = modelMetadata[chatModel] || {};
                       let rateLimit = meta.limit || (selectedProvider === 'groq' ? '1,500 RPM / 3M TPM' : '1,000 RPM / 2M TPM');
-                      let proxyCost = tokenBillingMode === 'pool' ? 'FREE (System Allocation)' : tokenBillingMode === 'managed' ? 'Managed Credits ($0.005/req)' : tokenBillingMode === 'paug' ? 'PAUG Metered' : 'BYOK Direct';
+                      let proxyCost = (tokenBillingMode as string) === 'pool' ? 'FREE (System Allocation)' : (tokenBillingMode as string) === 'managed' ? 'Managed Credits ($0.005/req)' : (tokenBillingMode as string) === 'paug' ? 'PAUG Metered' : 'BYOK Direct';
                       let speed = selectedProvider === 'groq' ? '⚡ Groq LPU (~180ms)' : chatModel.includes('flash') ? '⚡ Ultra Fast (~320ms)' : '🧠 High Reasoning (~800ms)';
 
                       return (

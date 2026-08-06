@@ -21,7 +21,9 @@ const PORT = 3000;
 let isBuildingFrontend = false;
 function triggerFrontendBuildIfNeeded() {
   const outDir = path.join(process.cwd(), 'frontend-next', 'out');
-  if (!fs.existsSync(outDir) && !isBuildingFrontend) {
+  const lockFile = path.join(process.cwd(), 'frontend-next', '.next', 'lock');
+  if (process.env.BUILDING === '1' || process.env.NODE_ENV === 'production') return;
+  if (!fs.existsSync(outDir) && !isBuildingFrontend && !fs.existsSync(lockFile)) {
     isBuildingFrontend = true;
     console.log('[Fabrica Engine] Initializing frontend build...');
     exec('npm run build:frontend', (err) => {

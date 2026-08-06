@@ -46,3 +46,5 @@ export interface WorkspaceMap {
   };
   updated_at: string;
 }
+
+export type ToolboxesYaml = any;

@@ -34,7 +34,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       className={className}
       style={{
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         height: '100%',
         width: '100%',
         backgroundColor: 'var(--surface)',
@@ -46,33 +46,18 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         ...style
       }}
     >
-      {/* ================= TOP SECTION: FILES & CODE ================= */}
+      {/* ================= WORKSPACE SUBSYSTEM (7 SUB-SECTIONS) ================= */}
       <div style={{
-        flex: '1 1 50%',
-        minHeight: '100px',
+        flex: 1,
+        width: '100%',
+        minWidth: 0,
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        borderBottom: '1px solid var(--border-soft)'
+        backgroundColor: 'var(--surface)'
       }}>
-        {topComponent || (
-          <GcsFileExplorer
-            tenantId={tenantId}
-            bucketName={bucketName}
-            onFileSelect={onFileSelect}
-          />
-        )}
-      </div>
-
-      {/* ================= BOTTOM SECTION: WORKSPACE SUBSYSTEM (7 SUB-SECTIONS) ================= */}
-      <div style={{
-        flex: '1 1 50%',
-        minHeight: '100px',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        {bottomComponent || (
+        {bottomComponent || topComponent || (
           <LiveAppPreview
             tenantId={tenantId}
             runnerUrl={runnerUrl}

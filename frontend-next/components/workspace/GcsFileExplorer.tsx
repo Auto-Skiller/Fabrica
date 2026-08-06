@@ -19,6 +19,9 @@ interface GcsFileExplorerProps {
   workspaceRoot?: string;
   onFileSelect?: (file: GcsFileNode) => void;
   className?: string;
+  treeOnly?: boolean;
+  openModalOnSelect?: boolean;
+  style?: React.CSSProperties;
 }
 
 const DEFAULT_MOCK_TREE: GcsFileNode[] = [
@@ -178,11 +181,17 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   bucketName,
   workspaceRoot = '/mnt/workspace',
   onFileSelect,
-  className = ''
+  className = '',
+  treeOnly = false,
+  openModalOnSelect = true,
+  style
 }) => {
   const actualBucket = bucketName || `gs://fabrica-tenant-${tenantId.toLowerCase().replace(/[^a-z0-9_\-]/g, '-')}/`;
   const [fileTree, setFileTree] = useState<GcsFileNode[]>(DEFAULT_MOCK_TREE);
   const [selectedFile, setSelectedFile] = useState<GcsFileNode | null>(DEFAULT_MOCK_TREE[0]);
+  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
+  const [modalSelectedFile, setModalSelectedFile] = useState<GcsFileNode | null>(null);
+  const [modalFileContent, setModalFileContent] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
     'src': true,
     'missions': true,
@@ -221,6 +230,11 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
 
   const handleSelectFile = (file: GcsFileNode) => {
     setSelectedFile(file);
+    setModalSelectedFile(file);
+    setModalFileContent(file.content || '');
+    if (openModalOnSelect) {
+      setIsEditorModalOpen(true);
+    }
     if (onFileSelect) onFileSelect(file);
   };
 
@@ -381,15 +395,17 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
         </button>
       </div>
 
-      {/* Main Split View: Left Tree + Right Editor */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* Main View: Tree Only or Split View */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden' }}>
         {/* Left Tree Panel */}
         <div style={{
-          width: '220px',
-          borderRight: '1px solid var(--border-soft)',
+          width: treeOnly ? '100%' : '220px',
+          borderRight: treeOnly ? 'none' : '1px solid var(--border-soft)',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: 'var(--surface-alt)'
+          backgroundColor: 'var(--surface-alt)',
+          height: '100%',
+          overflow: 'hidden'
         }}>
           {/* Search Box */}
           <div style={{ padding: '6px' }}>
@@ -436,118 +452,335 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
           </div>
         </div>
 
-        {/* Right Code Viewer Panel */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--surface)', minWidth: 0 }}>
-          {selectedFile ? (
-            <>
-              {/* File Header Bar */}
-              <div style={{
-                padding: '6px 12px',
-                backgroundColor: 'var(--surface-alt)',
-                borderBottom: '1px solid var(--border-soft)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <span style={{ fontSize: '13px' }}>{getFileIcon(selectedFile.name)}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {selectedFile.path}
+        {/* Right Code Viewer Panel (Only rendered if NOT treeOnly) */}
+        {!treeOnly && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: 'var(--surface)', minWidth: 0 }}>
+            {selectedFile ? (
+              <>
+                {/* File Header Bar */}
+                <div style={{
+                  padding: '6px 12px',
+                  backgroundColor: 'var(--surface-alt)',
+                  borderBottom: '1px solid var(--border-soft)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ fontSize: '13px' }}>{getFileIcon(selectedFile.name)}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedFile.path}
+                      </div>
+                      <div style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'flex', gap: '8px' }}>
+                        <span>Size: {formatFileSize(selectedFile.size || 0)}</span>
+                        <span>Lines: {(selectedFile.content || '').split('\n').length}</span>
+                        <span>GCS Updated: {selectedFile.updatedAt ? new Date(selectedFile.updatedAt).toLocaleTimeString() : 'Recent'}</span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '8.5px', color: 'var(--muted)', display: 'flex', gap: '8px' }}>
-                      <span>Size: {formatFileSize(selectedFile.size || 0)}</span>
-                      <span>Lines: {(selectedFile.content || '').split('\n').length}</span>
-                      <span>GCS Updated: {selectedFile.updatedAt ? new Date(selectedFile.updatedAt).toLocaleTimeString() : 'Recent'}</span>
-                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      onClick={handleCopyContent}
+                      style={{
+                        backgroundColor: copiedNotification ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface)',
+                        border: '1px solid var(--border-soft)',
+                        color: copiedNotification ? 'var(--status-success)' : 'var(--text)',
+                        borderRadius: '4px',
+                        padding: '3px 8px',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {copiedNotification ? '✓ Copied!' : '📋 Copy'}
+                    </button>
+                    <button
+                      onClick={handleDownloadFile}
+                      style={{
+                        backgroundColor: 'var(--accent)',
+                        border: 'none',
+                        color: 'var(--accent-contrast)',
+                        borderRadius: '4px',
+                        padding: '3px 8px',
+                        fontSize: '9.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📥 Download
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    onClick={handleCopyContent}
-                    style={{
-                      backgroundColor: copiedNotification ? 'rgba(16, 185, 129, 0.15)' : 'var(--surface)',
-                      border: '1px solid var(--border-soft)',
-                      color: copiedNotification ? 'var(--status-success)' : 'var(--text)',
-                      borderRadius: '4px',
-                      padding: '3px 8px',
-                      fontSize: '9.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {copiedNotification ? '✓ Copied!' : '📋 Copy'}
-                  </button>
-                  <button
-                    onClick={handleDownloadFile}
-                    style={{
-                      backgroundColor: 'var(--accent)',
-                      border: 'none',
-                      color: 'var(--accent-contrast)',
-                      borderRadius: '4px',
-                      padding: '3px 8px',
-                      fontSize: '9.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    📥 Download
-                  </button>
+                {/* Code Content Area */}
+                <div style={{ flex: 1, overflow: 'auto', padding: '10px', backgroundColor: 'var(--surface)' }}>
+                  <pre style={{
+                    margin: 0,
+                    fontFamily: 'var(--mono)',
+                    fontSize: '10.5px',
+                    lineHeight: '1.6',
+                    color: 'var(--text)',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
+                  }}>
+                    <code>
+                      {(selectedFile.content || '// Empty file').split('\n').map((line, idx) => (
+                        <div key={idx} style={{ display: 'flex' }}>
+                          <span style={{
+                            width: '32px',
+                            display: 'inline-block',
+                            color: 'var(--muted)',
+                            opacity: 0.7,
+                            textAlign: 'right',
+                            paddingRight: '10px',
+                            userSelect: 'none',
+                            flexShrink: 0
+                          }}>
+                            {idx + 1}
+                          </span>
+                          <span style={{ flex: 1 }}>{line || ' '}</span>
+                        </div>
+                      ))}
+                    </code>
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--muted)',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '24px' }}>📂</span>
+                <span style={{ fontSize: '10px' }}>Select a file from the GCS tree to inspect its contents</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* POP-UP CODE EDITOR WINDOW (MODAL) */}
+      {isEditorModalOpen && modalSelectedFile && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 99999,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}
+        onClick={() => setIsEditorModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '880px',
+              maxWidth: '92vw',
+              height: '82vh',
+              backgroundColor: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '8px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* MODAL HEADER */}
+            <div style={{
+              padding: '10px 16px',
+              backgroundColor: '#1e293b',
+              borderBottom: '1px solid #334155',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <span style={{ fontSize: '18px' }}>{getFileIcon(modalSelectedFile.name)}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {modalSelectedFile.path}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', gap: '12px', marginTop: '2px' }}>
+                    <span>Size: {formatFileSize(modalSelectedFile.size || 0)}</span>
+                    <span>Lines: {(modalFileContent || '').split('\n').length}</span>
+                    <span>Status: GCS Mount Synced</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Code Content Area */}
-              <div style={{ flex: 1, overflow: 'auto', padding: '10px', backgroundColor: 'var(--surface)' }}>
-                <pre style={{
-                  margin: 0,
-                  fontFamily: 'var(--mono)',
-                  fontSize: '10.5px',
-                  lineHeight: '1.6',
-                  color: 'var(--text)',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}>
-                  <code>
-                    {(selectedFile.content || '// Empty file').split('\n').map((line, idx) => (
-                      <div key={idx} style={{ display: 'flex' }}>
-                        <span style={{
-                          width: '32px',
-                          display: 'inline-block',
-                          color: 'var(--muted)',
-                          opacity: 0.7,
-                          textAlign: 'right',
-                          paddingRight: '10px',
-                          userSelect: 'none',
-                          flexShrink: 0
-                        }}>
-                          {idx + 1}
-                        </span>
-                        <span style={{ flex: 1 }}>{line || ' '}</span>
-                      </div>
-                    ))}
-                  </code>
-                </pre>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(modalFileContent);
+                    setCopiedNotification(true);
+                    setTimeout(() => setCopiedNotification(false), 2000);
+                  }}
+                  style={{
+                    backgroundColor: copiedNotification ? 'rgba(16, 185, 129, 0.2)' : '#0f172a',
+                    border: '1px solid #334155',
+                    color: copiedNotification ? '#10b981' : '#f1f5f9',
+                    borderRadius: '4px',
+                    padding: '5px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  {copiedNotification ? '✓ Copied!' : '📋 Copy Code'}
+                </button>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([modalFileContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = modalSelectedFile.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    border: 'none',
+                    color: '#ffffff',
+                    borderRadius: '4px',
+                    padding: '5px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  📥 Download
+                </button>
+                <button
+                  onClick={() => setIsEditorModalOpen(false)}
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#ef4444',
+                    borderRadius: '4px',
+                    padding: '5px 10px',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕
+                </button>
               </div>
-            </>
-          ) : (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--muted)',
-              gap: '8px'
-            }}>
-              <span style={{ fontSize: '24px' }}>📂</span>
-              <span style={{ fontSize: '10px' }}>Select a file from the GCS tree to inspect its contents</span>
             </div>
-          )}
+
+            {/* MODAL BODY: CODE CONTENT EDITOR */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '12px', backgroundColor: '#020617', display: 'flex' }}>
+              <textarea
+                value={modalFileContent}
+                onChange={(e) => setModalFileContent(e.target.value)}
+                spellCheck={false}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'transparent',
+                  color: '#e2e8f0',
+                  border: 'none',
+                  outline: 'none',
+                  fontFamily: 'var(--mono, monospace)',
+                  fontSize: '12px',
+                  lineHeight: '1.6',
+                  resize: 'none',
+                  whiteSpace: 'pre'
+                }}
+              />
+            </div>
+
+            {/* MODAL FOOTER */}
+            <div style={{
+              padding: '8px 16px',
+              backgroundColor: '#1e293b',
+              borderTop: '1px solid #334155',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '10px',
+              color: '#94a3b8',
+              fontFamily: 'var(--mono)'
+            }}>
+              <span>UTF-8 • Code Editor Window</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    // Update file in local state
+                    setFileTree(prev => {
+                      const updateNode = (nodes: GcsFileNode[]): GcsFileNode[] => {
+                        return nodes.map(n => {
+                          if (n.path === modalSelectedFile.path) {
+                            return { ...n, content: modalFileContent, updatedAt: new Date().toISOString() };
+                          }
+                          if (n.children) {
+                            return { ...n, children: updateNode(n.children) };
+                          }
+                          return n;
+                        });
+                      };
+                      return updateNode(prev);
+                    });
+                    setIsEditorModalOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: '#10b981',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 800
+                  }}
+                >
+                  💾 Save & Close
+                </button>
+                <button
+                  onClick={() => setIsEditorModalOpen(false)}
+                  style={{
+                    backgroundColor: '#334155',
+                    border: '1px solid #475569',
+                    color: '#f8fafc',
+                    padding: '4px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 700
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

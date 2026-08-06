@@ -71,7 +71,7 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
       {/* Diagnostics Details */}
       <div style={{
         display: 'flex',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: '#090d16',
         padding: '12px',

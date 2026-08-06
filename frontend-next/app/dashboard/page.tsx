@@ -8963,7 +8963,7 @@ ${isDirector ? `
                                         setShowCommandsMenu(false);
                                         setCommandSearch('');
                                         if (item.cmd === '/stop') {
-                                          handleStopAgent();
+                                          setIsAgentActive(false);
                                         } else {
                                           handleSendChat(item.cmd);
                                         }
@@ -10303,692 +10303,13 @@ ${isDirector ? `
                 tenantId={user?.id || activeEntity || 'usr-123'}
                 containerState={isChatLoading ? 'waking_up' : 'warm'}
               />
-              {false && (
-                <>
-                  {/* ARTIFACT VIEWER MODE */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px', padding: '6px' }}>
-                    {/* Artifact Selector Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          onClick={() => setYourDataSystemsView('list' as any)}
-                          style={{
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            padding: '2px 7px',
-                            borderRadius: '3px',
-                            border: '1px solid var(--border-soft)',
-                            background: 'var(--surface-alt)',
-                            color: 'var(--text-bright)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ◀ Back to Workspace Subsystem
-                        </button>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>SELECT DELIVERABLE:</span>
-                        <select
-                          value={selectedArtifact?.id || ''}
-                          onChange={(e) => {
-                            const found = systemComponents.find(sc => sc.id === e.target.value);
-                            if (found) handleGoToArtifact(found);
-                          }}
-                          style={{
-                            fontSize: '8.5px',
-                            fontWeight: 800,
-                            fontFamily: 'var(--mono)',
-                            background: 'var(--surface-alt)',
-                            border: '1px solid var(--border-soft)',
-                            borderRadius: '3px',
-                            color: 'var(--text-bright)',
-                            padding: '2px 6px',
-                            outline: 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {systemComponents.map(sc => (
-                            <option key={sc.id} value={sc.id}>📦 {sc.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <button
-                          onClick={() => setArtifactTab('preview')}
-                          style={{
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            padding: '2px 7px',
-                            borderRadius: '3px',
-                            border: 'none',
-                            background: artifactTab === 'preview' ? 'var(--accent)' : 'transparent',
-                            color: artifactTab === 'preview' ? '#fff' : 'var(--muted)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          👁️ Preview
-                        </button>
-                        <button
-                          onClick={() => setArtifactTab('code')}
-                          style={{
-                            fontSize: '8px',
-                            fontWeight: 800,
-                            padding: '2px 7px',
-                            borderRadius: '3px',
-                            border: 'none',
-                            background: artifactTab === 'code' ? '#8b5cf6' : 'transparent',
-                            color: artifactTab === 'code' ? '#fff' : 'var(--muted)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          💻 Code
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Preview / Code Content */}
-                    {selectedArtifact ? (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                        {artifactTab === 'preview' ? (
-                          <div style={{ flex: 1, minHeight: 0, border: '1px solid var(--border-soft)', borderRadius: '6px', overflow: 'hidden', background: '#0d1117' }}>
-                            {artifactCodeText && (artifactCodeText.includes('<html') || artifactCodeText.includes('<div') || artifactCodeText.includes('<!DOCTYPE')) ? (
-                              <iframe
-                                srcDoc={artifactCodeText}
-                                title={`Preview - ${selectedArtifact.name}`}
-                                style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }}
-                                sandbox="allow-scripts allow-modals allow-same-origin"
-                              />
-                            ) : (
-                              <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-                                <div style={{ borderBottom: '1px solid var(--border-soft)', paddingBottom: '6px', marginBottom: '8px' }}>
-                                  <div style={{ fontSize: '11px', fontWeight: 900, color: 'var(--text-bright)' }}>📦 {selectedArtifact.name}</div>
-                                  <div style={{ fontSize: '7.5px', color: 'var(--muted)', marginTop: '2px' }}>Role: {selectedArtifact.role || 'Deliverable Module'}</div>
-                                </div>
-                                <div style={{ fontSize: '8.5px', color: 'var(--text-bright)', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)' }}>
-                                  {artifactCodeText || 'No snapshot available.'}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', minHeight: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 6px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
-                              <span style={{ fontSize: '7.5px', color: '#8b5cf6', fontWeight: 800 }}>artifacts/{selectedArtifact.name}</span>
-                              <button
-                                onClick={handleSaveArtifactCode}
-                                disabled={isSavingArtifactCode}
-                                style={{ background: '#10b981', color: '#fff', border: 'none', fontSize: '7.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '3px', cursor: 'pointer' }}
-                              >
-                                {isSavingArtifactCode ? 'Saving...' : '💾 Save Code'}
-                              </button>
-                            </div>
-                            <textarea
-                              value={artifactCodeText}
-                              onChange={(e) => setArtifactCodeText(e.target.value)}
-                              style={{ flex: 1, minHeight: '120px', fontSize: '8.5px', fontFamily: 'var(--mono)', background: '#090d16', color: '#10b981', border: '1px solid var(--border-soft)', borderRadius: '6px', padding: '8px', outline: 'none', resize: 'none' }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '10px' }}>
-                        No deliverable selected.
-                      </div>
-                    )}
-                  </div>
-                  {/* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (DIRECT SINGLE HORIZONTAL ROW) */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
-                    {[
-                      { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'source' },
-                      { key: 'deep_research', label: 'Deep Research', icon: '📡', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', type: 'source' },
-                      { key: 'data_analysis', label: 'Data Analysis', icon: '📊', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', type: 'source' },
-                      { key: 'strategic_synthesis', label: 'Strategic Synthesis', icon: '🎯', color: '#10b981', bg: 'rgba(16,185,129,0.1)', type: 'source' },
-                      { key: 'executions', label: 'Executions', icon: '⚡', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'deliverable' },
-                      { key: 'reviews', label: 'Reviews', icon: '🛡️', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', type: 'deliverable' },
-                      { key: 'completed', label: 'Completed', icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.1)', type: 'deliverable' }
-                    ].map(sec => {
-                      const isSource = sec.type === 'source';
-                      const secItems = isSource
-                        ? rawDataList.filter((rd: any) => {
-                            const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                            if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                            const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
-                            return subSec === sec.key;
-                          })
-                        : systemComponents.filter((sc: any) => {
-                            const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                            if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
-                            const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
-                            return subSec === sec.key;
-                          });
-
-                      return (
-                        <div key={sec.key} style={{
-                          flex: '1 1 0px',
-                          minWidth: '110px',
-                          height: '100%',
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border-soft)',
-                          borderRadius: '5px',
-                          padding: '5px 6px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '5px'
-                        }}>
-                          {/* SUB-SECTION HEADER */}
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
-                            {/* Sub-Section Name directly ABOVE buttons */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                              <span style={{ fontSize: '10px', flexShrink: 0 }}>{sec.icon}</span>
-                              <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {sec.label} ({secItems.length})
-                              </span>
-                            </div>
-
-                            {/* SUB-SECTION ACTION BUTTONS (IMPORT & EXPORT) */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', width: '100%' }}>
-                              <button
-                                onClick={() => {
-                                  if (isSource) {
-                                    setNewSourceSubSection(sec.key);
-                                  } else {
-                                    setNewDeliverableSubSection(sec.key);
-                                  }
-                                  setModalSubSectionContext({
-                                    sectionType: isSource ? 'sources' : 'deliverables',
-                                    subSectionKey: sec.key,
-                                    subSectionLabel: sec.label,
-                                    secItems: secItems
-                                  });
-                                  setSelectedImportMethod('local');
-                                  setIsImportModalOpen(true);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  background: 'var(--surface-alt)',
-                                  border: '1px solid var(--border-soft)',
-                                  color: 'var(--text-bright)',
-                                  fontSize: '7.5px',
-                                  fontWeight: 800,
-                                  padding: '2px 3px',
-                                  borderRadius: '3px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '2px',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}
-                                title={`Import files into ${sec.label}`}
-                              >
-                                📥 Import
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (isSource) {
-                                    const selectedInSubSec = secItems.filter((i: any) => exportSelectedSourceIds.includes(i.id));
-                                    if (selectedInSubSec.length === 0) {
-                                      const allSecIds = secItems.map((i: any) => i.id);
-                                      setExportSelectedSourceIds(prev => Array.from(new Set([...prev, ...allSecIds])));
-                                    }
-                                  } else {
-                                    const selectedInSubSec = secItems.filter((i: any) => exportSelectedDeliverableIds.includes(i.id));
-                                    if (selectedInSubSec.length === 0) {
-                                      const allSecIds = secItems.map((i: any) => i.id);
-                                      setExportSelectedDeliverableIds(prev => Array.from(new Set([...prev, ...allSecIds])));
-                                    }
-                                  }
-                                  setModalSubSectionContext({
-                                    sectionType: isSource ? 'sources' : 'deliverables',
-                                    subSectionKey: sec.key,
-                                    subSectionLabel: sec.label,
-                                    secItems: secItems
-                                  });
-                                  setIsExportModalOpen(true);
-                                }}
-                                style={{
-                                  flex: 1,
-                                  minWidth: 0,
-                                  background: 'var(--surface-alt)',
-                                  border: '1px solid var(--border-soft)',
-                                  color: 'var(--accent)',
-                                  fontSize: '7.5px',
-                                  fontWeight: 800,
-                                  padding: '2px 3px',
-                                  borderRadius: '3px',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '2px',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}
-                                title={`Export ${sec.label} items`}
-                              >
-                                📤 Export
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* SUB-SECTION ITEMS VERTICAL STACK */}
-                          <div style={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                            overflowY: 'auto',
-                            minHeight: 0,
-                            paddingRight: '2px'
-                          }}>
-                            {secItems.length > 0 ? (
-                              isSource ? (
-                                secItems.map((rd: any) => {
-                                  const isExpanded = expandedRawDataIds.includes(rd.id);
-                                  const itemProj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
-                                  const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
-                                  const isSelectedForExport = exportSelectedSourceIds.includes(rd.id);
-
-                                  return (
-                                    <div key={rd.id} style={{
-                                      width: '100%',
-                                      background: 'var(--surface-alt)',
-                                      border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
-                                      borderRadius: '5px',
-                                      padding: '6px 8px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '4px'
-                                    }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, overflow: 'hidden' }}>
-                                            <input
-                                              type="checkbox"
-                                              checked={isSelectedForExport}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setExportSelectedSourceIds(prev => [...prev, rd.id]);
-                                                } else {
-                                                  setExportSelectedSourceIds(prev => prev.filter(id => id !== rd.id));
-                                                }
-                                              }}
-                                              style={{ cursor: 'pointer' }}
-                                              title="Select item for export"
-                                            />
-                                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                              {rd.name}
-                                            </span>
-                                          </div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                            <button
-                                              onClick={() => toggleRawDataExpand(rd.id)}
-                                              style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '8px', cursor: 'pointer', padding: '1px' }}
-                                              title="View / edit content"
-                                            >
-                                              {isExpanded ? '▲' : '▼'}
-                                            </button>
-                                            <button
-                                              onClick={() => handleDeleteRawData(rd.id)}
-                                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '9px', padding: '1px' }}
-                                              title="Delete item"
-                                            >
-                                              ✕
-                                            </button>
-                                          </div>
-                                        </div>
-
-                                        {/* Disk Path Badge */}
-                                        <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          📁 workspace_subsystem/{subSec}/{rd.name}
-                                        </span>
-
-                                        {/* Stage/Loop Dependency Badge */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
-                                          <span style={{ fontSize: '6px', color: 'var(--muted)', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.03)', padding: '1px 3px', borderRadius: '2px', border: '1px solid var(--border-soft)', width: 'fit-content' }}>
-                                            🔗 {subSec === 'discovery_scoping' ? 'Discovery Loop' : subSec === 'deep_research' ? 'Intelligence Crawl' : subSec === 'data_analysis' ? 'Pattern Extraction' : 'Strategic Roadmap'}
-                                          </span>
-
-                                          {/* Dependency Engine Processed Badge */}
-                                          {(() => {
-                                            const processedStages = getStagesWhereItemProcessed(rd.id);
-                                            const isProcessed = processedStages.length > 0;
-                                            return (
-                                              <button
-                                                type="button"
-                                                onClick={() => toggleItemProcessedForStage(rd.id, subSec)}
-                                                style={{
-                                                  fontSize: '6px',
-                                                  fontWeight: 800,
-                                                  padding: '1px 3px',
-                                                  borderRadius: '2px',
-                                                  border: isProcessed ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(245,158,11,0.35)',
-                                                  background: isProcessed ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                                                  color: isProcessed ? '#10b981' : '#f59e0b',
-                                                  cursor: 'pointer',
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  gap: '2px'
-                                                }}
-                                                title={isProcessed ? `Processed in stage: ${processedStages.join(', ')}. Click to toggle.` : 'Unprocessed - Click to toggle processed state in dependency engine.'}
-                                              >
-                                                {isProcessed ? `✅ Processed (${processedStages.length})` : '⚡ Unprocessed'}
-                                              </button>
-                                            );
-                                          })()}
-                                        </div>
-                                      </div>
-
-                                      {/* Action Bar */}
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
-                                        <button
-                                          onClick={() => {
-                                            setIsAddMissionOpen(true);
-                                            setNewMissionObjective(`Synthesize & process item "${rd.name}" in project "${itemProj}"`);
-                                          }}
-                                          style={{
-                                            fontSize: '6.5px',
-                                            fontWeight: 800,
-                                            background: 'rgba(204,122,74,0.12)',
-                                            border: '1px solid var(--accent)',
-                                            color: 'var(--accent)',
-                                            borderRadius: '2.5px',
-                                            padding: '1px 4px',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          🚀 Launch
-                                        </button>
-                                        <select
-                                          value={subSec}
-                                          onChange={async (e) => {
-                                            const nextSub = e.target.value;
-                                            try {
-                                              const res = await fetch('/api/db/raw-data', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                  id: rd.id,
-                                                  name: rd.name,
-                                                  content: rd.content,
-                                                  mime_type: rd.mime_type,
-                                                  metadata: {
-                                                    ...(rd.metadata || {}),
-                                                    sub_section: nextSub,
-                                                    project_name: itemProj,
-                                                    tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
-                                                  }
-                                                })
-                                              });
-                                              if (res.ok) {
-                                                setToast({ message: `Moved to ${nextSub}`, type: 'success', isOpen: true });
-                                                fetchWorkspaceData();
-                                              }
-                                            } catch (err) {}
-                                          }}
-                                          style={{
-                                            fontSize: '6px',
-                                            fontWeight: 700,
-                                            fontFamily: 'var(--sans)',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border-soft)',
-                                            borderRadius: '2.5px',
-                                            color: 'var(--muted)',
-                                            padding: '1px 2px',
-                                            outline: 'none',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          <option value="discovery_scoping">Discovery</option>
-                                          <option value="deep_research">Deep Research</option>
-                                          <option value="data_analysis">Data Analysis</option>
-                                          <option value="strategic_synthesis">Strategic Synthesis</option>
-                                        </select>
-                                      </div>
-
-                                      {/* Expand Content Area */}
-                                      {isExpanded && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px', marginTop: '2px' }}>
-                                          <textarea
-                                            style={{
-                                              width: '100%',
-                                              height: '55px',
-                                              fontSize: '7.5px',
-                                              fontFamily: 'var(--mono)',
-                                              background: '#090d16',
-                                              border: '1px solid var(--border-soft)',
-                                              borderRadius: '3px',
-                                              padding: '3px 4px',
-                                              color: '#10b981',
-                                              resize: 'vertical',
-                                              outline: 'none'
-                                            }}
-                                            defaultValue={rd.content}
-                                            onBlur={async (e) => {
-                                              if (e.target.value !== rd.content) {
-                                                try {
-                                                  const res = await fetch('/api/db/raw-data', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                      id: rd.id,
-                                                      name: rd.name,
-                                                      content: e.target.value,
-                                                      mime_type: rd.mime_type,
-                                                      metadata: {
-                                                        ...(rd.metadata || {}),
-                                                        project_name: itemProj,
-                                                        tenantId: rd.metadata?.tenantId || activeEntity || 'default_user'
-                                                      }
-                                                    })
-                                                  });
-                                                  if (res.ok) {
-                                                    setToast({ message: 'Saved content updates!', type: 'success', isOpen: true });
-                                                    fetchWorkspaceData();
-                                                  }
-                                                } catch (err) {}
-                                              }
-                                            }}
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                secItems.map((sc: any) => {
-                                  const itemProj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
-                                  const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
-                                  const isSelectedForExport = exportSelectedDeliverableIds.includes(sc.id);
-
-                                  return (
-                                    <div key={sc.id} style={{
-                                      width: '100%',
-                                      background: 'var(--surface-alt)',
-                                      border: isSelectedForExport ? '1.5px solid var(--accent)' : '1px solid var(--border-soft)',
-                                      borderRadius: '5px',
-                                      padding: '6px 8px',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '4px'
-                                    }}>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, overflow: 'hidden' }}>
-                                            <input
-                                              type="checkbox"
-                                              checked={isSelectedForExport}
-                                              onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setExportSelectedDeliverableIds(prev => [...prev, sc.id]);
-                                                } else {
-                                                  setExportSelectedDeliverableIds(prev => prev.filter(id => id !== sc.id));
-                                                }
-                                              }}
-                                              style={{ cursor: 'pointer' }}
-                                              title="Select item for export"
-                                            />
-                                            <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                              {sc.name}
-                                            </span>
-                                          </div>
-                                          <button
-                                            onClick={() => handleDeleteSystemComponent(sc.id)}
-                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '9px', padding: '1px' }}
-                                            title="Delete item"
-                                          >
-                                            ✕
-                                          </button>
-                                        </div>
-
-                                        {/* Disk Path Badge */}
-                                        <span style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                          📁 workspace_subsystem/{subSec}/{sc.name}
-                                        </span>
-
-                                        {/* Stage/Loop Dependency Badge */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
-                                          <span style={{ fontSize: '6px', color: '#10b981', fontFamily: 'var(--mono)', background: 'rgba(16,185,129,0.06)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
-                                            🛡️ Quality Gate: Passed
-                                          </span>
-
-                                          {/* Dependency Engine Processed Badge */}
-                                          {(() => {
-                                            const processedStages = getStagesWhereItemProcessed(sc.id);
-                                            const isProcessed = processedStages.length > 0;
-                                            return (
-                                              <button
-                                                type="button"
-                                                onClick={() => toggleItemProcessedForStage(sc.id, subSec)}
-                                                style={{
-                                                  fontSize: '6px',
-                                                  fontWeight: 800,
-                                                  padding: '1px 3px',
-                                                  borderRadius: '2px',
-                                                  border: isProcessed ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(59,130,246,0.35)',
-                                                  background: isProcessed ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)',
-                                                  color: isProcessed ? '#10b981' : '#3b82f6',
-                                                  cursor: 'pointer',
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  gap: '2px'
-                                                }}
-                                                title={isProcessed ? `Processed in stage: ${processedStages.join(', ')}. Click to toggle.` : 'Unprocessed - Click to toggle processed state.'}
-                                              >
-                                                {isProcessed ? `✅ Processed (${processedStages.length})` : '📦 Deliverable Output'}
-                                              </button>
-                                            );
-                                          })()}
-                                        </div>
-                                      </div>
-
-                                      {/* Actions Bar */}
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', marginTop: '2px', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
-                                        <button
-                                          onClick={() => {
-                                            handleGoToArtifact(sc);
-                                            setYourDataSystemsView('artifact' as any);
-                                          }}
-                                          style={{
-                                            fontSize: '6.5px',
-                                            fontWeight: 800,
-                                            background: 'rgba(59,130,246,0.12)',
-                                            border: '1px solid #3b82f6',
-                                            color: '#3b82f6',
-                                            borderRadius: '2.5px',
-                                            padding: '1px 4px',
-                                            cursor: 'pointer'
-                                          }}
-                                          title="View Live Preview or Code Editor"
-                                        >
-                                          🚀 Artifact
-                                        </button>
-
-                                        <select
-                                          value={subSec}
-                                          onChange={async (e) => {
-                                            const nextSub = e.target.value;
-                                            try {
-                                              const res = await fetch('/api/db/system-components', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                  id: sc.id,
-                                                  name: sc.name,
-                                                  role: sc.role,
-                                                  code_snapshot: sc.code_snapshot,
-                                                  metadata: {
-                                                    ...(sc.metadata || {}),
-                                                    sub_section: nextSub,
-                                                    status: nextSub === 'completed' ? 'processed' : nextSub === 'reviews' ? 'reviewing' : 'new',
-                                                    project_name: itemProj,
-                                                    tenantId: sc.metadata?.tenantId || activeEntity || 'default_user'
-                                                  }
-                                                })
-                                              });
-                                              if (res.ok) {
-                                                setToast({ message: `Moved deliverable to ${nextSub}`, type: 'success', isOpen: true });
-                                                fetchWorkspaceData();
-                                              }
-                                            } catch (err) {}
-                                          }}
-                                          style={{
-                                            fontSize: '6px',
-                                            fontWeight: 700,
-                                            fontFamily: 'var(--sans)',
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border-soft)',
-                                            borderRadius: '2.5px',
-                                            color: 'var(--muted)',
-                                            padding: '1px 2px',
-                                            outline: 'none',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          <option value="executions">Executions</option>
-                                          <option value="reviews">Reviews</option>
-                                          <option value="completed">Completed</option>
-                                        </select>
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )
-                            ) : (
-                              <div style={{
-                                flex: 1,
-                                border: '1px dashed var(--border-soft)',
-                                borderRadius: '4px',
-                                padding: '12px 8px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                textAlign: 'center',
-                                fontSize: '7.5px',
-                                color: 'var(--muted)',
-                                background: 'rgba(255,255,255,0.01)'
-                              }}>
-                                <span>No items in {sec.label}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
             </div>
           )}
         </div>
+      </div>
 
-        {/* ============ RIGHT COLUMN: FILES/CODE (TOP) & WORKSPACE SUBSYSTEM (BOTTOM) ============ */}
-        <aside className="col side" style={{ width: '420px', minWidth: '320px', flexShrink: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-soft)' }}>
+        {/* ============ RIGHT COLUMN: WORKSPACE SUBSYSTEM (7 VERTICAL SUBSECTIONS) ============ */}
+        <aside className="col side" style={{ width: '380px', minWidth: '300px', flexShrink: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-soft)' }}>
           <RightPanel
             tenantId={user?.id || activeEntity || 'usr-123'}
             containerState={isChatLoading ? 'waking_up' : 'warm'}
@@ -11025,8 +10346,11 @@ ${isDirector ? `
                           </button>
                           <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>SELECT DELIVERABLE:</span>
                           <select
-                            value={selectedArtifactId || ''}
-                            onChange={(e) => setSelectedArtifactId(e.target.value)}
+                            value={selectedArtifact?.id || selectedArtifact?.name || ''}
+                            onChange={(e) => {
+                              const found = systemComponents.find((sc: any) => (sc.id || sc.name) === e.target.value);
+                              setSelectedArtifact(found || null);
+                            }}
                             style={{
                               fontSize: '8.5px',
                               fontWeight: 700,
@@ -11048,15 +10372,15 @@ ${isDirector ? `
                           </select>
                         </div>
                         <span style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                          {selectedArtifactId ? `ID: ${selectedArtifactId}` : 'No selection'}
+                          {selectedArtifact ? `ID: ${selectedArtifact.id || selectedArtifact.name}` : 'No selection'}
                         </span>
                       </div>
 
                       {/* Artifact Content Display */}
                       <div style={{ flex: 1, border: '1px solid var(--border-soft)', borderRadius: '4px', background: 'var(--surface)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        {selectedArtifactId ? (
+                        {selectedArtifact ? (
                           (() => {
-                            const sc = systemComponents.find((c: any) => (c.id || c.name) === selectedArtifactId);
+                            const sc = selectedArtifact;
                             if (!sc) return <div style={{ padding: '12px', fontSize: '10px', color: 'var(--muted)' }}>Deliverable not found.</div>;
                             
                             const content = sc.content || sc.description || JSON.stringify(sc.metadata || {}, null, 2);
@@ -11094,8 +10418,8 @@ ${isDirector ? `
                       </div>
                     </div>
                   ) : (
-                    /* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (DIRECT SINGLE HORIZONTAL ROW) */
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
+                    /* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (VERTICAL STACKED LIST) */
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '6px', gap: '6px' }}>
                       {[
                         { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'source' },
                         { key: 'deep_research', label: 'Deep Research', icon: '📡', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', type: 'source' },
@@ -11122,79 +10446,74 @@ ${isDirector ? `
 
                         return (
                           <div key={sec.key} style={{
-                            flex: '1 1 0px',
-                            minWidth: '110px',
-                            height: '100%',
+                            width: '100%',
+                            flexShrink: 0,
                             background: 'var(--surface)',
                             border: '1px solid var(--border-soft)',
                             borderRadius: '5px',
-                            padding: '5px 6px',
+                            padding: '6px 8px',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '5px'
                           }}>
                             {/* SUB-SECTION HEADER */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
-                              {/* Sub-Section Name directly ABOVE buttons */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
-                                <span style={{ fontSize: '10px', flexShrink: 0 }}>{sec.icon}</span>
-                                <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid var(--border-soft)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '11px', flexShrink: 0 }}>{sec.icon}</span>
+                                <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                                   {sec.label}
                                 </span>
-                              </div>
-
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2px' }}>
                                 <span style={{
                                   fontSize: '7px',
                                   fontWeight: 800,
                                   color: sec.color,
                                   background: sec.bg,
-                                  padding: '1px 4px',
+                                  padding: '1px 5px',
                                   borderRadius: '3px',
                                   fontFamily: 'var(--mono)'
                                 }}>
                                   {secItems.length} {isSource ? 'Docs' : 'Delivs'}
                                 </span>
+                              </div>
 
-                                <div style={{ display: 'flex', gap: '2px' }}>
-                                  <button
-                                    onClick={() => handleCreateDeliverableModalOpen(sec.key)}
-                                    title={`Add new document to ${sec.label}`}
-                                    style={{
-                                      fontSize: '7.5px',
-                                      fontWeight: 800,
-                                      background: 'var(--surface-alt)',
-                                      border: '1px solid var(--border-soft)',
-                                      color: 'var(--text-bright)',
-                                      borderRadius: '2px',
-                                      padding: '1px 3px',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    + Add
-                                  </button>
-                                  <button
-                                    onClick={() => handleImportToSection(sec.key)}
-                                    title={`Import item into ${sec.label}`}
-                                    style={{
-                                      fontSize: '7.5px',
-                                      fontWeight: 800,
-                                      background: 'var(--surface-alt)',
-                                      border: '1px solid var(--border-soft)',
-                                      color: 'var(--text-bright)',
-                                      borderRadius: '2px',
-                                      padding: '1px 3px',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    📥
-                                  </button>
-                                </div>
+                              <div style={{ display: 'flex', gap: '3px' }}>
+                                <button
+                                  onClick={() => setIsImportModalOpen(true)}
+                                  title={`Add new document to ${sec.label}`}
+                                  style={{
+                                    fontSize: '7.5px',
+                                    fontWeight: 800,
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    color: 'var(--text-bright)',
+                                    borderRadius: '2px',
+                                    padding: '1px 4px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  + Add
+                                </button>
+                                <button
+                                  onClick={() => setIsImportModalOpen(true)}
+                                  title={`Import item into ${sec.label}`}
+                                  style={{
+                                    fontSize: '7.5px',
+                                    fontWeight: 800,
+                                    background: 'var(--surface-alt)',
+                                    border: '1px solid var(--border-soft)',
+                                    color: 'var(--text-bright)',
+                                    borderRadius: '2px',
+                                    padding: '1px 4px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  📥 Import
+                                </button>
                               </div>
                             </div>
 
                             {/* SUB-SECTION ITEMS SCROLLABLE LIST */}
-                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
+                            <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                               {secItems.length > 0 ? (
                                 isSource ? (
                                   secItems.map((rd: any) => {
@@ -11221,9 +10540,9 @@ ${isDirector ? `
                                             {rd.metadata.description}
                                           </div>
                                         )}
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px', pt: '2px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px', paddingTop: '2px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
                                           <button
-                                            onClick={() => handleViewItemDetail(rd, 'source')}
+                                            onClick={() => { setSelectedArtifact(rd); setYourDataSystemsView('artifact'); }}
                                             style={{ fontSize: '6.5px', color: 'var(--accent)', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
                                           >
                                             View
@@ -11287,7 +10606,7 @@ ${isDirector ? `
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
                                           <button
                                             onClick={() => {
-                                              setSelectedArtifactId(sc.id || sc.name);
+                                              setSelectedArtifact(sc);
                                               setYourDataSystemsView('artifact' as any);
                                             }}
                                             style={{ fontSize: '6.5px', color: 'var(--accent)', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
@@ -11368,7 +10687,8 @@ ${isDirector ? `
           </div>
         </div>
       </main>
-                       {/* Realtime Event Payload Modal */}
+
+      {/* Realtime Event Payload Modal */}
       {selectedRealtimeEvent && (
         <div
           className="dashboard-modal-overlay"
@@ -16168,7 +15488,7 @@ ${isDirector ? `
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14px' }}>📋</span>
                 <span style={{ fontSize: '11px', fontWeight: 900, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {dtxt.backlogTitle}
+                  {dtxt.backlogModalTitle}
                 </span>
               </div>
               <button
@@ -16412,7 +15732,7 @@ ${isDirector ? `
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14px' }}>🔍</span>
                 <span style={{ fontSize: '11px', fontWeight: 900, color: '#f43f5e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {dtxt.reviewTitle}
+                  {dtxt.reviewModalTitle}
                 </span>
               </div>
               <button
@@ -16659,7 +15979,7 @@ ${isDirector ? `
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14px' }}>📋</span>
                 <span style={{ fontSize: '11px', fontWeight: 900, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {dtxt.backlogDetailTitle}
+                  {dtxt.backlogItemTitle}
                 </span>
               </div>
               <button
@@ -16820,7 +16140,7 @@ ${isDirector ? `
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14px' }}>🔍</span>
                 <span style={{ fontSize: '11px', fontWeight: 900, color: '#f43f5e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {dtxt.reviewDetailTitle}
+                  {dtxt.reviewItemTitle}
                 </span>
               </div>
               <button
