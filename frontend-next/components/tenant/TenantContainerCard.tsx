@@ -47,10 +47,10 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
           <span style={{ fontSize: '18px' }}>⚡</span>
           <div>
             <div style={{ fontSize: '12px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#f8fafc' }}>
-              Dedicated Runner & Storage Engine
+              User Container Instance
             </div>
             <div style={{ fontSize: '9px', color: '#94a3b8' }}>
-              Per-User Isolated Cloud Run Container & Dedicated GCP Bucket
+              Per-User Isolated Workspace Container
             </div>
           </div>
         </div>
@@ -64,33 +64,23 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
           padding: '2px 8px',
           borderRadius: '12px'
         }}>
-          ● Active (Scale-to-Zero)
+          ● Active
         </span>
       </div>
 
-      {/* Grid of Diagnostics Details */}
+      {/* Diagnostics Details */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '10px',
+        display: 'flex',
+        justify: 'space-between',
+        alignItems: 'center',
         backgroundColor: '#090d16',
         padding: '12px',
         borderRadius: '8px',
         border: '1px solid #1e293b'
       }}>
         <div>
-          <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block' }}>CLOUD RUN SERVICE</span>
-          <code style={{ fontSize: '10px', color: '#38bdf8', fontFamily: 'var(--mono)' }}>{serviceName}</code>
-        </div>
-
-        <div>
-          <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block' }}>DEDICATED GCS BUCKET</span>
-          <code style={{ fontSize: '10px', color: '#8b5cf6', fontFamily: 'var(--mono)' }}>{bucketName}</code>
-        </div>
-
-        <div>
-          <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block' }}>CONTAINER FUSE MOUNT</span>
-          <code style={{ fontSize: '10px', color: '#cbd5e1', fontFamily: 'var(--mono)' }}>/mnt/workspace/</code>
+          <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block' }}>CONTAINER STATUS</span>
+          <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 800 }}>Active (1 Instance)</span>
         </div>
 
         <div>
@@ -123,7 +113,7 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
         <button
           type="button"
           disabled={isProcessing}
-          onClick={() => triggerAction(`Pre-warming container instance ${serviceName}...`)}
+          onClick={() => triggerAction('Pre-warming user container instance...')}
           style={{
             backgroundColor: '#3b82f6',
             border: 'none',
@@ -146,7 +136,7 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
         <button
           type="button"
           disabled={isProcessing}
-          onClick={() => triggerAction(`Rebooting instance ${serviceName}...`)}
+          onClick={() => triggerAction('Rebooting container instance...')}
           style={{
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
@@ -169,7 +159,7 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
         <button
           type="button"
           disabled={isProcessing}
-          onClick={() => triggerAction(`Exporting zip backup from GCS bucket ${bucketName}...`)}
+          onClick={() => triggerAction('Exporting workspace zip backup...')}
           style={{
             backgroundColor: '#1e293b',
             border: '1px solid #334155',
@@ -192,7 +182,7 @@ export const TenantContainerCard: React.FC<TenantContainerCardProps> = ({
         <button
           type="button"
           disabled={isProcessing}
-          onClick={() => triggerAction(`Purging workspace files in ${bucketName}...`)}
+          onClick={() => triggerAction('Purging workspace storage...')}
           style={{
             backgroundColor: 'rgba(239, 68, 68, 0.12)',
             border: '1px solid rgba(239, 68, 68, 0.3)',

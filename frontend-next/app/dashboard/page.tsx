@@ -18,6 +18,7 @@ import { UserHarnessService } from '../../components/harness/user-harness';
 import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../components/workspace/drive-api';
 import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../components/workspace/github-api';
 import { RightPanel } from '../../components/workspace/RightPanel';
+import LiveAppPreview from '../../components/workspace/LiveAppPreview';
 import { ContainerStatusBadge } from '../../components/tenant/ContainerStatusBadge';
 import { AgentExecutionNotice } from '../../components/harness/AgentExecutionNotice';
 import JSZip from 'jszip';
@@ -8137,7 +8138,7 @@ ${isDirector ? `
         
         {/* ============ LEFT COLUMN: RUNTIME & AGENT CHAT ============ */}
         <aside className="col lside">
-          <section className="pane" style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '3px' }}>
+          <section className="pane" style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 0, border: 'none' }}>
             <div style={{
               flex: 1,
               display: 'flex',
@@ -8150,7 +8151,20 @@ ${isDirector ? `
               transition: 'filter 0.3s ease, opacity 0.3s ease'
             }}>
               {/* Header */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1.5px solid var(--border)', paddingBottom: '6px', marginBottom: '8px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '2px 8px',
+                height: '28px',
+                minHeight: '28px',
+                maxHeight: '28px',
+                boxSizing: 'border-box',
+                background: 'var(--surface-alt)',
+                borderBottom: '1px solid var(--border-soft)',
+                gap: '6px',
+                flexWrap: 'nowrap'
+              }}>
                 {/* Line 1: Header title on left, Context bar & Model selector on right */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, minWidth: 0, padding: '0px' }}>
@@ -9266,8 +9280,10 @@ ${isDirector ? `
             justifyContent: 'space-between',
             gap: '6px',
             padding: '2px 8px',
+            height: '28px',
             minHeight: '28px',
             maxHeight: '28px',
+            boxSizing: 'border-box',
             background: 'var(--surface-alt)',
             borderBottom: '1px solid var(--border-soft)',
             flexShrink: 0
@@ -9602,10 +9618,10 @@ ${isDirector ? `
                 transition: 'all 0.2s ease'
               }}>
                 <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: 'none' }}>
                 
                 {/* Mission bar switcher & controls in a single row */}
-                <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', padding: '2px 8px', minHeight: '28px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
+                <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', padding: '2px 8px', height: '28px', minHeight: '28px', maxHeight: '28px', boxSizing: 'border-box', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
                   
                   {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 1, minWidth: 0, overflowX: 'auto', padding: '0px' }}>
@@ -10236,7 +10252,7 @@ ${isDirector ? `
         </section>
     </div>
 
-        {/* ================= BOTTOM WORKSPACE SUBSYSTEM SECTION ================= */}
+        {/* ================= BOTTOM WORKSPACE AREA: LIVE APP PREVIEW ================= */}
         <div style={{
           flex: minCenter ? '1 1 100%' : (minBottomVertical ? '0 0 auto' : '1 1 50%'),
           minHeight: minBottomVertical ? '26px' : '180px',
@@ -10262,7 +10278,7 @@ ${isDirector ? `
               <button
                 type="button"
                 onClick={() => toggleBottomVertical()}
-                title="Expand Workspace Subsystem section vertically"
+                title="Expand Live App Preview section vertically"
                 style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border-soft)',
@@ -10278,21 +10294,18 @@ ${isDirector ? `
                   gap: '4px'
                 }}
               >
-                ▲ Expand Workspace Subsystem
+                ▲ Expand Live App Preview
               </button>
             </div>
           ) : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%', position: 'relative' }}>
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                overflow: 'hidden',
-                background: 'var(--surface-alt)'
-              }}>
-                {yourDataSystemsView === ('artifact' as any) ? (
-                  /* ARTIFACT VIEWER MODE */
+              <LiveAppPreview
+                tenantId={user?.id || activeEntity || 'usr-123'}
+                containerState={isChatLoading ? 'waking_up' : 'warm'}
+              />
+              {false && (
+                <>
+                  {/* ARTIFACT VIEWER MODE */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px', padding: '6px' }}>
                     {/* Artifact Selector Header */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
@@ -10422,8 +10435,7 @@ ${isDirector ? `
                       </div>
                     )}
                   </div>
-                ) : (
-                  /* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (DIRECT SINGLE HORIZONTAL ROW) */
+                  {/* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (DIRECT SINGLE HORIZONTAL ROW) */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
                     {[
                       { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'source' },
@@ -10969,18 +10981,387 @@ ${isDirector ? `
                       );
                     })}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           )}
         </div>
-      </div>
 
-        {/* ============ RIGHT COLUMN: LIVE APP PREVIEW & FILES/CODE ============ */}
+        {/* ============ RIGHT COLUMN: FILES/CODE (TOP) & WORKSPACE SUBSYSTEM (BOTTOM) ============ */}
         <aside className="col side" style={{ width: '420px', minWidth: '320px', flexShrink: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-soft)' }}>
           <RightPanel
             tenantId={user?.id || activeEntity || 'usr-123'}
             containerState={isChatLoading ? 'waking_up' : 'warm'}
+            bottomComponent={
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', height: '100%', position: 'relative' }}>
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                  overflow: 'hidden',
+                  background: 'var(--surface-alt)'
+                }}>
+                  {yourDataSystemsView === ('artifact' as any) ? (
+                    /* ARTIFACT VIEWER MODE */
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px', padding: '6px' }}>
+                      {/* Artifact Selector Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            onClick={() => setYourDataSystemsView('list' as any)}
+                            style={{
+                              fontSize: '8px',
+                              fontWeight: 800,
+                              padding: '2px 7px',
+                              borderRadius: '3px',
+                              border: '1px solid var(--border-soft)',
+                              background: 'var(--surface-alt)',
+                              color: 'var(--text-bright)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ◀ Back to Workspace Subsystem
+                          </button>
+                          <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>SELECT DELIVERABLE:</span>
+                          <select
+                            value={selectedArtifactId || ''}
+                            onChange={(e) => setSelectedArtifactId(e.target.value)}
+                            style={{
+                              fontSize: '8.5px',
+                              fontWeight: 700,
+                              background: 'var(--surface-alt)',
+                              color: 'var(--text-bright)',
+                              border: '1px solid var(--border-soft)',
+                              borderRadius: '3px',
+                              padding: '2px 6px',
+                              maxWidth: '220px',
+                              outline: 'none'
+                            }}
+                          >
+                            <option value="">-- Choose Deliverable --</option>
+                            {systemComponents.map((sc: any) => (
+                              <option key={sc.id || sc.name} value={sc.id || sc.name}>
+                                ⚡ {sc.name || sc.title || 'Deliverable Item'} ({sc.metadata?.sub_section || sc.sub_section || 'executions'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <span style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                          {selectedArtifactId ? `ID: ${selectedArtifactId}` : 'No selection'}
+                        </span>
+                      </div>
+
+                      {/* Artifact Content Display */}
+                      <div style={{ flex: 1, border: '1px solid var(--border-soft)', borderRadius: '4px', background: 'var(--surface)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        {selectedArtifactId ? (
+                          (() => {
+                            const sc = systemComponents.find((c: any) => (c.id || c.name) === selectedArtifactId);
+                            if (!sc) return <div style={{ padding: '12px', fontSize: '10px', color: 'var(--muted)' }}>Deliverable not found.</div>;
+                            
+                            const content = sc.content || sc.description || JSON.stringify(sc.metadata || {}, null, 2);
+                            const isCode = typeof content === 'string' && (content.includes('import ') || content.includes('function') || content.includes('<div') || content.includes('export '));
+
+                            return (
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                                <div style={{ padding: '6px 10px', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)' }}>
+                                    📄 {sc.name || 'Deliverable Content'}
+                                  </span>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(content);
+                                        setToast({ message: 'Copied content to clipboard!', type: 'info', isOpen: true });
+                                      }}
+                                      style={{ fontSize: '7.5px', padding: '1px 5px', borderRadius: '2px', border: '1px solid var(--border-soft)', background: 'var(--surface)', cursor: 'pointer' }}
+                                    >
+                                      📋 Copy
+                                    </button>
+                                  </div>
+                                </div>
+                                <div style={{ flex: 1, padding: '10px', overflowY: 'auto', fontFamily: isCode ? 'var(--mono)' : 'inherit', fontSize: '9px', color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
+                                  {content}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '10px' }}>
+                            No deliverable selected.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (DIRECT SINGLE HORIZONTAL ROW) */
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflowX: 'auto', padding: '6px', gap: '6px' }}>
+                      {[
+                        { key: 'discovery_scoping', label: 'Discovery & Scoping', icon: '🔍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'source' },
+                        { key: 'deep_research', label: 'Deep Research', icon: '📡', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', type: 'source' },
+                        { key: 'data_analysis', label: 'Data Analysis', icon: '📊', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', type: 'source' },
+                        { key: 'strategic_synthesis', label: 'Strategic Synthesis', icon: '🎯', color: '#10b981', bg: 'rgba(16,185,129,0.1)', type: 'source' },
+                        { key: 'executions', label: 'Executions', icon: '⚡', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', type: 'deliverable' },
+                        { key: 'reviews', label: 'Reviews', icon: '🛡️', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', type: 'deliverable' },
+                        { key: 'completed', label: 'Completed', icon: '✅', color: '#10b981', bg: 'rgba(16,185,129,0.1)', type: 'deliverable' }
+                      ].map(sec => {
+                        const isSource = sec.type === 'source';
+                        const secItems = isSource
+                          ? rawDataList.filter((rd: any) => {
+                              const proj = rd.metadata?.project_name || rd.metadata?.project || 'default_project';
+                              if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                              const subSec = rd.metadata?.sub_section || rd.sub_section || 'discovery_scoping';
+                              return subSec === sec.key;
+                            })
+                          : systemComponents.filter((sc: any) => {
+                              const proj = sc.metadata?.project_name || sc.metadata?.project || 'default_project';
+                              if (selectedProjectName !== 'all' && proj !== selectedProjectName) return false;
+                              const subSec = sc.metadata?.sub_section || sc.sub_section || (sc.metadata?.status === 'processed' ? 'completed' : sc.metadata?.status === 'reviewing' ? 'reviews' : 'executions');
+                              return subSec === sec.key;
+                            });
+
+                        return (
+                          <div key={sec.key} style={{
+                            flex: '1 1 0px',
+                            minWidth: '110px',
+                            height: '100%',
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '5px',
+                            padding: '5px 6px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '5px'
+                          }}>
+                            {/* SUB-SECTION HEADER */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingBottom: '3px', borderBottom: '1px solid var(--border-soft)' }}>
+                              {/* Sub-Section Name directly ABOVE buttons */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
+                                <span style={{ fontSize: '10px', flexShrink: 0 }}>{sec.icon}</span>
+                                <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                  {sec.label}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2px' }}>
+                                <span style={{
+                                  fontSize: '7px',
+                                  fontWeight: 800,
+                                  color: sec.color,
+                                  background: sec.bg,
+                                  padding: '1px 4px',
+                                  borderRadius: '3px',
+                                  fontFamily: 'var(--mono)'
+                                }}>
+                                  {secItems.length} {isSource ? 'Docs' : 'Delivs'}
+                                </span>
+
+                                <div style={{ display: 'flex', gap: '2px' }}>
+                                  <button
+                                    onClick={() => handleCreateDeliverableModalOpen(sec.key)}
+                                    title={`Add new document to ${sec.label}`}
+                                    style={{
+                                      fontSize: '7.5px',
+                                      fontWeight: 800,
+                                      background: 'var(--surface-alt)',
+                                      border: '1px solid var(--border-soft)',
+                                      color: 'var(--text-bright)',
+                                      borderRadius: '2px',
+                                      padding: '1px 3px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    + Add
+                                  </button>
+                                  <button
+                                    onClick={() => handleImportToSection(sec.key)}
+                                    title={`Import item into ${sec.label}`}
+                                    style={{
+                                      fontSize: '7.5px',
+                                      fontWeight: 800,
+                                      background: 'var(--surface-alt)',
+                                      border: '1px solid var(--border-soft)',
+                                      color: 'var(--text-bright)',
+                                      borderRadius: '2px',
+                                      padding: '1px 3px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    📥
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* SUB-SECTION ITEMS SCROLLABLE LIST */}
+                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
+                              {secItems.length > 0 ? (
+                                isSource ? (
+                                  secItems.map((rd: any) => {
+                                    const nextSub = sec.key === 'discovery_scoping' ? 'deep_research' : sec.key === 'deep_research' ? 'data_analysis' : sec.key === 'data_analysis' ? 'strategic_synthesis' : 'discovery_scoping';
+                                    return (
+                                      <div
+                                        key={rd.id || rd.name}
+                                        style={{
+                                          background: 'var(--surface-alt)',
+                                          border: '1px solid var(--border-soft)',
+                                          borderRadius: '3px',
+                                          padding: '4px 5px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '2px',
+                                          fontSize: '8px'
+                                        }}
+                                      >
+                                        <div style={{ fontWeight: 700, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          📄 {rd.name || rd.title || 'Document'}
+                                        </div>
+                                        {rd.metadata?.description && (
+                                          <div style={{ fontSize: '7px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {rd.metadata.description}
+                                          </div>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px', pt: '2px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                                          <button
+                                            onClick={() => handleViewItemDetail(rd, 'source')}
+                                            style={{ fontSize: '6.5px', color: 'var(--accent)', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                                          >
+                                            View
+                                          </button>
+                                          <select
+                                            value={sec.key}
+                                            onChange={async (e) => {
+                                              const targetSub = e.target.value;
+                                              if (targetSub === sec.key) return;
+                                              try {
+                                                const res = await fetch(`/api/user-data/raw-sources/${encodeURIComponent(rd.id)}`, {
+                                                  method: 'PATCH',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({ metadata: { ...(rd.metadata || {}), sub_section: targetSub } })
+                                                });
+                                                if (res.ok) {
+                                                  setToast({ message: `Moved to ${targetSub}`, type: 'success', isOpen: true });
+                                                  fetchWorkspaceData();
+                                                }
+                                              } catch (err) {}
+                                            }}
+                                            style={{
+                                              fontSize: '6.5px',
+                                              background: 'var(--surface)',
+                                              color: 'var(--muted)',
+                                              border: '1px solid var(--border-soft)',
+                                              borderRadius: '2px',
+                                              padding: '1px 2px',
+                                              outline: 'none',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            <option value="discovery_scoping">Discovery</option>
+                                            <option value="deep_research">Deep Research</option>
+                                            <option value="data_analysis">Data Analysis</option>
+                                            <option value="strategic_synthesis">Strategic Synthesis</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  secItems.map((sc: any) => {
+                                    return (
+                                      <div
+                                        key={sc.id || sc.name}
+                                        style={{
+                                          background: 'var(--surface-alt)',
+                                          border: '1px solid var(--border-soft)',
+                                          borderRadius: '3px',
+                                          padding: '4px 5px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '2px',
+                                          fontSize: '8px'
+                                        }}
+                                      >
+                                        <div style={{ fontWeight: 700, color: 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          ⚡ {sc.name || sc.title || 'Deliverable'}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                                          <button
+                                            onClick={() => {
+                                              setSelectedArtifactId(sc.id || sc.name);
+                                              setYourDataSystemsView('artifact' as any);
+                                            }}
+                                            style={{ fontSize: '6.5px', color: 'var(--accent)', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                                          >
+                                            Inspect
+                                          </button>
+                                          <select
+                                            value={sec.key}
+                                            onChange={async (e) => {
+                                              const nextSub = e.target.value;
+                                              if (nextSub === sec.key) return;
+                                              try {
+                                                const res = await fetch(`/api/user-data/deliverables/${encodeURIComponent(sc.id)}`, {
+                                                  method: 'PATCH',
+                                                  headers: { 'Content-Type': 'application/json' },
+                                                  body: JSON.stringify({
+                                                    sub_section: nextSub,
+                                                    metadata: { ...(sc.metadata || {}), sub_section: nextSub, status: nextSub === 'completed' ? 'processed' : nextSub === 'reviewing' ? 'reviews' : 'draft' }
+                                                  })
+                                                });
+                                                if (res.ok) {
+                                                  setToast({ message: `Moved deliverable to ${nextSub}`, type: 'success', isOpen: true });
+                                                  fetchWorkspaceData();
+                                                }
+                                              } catch (err) {}
+                                            }}
+                                            style={{
+                                              fontSize: '6.5px',
+                                              background: 'var(--surface)',
+                                              color: 'var(--muted)',
+                                              border: '1px solid var(--border-soft)',
+                                              borderRadius: '2px',
+                                              padding: '1px 2px',
+                                              outline: 'none',
+                                              cursor: 'pointer'
+                                            }}
+                                          >
+                                            <option value="executions">Executions</option>
+                                            <option value="reviews">Reviews</option>
+                                            <option value="completed">Completed</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )
+                              ) : (
+                                <div style={{
+                                  flex: 1,
+                                  border: '1px dashed var(--border-soft)',
+                                  borderRadius: '4px',
+                                  padding: '12px 8px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  textAlign: 'center',
+                                  fontSize: '7.5px',
+                                  color: 'var(--muted)',
+                                  background: 'rgba(255,255,255,0.01)'
+                                }}>
+                                  <span>No items in {sec.label}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            }
           />
         </aside>
 

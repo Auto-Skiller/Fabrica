@@ -20,10 +20,19 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 40, left: 10 });
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
-  const safeTenant = tenantId.toLowerCase().replace(/[^a-z0-9_\-]/g, '-');
-  const serviceName = `fabrica-runner-${safeTenant}`;
-  const bucketName = `gs://fabrica-tenant-${safeTenant}/`;
+
+  const triggerAction = (message: string, duration = 2000, callback?: () => void) => {
+    setIsProcessing(true);
+    setStatusMessage(message);
+    if (callback) callback();
+    setTimeout(() => {
+      setIsProcessing(false);
+      setTimeout(() => setStatusMessage(null), 1500);
+    }, duration);
+  };
 
   const togglePopover = () => {
     if (!isOpen && buttonRef.current) {
@@ -131,24 +140,8 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
           {/* Diagnostics Key Values */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>Service Name:</span>
-              <code style={{ color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{serviceName}</code>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>GCP Region:</span>
-              <span style={{ color: 'var(--text)', fontWeight: 700 }}>europe-west2</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>Scaling Mode:</span>
-              <span style={{ color: 'var(--status-success)', fontWeight: 800 }}>min: 0 (Scale to Zero)</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>Dedicated Bucket:</span>
-              <code style={{ color: 'var(--accent)', fontFamily: 'var(--mono)', fontSize: '9px' }}>{bucketName}</code>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--muted)' }}>Mount Path:</span>
-              <code style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>/mnt/workspace</code>
+              <span style={{ color: 'var(--muted)' }}>Container Status:</span>
+              <span style={{ color: getStatusColor(), fontWeight: 800 }}>{getStatusLabel()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--muted)' }}>Compute Spec:</span>
@@ -156,46 +149,117 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '10px', display: 'flex', gap: '6px' }}>
+          {/* Status Feedback Banner */}
+          {statusMessage && (
+            <div style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              border: '1px solid #3b82f6',
+              color: '#60a5fa',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              fontSize: '9.5px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>{isProcessing ? '⏳' : '✓'}</span>
+              <span>{statusMessage}</span>
+            </div>
+          )}
+
+          {/* Quick Actions (4 Moved Buttons) */}
+          <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
             <button
               type="button"
-              onClick={() => {
-                if (onWarmup) onWarmup();
-                setIsOpen(false);
-              }}
+              disabled={isProcessing}
+              onClick={() => triggerAction('Pre-warming user container instance...', 2000, onWarmup)}
               style={{
-                flex: 1,
                 backgroundColor: 'var(--accent)',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 color: 'var(--accent-contrast)',
-                fontSize: '10px',
+                fontSize: '9.5px',
                 fontWeight: 800,
-                padding: '6px',
-                cursor: 'pointer'
+                padding: '6px 8px',
+                cursor: isProcessing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
               }}
             >
-              ⚡ Pre-warm Instance
+              <span>⚡</span>
+              <span>Manual Pre-warm</span>
             </button>
+
             <button
               type="button"
-              onClick={() => {
-                if (onRestart) onRestart();
-                setIsOpen(false);
-              }}
+              disabled={isProcessing}
+              onClick={() => triggerAction('Rebooting container instance...', 2000, onRestart)}
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-soft)',
-                borderRadius: '4px',
                 color: 'var(--text)',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '6px 10px',
-                cursor: 'pointer'
+                borderRadius: '6px',
+                padding: '6px 8px',
+                fontSize: '9.5px',
+                fontWeight: 800,
+                cursor: isProcessing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
               }}
             >
-              🔄 Reboot
+              <span>🔄</span>
+              <span>Restart Container</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => triggerAction('Exporting workspace zip backup...', 2000)}
+              style={{
+                backgroundColor: 'var(--surface)',
+                border: '1px solid var(--border-soft)',
+                color: '#8b5cf6',
+                borderRadius: '6px',
+                padding: '6px 8px',
+                fontSize: '9.5px',
+                fontWeight: 800,
+                cursor: isProcessing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>📥</span>
+              <span>Export Workspace (.zip)</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => triggerAction('Purging workspace storage...', 2000)}
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '6px 8px',
+                fontSize: '9.5px',
+                fontWeight: 800,
+                cursor: isProcessing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              <span>🧹</span>
+              <span>Purge Workspace</span>
             </button>
           </div>
         </div>

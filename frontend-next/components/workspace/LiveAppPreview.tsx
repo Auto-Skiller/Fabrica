@@ -70,7 +70,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
     >
       {/* Top Browser Toolbar */}
       <div style={{
-        padding: '2px 6px',
+        padding: '2px 8px',
         backgroundColor: 'var(--surface-alt)',
         borderBottom: '1px solid var(--border-soft)',
         display: 'flex',
@@ -78,7 +78,10 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
         justifyContent: 'space-between',
         gap: '4px',
         flexWrap: 'nowrap',
-        minHeight: '26px'
+        height: '28px',
+        minHeight: '28px',
+        maxHeight: '28px',
+        boxSizing: 'border-box'
       }}>
         {/* Navigation & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
@@ -114,48 +117,57 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
           }}>
             <button
               onClick={() => setViewportMode('desktop')}
+              title="Desktop"
               style={{
                 backgroundColor: viewportMode === 'desktop' ? 'var(--accent)' : 'transparent',
                 color: viewportMode === 'desktop' ? 'var(--accent-contrast)' : 'var(--muted)',
                 border: 'none',
                 borderRadius: '2px',
-                padding: '1px 4px',
-                fontSize: '8px',
-                fontWeight: 700,
-                cursor: 'pointer'
+                padding: '2px 6px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              💻 Desktop
+              💻
             </button>
             <button
               onClick={() => setViewportMode('tablet')}
+              title="Tablet"
               style={{
                 backgroundColor: viewportMode === 'tablet' ? 'var(--accent)' : 'transparent',
                 color: viewportMode === 'tablet' ? 'var(--accent-contrast)' : 'var(--muted)',
                 border: 'none',
                 borderRadius: '2px',
-                padding: '1px 4px',
-                fontSize: '8px',
-                fontWeight: 700,
-                cursor: 'pointer'
+                padding: '2px 6px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              📱 Tablet
+              📱
             </button>
             <button
               onClick={() => setViewportMode('mobile')}
+              title="Mobile"
               style={{
                 backgroundColor: viewportMode === 'mobile' ? 'var(--accent)' : 'transparent',
                 color: viewportMode === 'mobile' ? 'var(--accent-contrast)' : 'var(--muted)',
                 border: 'none',
                 borderRadius: '2px',
-                padding: '1px 4px',
-                fontSize: '8px',
-                fontWeight: 700,
-                cursor: 'pointer'
+                padding: '2px 6px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              📲 Mobile
+              📲
             </button>
           </div>
         </div>
@@ -190,22 +202,22 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
             href={currentUrl}
             target="_blank"
             rel="noopener noreferrer"
+            title="Open in New Tab"
             style={{
               backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-soft)',
               color: 'var(--text)',
               borderRadius: '3px',
               padding: '1px 5px',
-              fontSize: '8px',
-              fontWeight: 700,
+              fontSize: '11px',
               textDecoration: 'none',
               display: 'flex',
               alignItems: 'center',
-              gap: '2px',
+              justifyContent: 'center',
               height: '18px'
             }}
           >
-            ↗️ New Tab
+            ↗️
           </a>
         </div>
       </div>
@@ -250,7 +262,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
               ⚡ Spinning Up User Container...
             </div>
             <div style={{ fontSize: '9.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '12px' }}>
-              <code style={{ color: 'var(--accent)' }}>fabrica-runner-{safeTenant}</code> (~1.8s cold start)
+              (~1.8s cold start)
             </div>
             <div style={{
               width: '180px',

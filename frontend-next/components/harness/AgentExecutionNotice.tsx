@@ -37,9 +37,9 @@ export const AgentExecutionNotice: React.FC<AgentExecutionNoticeProps> = ({
       >
         <span>🟢</span>
         <span style={{ fontWeight: 700 }}>
-          Dedicated Container Active: <code style={{ fontFamily: 'var(--mono)', color: '#34d399' }}>{serviceName}</code>
+          Dedicated Container Active
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: '9px', opacity: 0.8 }}>GCS FUSE Mounted</span>
+        <span style={{ marginLeft: 'auto', fontSize: '9px', opacity: 0.8 }}>Workspace Active</span>
       </div>
     );
   }
@@ -65,9 +65,6 @@ export const AgentExecutionNotice: React.FC<AgentExecutionNoticeProps> = ({
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 800 }}>
           Spinning up dedicated user container... (~1.8s cold start)
-        </div>
-        <div style={{ fontSize: '9px', color: '#fbbf24', fontFamily: 'var(--mono)' }}>
-          Target: <code style={{ color: '#fde68a' }}>{serviceName}</code> (Bucket: {bucketName})
         </div>
       </div>
     </div>

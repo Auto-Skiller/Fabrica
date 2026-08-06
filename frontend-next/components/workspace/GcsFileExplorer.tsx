@@ -335,54 +335,49 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
         overflow: 'hidden'
       }}
     >
-      {/* Bucket & Path Diagnostic Header */}
+
+
+      {/* Code & Files Section Header */}
       <div style={{
-        padding: '8px 12px',
+        padding: '2px 8px',
         backgroundColor: 'var(--surface-alt)',
         borderBottom: '1px solid var(--border-soft)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '8px'
+        gap: '4px',
+        height: '28px',
+        minHeight: '28px',
+        maxHeight: '28px',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          <span style={{ fontSize: '13px' }}>🗄️</span>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
-                DEDICATED GCS BUCKET
-              </span>
-              <span style={{ fontSize: '8px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--status-success)', padding: '1px 5px', borderRadius: '3px', fontWeight: 800 }}>
-                FUSE MOUNTED
-              </span>
-            </div>
-            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {actualBucket}
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '11px' }}>💻</span>
+          <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--mono)', letterSpacing: '0.04em' }}>
+            CODE & FILES
+          </span>
         </div>
 
         <button
           onClick={handleRefreshTree}
           disabled={isRefreshing}
+          title="Refresh Workspace Files"
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--border-soft)',
             color: 'var(--muted)',
-            borderRadius: '4px',
-            padding: '3px 7px',
+            borderRadius: '3px',
+            padding: '1px 5px',
             fontSize: '9.5px',
-            fontWeight: 700,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '3px'
           }}
         >
           <span style={{ display: 'inline-block', transform: isRefreshing ? 'rotate(360deg)' : 'none', transition: 'transform 0.5s' }}>
             🔄
           </span>
-          Refresh
         </button>
       </div>
 
@@ -437,7 +432,7 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
             fontFamily: 'var(--mono)',
             backgroundColor: 'var(--surface-alt)'
           }}>
-            Mount: <span style={{ color: 'var(--text)' }}>{workspaceRoot}</span>
+            Workspace Root: <span style={{ color: 'var(--text)' }}>{workspaceRoot}</span>
           </div>
         </div>
 

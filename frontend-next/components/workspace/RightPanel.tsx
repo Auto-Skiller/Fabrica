@@ -6,7 +6,7 @@ import GcsFileExplorer, { GcsFileNode } from './GcsFileExplorer';
 
 export type RightPanelTab = 'preview' | 'files';
 
-interface RightPanelProps {
+export interface RightPanelProps {
   tenantId?: string;
   bucketName?: string;
   runnerUrl?: string;
@@ -14,6 +14,8 @@ interface RightPanelProps {
   onFileSelect?: (file: GcsFileNode) => void;
   className?: string;
   style?: React.CSSProperties;
+  topComponent?: React.ReactNode;
+  bottomComponent?: React.ReactNode;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -23,7 +25,9 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   containerState = 'warm',
   onFileSelect,
   className = '',
-  style
+  style,
+  topComponent,
+  bottomComponent
 }) => {
   return (
     <div
@@ -42,35 +46,39 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         ...style
       }}
     >
-      {/* ================= TOP SECTION: LIVE APP PREVIEW ================= */}
+      {/* ================= TOP SECTION: FILES & CODE ================= */}
       <div style={{
-        flex: '1 1 55%',
+        flex: '1 1 50%',
         minHeight: '100px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         borderBottom: '1px solid var(--border-soft)'
       }}>
-        <LiveAppPreview
-          tenantId={tenantId}
-          runnerUrl={runnerUrl}
-          containerState={containerState}
-        />
+        {topComponent || (
+          <GcsFileExplorer
+            tenantId={tenantId}
+            bucketName={bucketName}
+            onFileSelect={onFileSelect}
+          />
+        )}
       </div>
 
-      {/* ================= BOTTOM SECTION: FILES & CODE ================= */}
+      {/* ================= BOTTOM SECTION: WORKSPACE SUBSYSTEM (7 SUB-SECTIONS) ================= */}
       <div style={{
-        flex: '1 1 45%',
+        flex: '1 1 50%',
         minHeight: '100px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden'
       }}>
-        <GcsFileExplorer
-          tenantId={tenantId}
-          bucketName={bucketName}
-          onFileSelect={onFileSelect}
-        />
+        {bottomComponent || (
+          <LiveAppPreview
+            tenantId={tenantId}
+            runnerUrl={runnerUrl}
+            containerState={containerState}
+          />
+        )}
       </div>
     </div>
   );
