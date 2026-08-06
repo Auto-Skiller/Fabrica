@@ -84,7 +84,8 @@ export interface AuditLogEvent {
 
 export function getTenantRoot(tenantId: string): string {
   const safeTenant = (tenantId || 'usr_anon').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const userRoot = path.resolve(process.cwd(), 'workspaces', safeTenant);
+  const baseStorageDir = path.resolve(process.env.WORKSPACES_STORAGE_PATH || '/mnt/workspaces');
+  const userRoot = path.join(baseStorageDir, safeTenant);
   if (!fs.existsSync(userRoot)) {
     fs.mkdirSync(userRoot, { recursive: true });
   }
@@ -101,8 +102,7 @@ export function resolveTenantPath(tenantId: string, targetPath: string = ''): st
 }
 
 export function isTenantInitialized(tenantId: string): boolean {
-  const safeTenant = tenantId.replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const userRoot = path.resolve(process.cwd(), 'workspaces', safeTenant);
+  const userRoot = getTenantRoot(tenantId);
   const tenantJsonPath = path.join(userRoot, 'tenant.json');
   if (!fs.existsSync(userRoot) || !fs.existsSync(tenantJsonPath)) {
     return false;
@@ -439,15 +439,6 @@ export function getTenantAuditLogs(tenantId: string = 'default_user'): AuditLogE
     try {
       const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
       if (Array.isArray(parsed.logs)) return parsed.logs;
-    } catch (_) {}
-  }
-
-  // Fallback to legacy logs.json if present
-  const logsPath = path.join(root, 'logs.json');
-  if (fs.existsSync(logsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(logsPath, 'utf8'));
-      return Array.isArray(parsed.events) ? parsed.events : [];
     } catch (_) {}
   }
 

@@ -118,6 +118,22 @@ export interface PiProcessLogItem {
   apiKeyStrategy: string;
 }
 
+export function getPiBinaryPath(tenantId?: string): string {
+  if (tenantId) {
+    const userRoot = getTenantRoot(tenantId);
+    const tenantPiBin = path.join(userRoot, '.npm-global', 'bin', 'pi');
+    if (fs.existsSync(tenantPiBin)) {
+      return tenantPiBin;
+    }
+    return tenantPiBin;
+  }
+  const localBin = path.resolve(process.cwd(), 'node_modules/.bin/pi');
+  if (fs.existsSync(localBin)) {
+    return localBin;
+  }
+  return 'pi';
+}
+
 // ── Single Daemon Process & Active Trackers ────────────────────────────────────
 
 export class PiDaemonProcess {
@@ -681,9 +697,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   // Sync user BYOK key configuration into user's .pi/agent/auth.json and .pi/agent/models.json
   syncPiUserAuthKeys(tenantId, options.customKey, provider);
 
-  const piBin = fs.existsSync(path.resolve(process.cwd(), 'node_modules/.bin/pi'))
-    ? path.resolve(process.cwd(), 'node_modules/.bin/pi')
-    : 'pi';
+  const piBin = getPiBinaryPath(tenantId);
 
   const executeAttempt = async (apiKey?: string): Promise<{ stdout: string; stderr: string }> => {
     const apiKeyStrategy = options.customKey ? 'BYOK' : (apiKey ? 'Key Pool Rotation' : 'System Fallback');
@@ -975,9 +989,7 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
   const provider = fullModel.split('/')[0];
   syncPiUserAuthKeys(tenantId, options.customKey, provider);
 
-  const piBin = fs.existsSync(path.resolve(process.cwd(), 'node_modules/.bin/pi'))
-    ? path.resolve(process.cwd(), 'node_modules/.bin/pi')
-    : 'pi';
+  const piBin = getPiBinaryPath(tenantId);
 
   const apiKeyStrategy = options.customKey ? 'BYOK' : 'Key Pool Rotation';
   const effectiveKey = options.customKey || (provider === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY) || process.env.GEMINI_API_KEY;

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { BUSINESS_PLANS } from '../harness/user-harness';
 import { buildProvidersFromPiCli, FABRICA_POOL_MODELS } from '../harness/pi-models';
+import { TenantContainerCard } from '../tenant/TenantContainerCard';
 
 export interface AccountWorkspaceModalProps {
   isOpen: boolean;
@@ -474,6 +475,9 @@ export const AccountWorkspaceModal: React.FC<AccountWorkspaceModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Dedicated Runner & GCS Storage Engine Card */}
+              <TenantContainerCard tenantId={user?.id || activeEntity || 'usr-123'} />
 
               {/* Plans & Subscription Pricing Cards */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -17,6 +17,9 @@ import { buildProvidersFromPiCli, FABRICA_POOL_MODELS, DEFAULT_PI_CLI_MODELS } f
 import { UserHarnessService } from '../../components/harness/user-harness';
 import { listDriveFiles, fetchGoogleSheetAsCSV, fetchDriveFileContent } from '../../components/workspace/drive-api';
 import { fetchGitHubContents, downloadGitHubFile, exportToGitHub } from '../../components/workspace/github-api';
+import { RightPanel } from '../../components/workspace/RightPanel';
+import { ContainerStatusBadge } from '../../components/tenant/ContainerStatusBadge';
+import { AgentExecutionNotice } from '../../components/harness/AgentExecutionNotice';
 import JSZip from 'jszip';
 
 const consolidatedWorkflows = [
@@ -3593,10 +3596,10 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     }
   };
 
-  // Master grid column template (Left: Agent Section, Right: Missions & Workspace)
+  // Master grid column template (Left: Agent Section, Center: Missions & Workspace, Right: Live App Preview & Files)
   const getGridTemplateColumns = () => {
     const lw = `${leftSideW}%`;
-    return `${lw} minmax(0, 1fr)`;
+    return `${lw} minmax(0, 1fr) 420px`;
   };
 
   // Agent Chat Input Height Resizer Drag Mechanics
@@ -8502,6 +8505,9 @@ ${isDirector ? `
                         minHeight: 0
                       }}
                     >
+                      {/* Container Execution Cold-Start Notice Banner */}
+                      <AgentExecutionNotice tenantId={user?.id || activeEntity || 'usr-123'} containerState={isChatLoading ? 'waking_up' : 'warm'} />
+
                       {chatHistory.map((h, index) => (
                         <div
                           key={index}
@@ -9249,394 +9255,267 @@ ${isDirector ? `
         </section>
       </aside>
 
-        {/* ============ MAIN WORKSPACE WRAPPER (TOP: MISSIONS | BOTTOM: ARTIFACT (LEFT) + PROJECTS (RIGHT)) ============ */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+        {/* ============ CENTER & RIGHT CONTAINER WITH TOP-BAR ============ */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
           
-          {/* ============ TOP SECTION: MISSIONS HQ BOARD ============ */}
+          {/* ============ GLOBAL TOP-BAR ABOVE MISSIONS & RIGHT PANEL ============ */}
           <div style={{
-            flex: minCenter ? '0 0 auto' : (minBottomVertical ? '1 1 100%' : '1 1 50%'),
-            minHeight: minCenter ? '36px' : '200px',
-            maxHeight: minCenter ? '36px' : 'none',
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '6px',
+            padding: '2px 8px',
+            minHeight: '28px',
+            maxHeight: '28px',
+            background: 'var(--surface-alt)',
             borderBottom: '1px solid var(--border-soft)',
-            transition: 'all 0.2s ease'
+            flexShrink: 0
           }}>
-            <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            
-            {/* Mission bar switcher & controls in a single, split row */}
-            <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: '6px', padding: '4px 10px', minHeight: '36px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
-              
-              {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 1, minWidth: 0, overflowX: 'auto', padding: '0px' }}>
-                {minCenter ? (
-                  <div
-                    onClick={() => toggleMissionsVertical(false)}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                    title="Click to expand Missions HQ"
-                  >
-                    <span style={{ fontSize: '8.5px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>MISSIONS</span>
-                    <span style={{ fontSize: '9.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
-                      AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    {/* 1. New */}
-                    <button
-                      onClick={() => setIsAddMissionOpen(true)}
-                      title="Register New Mission"
-                      style={{
-                        height: '22px',
-                        padding: '0 8px',
-                        fontSize: '9px',
-                        fontWeight: 900,
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        border: '1px solid #10b981',
-                        color: '#ffffff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        lineHeight: '1',
-                        flexShrink: 0,
-                        boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
-                      }}
-                    >
-                      <span style={{ fontSize: '10px' }}>✨</span>
-                      <span>{dtxt.btnNewMission}</span>
-                    </button>
+            {/* Left Title / Workspace Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                🚀 FABRICA WORKSPACE HQ
+              </span>
+              <ContainerStatusBadge tenantId={user?.id || activeEntity || 'usr-123'} />
+            </div>
 
-                    {/* 2. Pipeline Config */}
-                    <button
-                      onClick={() => setIsGatesModalOpen(true)}
-                      title="Configure Approval Gates & Loop EFFORT Parameters"
-                      style={{
-                        height: '22px',
-                        padding: '0 8px',
-                        fontSize: '8.5px',
-                        fontWeight: 800,
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.4)',
-                        color: '#3b82f6',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        lineHeight: '1',
-                        flexShrink: 0
-                      }}
-                    >
-                      <span>⚙️</span>
-                      <span>Pipeline Config</span>
-                    </button>
+            {/* Right Group: Persistent Actions (Theme, Language, Logs, Account & API) + Minimize Pad */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+              {/* Theme Icon */}
+              <button 
+                className="theme-toggle" 
+                onClick={toggleTheme} 
+                title={dtxt.themeTitle} 
+                style={{ 
+                  height: '18px', 
+                  width: '18px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-soft)',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  color: 'var(--text)',
+                  fontSize: '8px',
+                  padding: '0',
+                  flexShrink: 0
+                }}
+              >
+                {theme === 'dark' ? '☀' : '☾'}
+              </button>
 
-                    {/* 3. Sort */}
-                    <select
-                      style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        padding: '1px 4px',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        height: '22px',
-                        maxWidth: '90px',
-                        flexShrink: 0
-                      }}
-                      value={sortOption}
-                      onChange={(e) => setSortOption(e.target.value)}
-                    >
-                      <option value="default">Sort: Default</option>
-                      <option value="name">Sort: Name</option>
-                      <option value="priority">Sort: Priority</option>
-                    </select>
+              {/* UI Language Dropdown */}
+              <select
+                value={uiLang}
+                onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
+                title={dtxt.langTitle}
+                style={{
+                  height: '18px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-soft)',
+                  borderRadius: '3px',
+                  color: 'var(--text)',
+                  fontSize: '7.5px',
+                  fontWeight: 800,
+                  padding: '0 3px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  flexShrink: 0
+                }}
+              >
+                <option value="EN">🌐 EN</option>
+                <option value="FR">🌐 FR</option>
+                <option value="AR">🌐 AR</option>
+              </select>
 
-                    {/* 4. Search */}
-                    <div className="mhq-search" style={{ height: '22px', padding: '0 6px', gap: '4px', background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '4px', display: 'flex', alignItems: 'center', flexShrink: 1, minWidth: '70px', maxWidth: '140px' }}>
-                      <span style={{ fontSize: '8px', color: 'var(--muted)', flexShrink: 0 }}>⌕</span>
-                      <input 
-                        type="text" 
-                        placeholder={dtxt.searchPlaceholder} 
-                        value={searchQuery} 
-                        onChange={(e) => setSearchQuery(e.target.value)} 
-                        style={{ fontSize: '8px', width: '100%', minWidth: 0, background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
-                      />
-                    </div>
+              {/* Logs Button */}
+              <button
+                onClick={() => setIsLogsWindowOpen(true)}
+                style={{
+                  padding: '0 4px',
+                  fontSize: '7.5px',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border-soft)',
+                  color: 'var(--text-bright)',
+                  height: '18px',
+                  cursor: 'pointer',
+                  borderRadius: '3px',
+                  flexShrink: 0
+                }}
+                title="Open System & Realtime Execution Logs"
+              >
+                <span>📟</span>
+                <span>Logs</span>
+              </button>
 
-                    {/* 5. Priorities */}
-                    <select
-                      style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        padding: '1px 4px',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        height: '22px',
-                        maxWidth: '90px',
-                        flexShrink: 0
-                      }}
-                      value={prioFilter}
-                      onChange={(e) => setPrioFilter(e.target.value)}
-                    >
-                      <option value="ALL">{dtxt.allPriorities}</option>
-                      <option value="CRITICAL">CRITICAL</option>
-                      <option value="HIGH">HIGH</option>
-                      <option value="MEDIUM">MEDIUM</option>
-                      <option value="LOW">LOW</option>
-                    </select>
-
-                    {/* 6. Types */}
-                    <select
-                      style={{
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border-soft)',
-                        borderRadius: '4px',
-                        color: 'var(--text-secondary)',
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        padding: '1px 4px',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        height: '22px',
-                        maxWidth: '110px',
-                        flexShrink: 0
-                      }}
-                      value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value)}
-                    >
-                      <option value="ALL">{dtxt.allTypes || 'All Types'}</option>
-                      <option value="standard">{getCategoryLabel('standard')}</option>
-                      <option value="full_pipeline">{getCategoryLabel('full_pipeline')}</option>
-                      <option value="quick_pipeline">{getCategoryLabel('quick_pipeline')}</option>
-                      <option value="custom_entry_pipeline">{getCategoryLabel('custom_entry_pipeline')}</option>
-                      <option value="custom_selection_pipeline">{getCategoryLabel('custom_selection_pipeline')}</option>
-                    </select>
-                  </>
-                )}
-              </div>
-
-              {/* Right Group: Persistent Actions (Theme, Language, Logs, Account & API) + Minimize Toggle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, paddingLeft: '5px', paddingRight: '5px', paddingTop: '0px', paddingBottom: '0px' }}>
-                {/* Theme Icon */}
-                <button 
-                  className="theme-toggle" 
-                  onClick={toggleTheme} 
-                  title={dtxt.themeTitle} 
-                  style={{ 
-                    height: '22px', 
-                    width: '22px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    color: 'var(--text)',
-                    fontSize: '9px',
-                    padding: '0',
-                    flexShrink: 0
-                  }}
-                >
-                  {theme === 'dark' ? '☀' : '☾'}
-                </button>
-
-                {/* UI Language Dropdown */}
-                <select
-                  value={uiLang}
-                  onChange={(e) => handleUiLangChange(e.target.value as 'EN' | 'FR' | 'AR')}
-                  title={dtxt.langTitle}
-                  style={{
-                    height: '22px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border-soft)',
-                    borderRadius: '4px',
-                    color: 'var(--text)',
-                    fontSize: '8px',
-                    fontWeight: 800,
-                    padding: '0 4px',
-                    cursor: 'pointer',
-                    outline: 'none',
-                    flexShrink: 0
-                  }}
-                >
-                  <option value="EN">🌐 EN</option>
-                  <option value="FR">🌐 FR</option>
-                  <option value="AR">🌐 AR</option>
-                </select>
-
-                                {/* Logs Button */}
+              {/* Account & API Button */}
+              <div
+                style={{ position: 'relative' }}
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setAccountHoverPos({
+                    top: rect.bottom + 6,
+                    right: Math.max(8, window.innerWidth - rect.right)
+                  });
+                  setIsAccountHoverOpen(true);
+                }}
+                onMouseLeave={() => setIsAccountHoverOpen(false)}
+              >
                 <button
-                  onClick={() => setIsLogsWindowOpen(true)}
+                  onClick={() => setIsAccountWindowOpen(true)}
                   style={{
-                    padding: '0 6px',
-                    fontSize: '8.5px',
+                    padding: '0 5px',
+                    fontSize: '7.5px',
                     fontWeight: 800,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border-soft)',
-                    color: 'var(--text-bright)',
-                    height: '22px',
+                    gap: '3px',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                    border: 'none',
+                    color: '#fff',
+                    height: '18px',
                     cursor: 'pointer',
-                    borderRadius: '4px',
+                    borderRadius: '3px',
                     flexShrink: 0
                   }}
-                  title="Open System & Realtime Execution Logs"
+                  title="Manage Account, Workspace & API Keys"
                 >
-                  <span>📟</span>
-                  <span>Logs</span>
+                  <span>🔑</span>
+                  <span>Account & API</span>
                 </button>
 
-                {/* Account & API Button */}
-                <div
-                  style={{ position: 'relative' }}
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setAccountHoverPos({
-                      top: rect.bottom + 6,
-                      right: Math.max(8, window.innerWidth - rect.right)
-                    });
-                    setIsAccountHoverOpen(true);
-                  }}
-                  onMouseLeave={() => setIsAccountHoverOpen(false)}
-                >
-                  <button
-                    onClick={() => setIsAccountWindowOpen(true)}
+                {/* Hover Small Window for Current Plan, Usage Quota, Token Alerts & Token Billing/Routing Method */}
+                {isAccountHoverOpen && (
+                  <div
                     style={{
-                      padding: '0 8px',
-                      fontSize: '8.5px',
-                      fontWeight: 800,
+                      position: 'fixed',
+                      top: `${accountHoverPos.top}px`,
+                      right: `${accountHoverPos.right}px`,
+                      width: '290px',
+                      background: 'var(--surface)',
+                      border: '1.5px solid #3b82f6',
+                      borderRadius: '8px',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                      padding: '12px',
+                      zIndex: 99999,
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                      border: 'none',
-                      color: '#fff',
-                      height: '22px',
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                      flexShrink: 0
+                      flexDirection: 'column',
+                      gap: '8px',
+                      pointerEvents: 'none'
                     }}
-                    title="Manage Account, Workspace & API Keys"
                   >
-                    <span>🔑</span>
-                    <span>Account & API</span>
-                  </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
+                        📊 Tier & Quota Overview
+                      </span>
+                      <span style={{ fontSize: '8px', fontWeight: 800, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.15)', padding: '1px 6px', borderRadius: '3px' }}>
+                        {selectedPlan ? `${selectedPlan.toUpperCase()} PLAN` : 'FREE SHARED TIER'}
+                      </span>
+                    </div>
 
-                  {/* Hover Small Window for Current Plan, Usage Quota, Token Alerts & Token Billing/Routing Method */}
-                  {isAccountHoverOpen && (
-                    <div
-                      style={{
-                        position: 'fixed',
-                        top: `${accountHoverPos.top}px`,
-                        right: `${accountHoverPos.right}px`,
-                        width: '290px',
-                        background: 'var(--surface)',
-                        border: '1.5px solid #3b82f6',
-                        borderRadius: '8px',
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
-                        padding: '12px',
-                        zIndex: 99999,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        pointerEvents: 'none'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-soft)', paddingBottom: '4px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--accent)', textTransform: 'uppercase' }}>
-                          📊 Tier & Quota Overview
-                        </span>
-                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.15)', padding: '1px 6px', borderRadius: '3px' }}>
-                          {selectedPlan ? `${selectedPlan.toUpperCase()} PLAN` : 'FREE SHARED TIER'}
-                        </span>
-                      </div>
+                    {/* Real User Tenant Space ID */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '4px 6px', borderRadius: '4px' }}>
+                      <span style={{ color: 'var(--muted)', fontWeight: 700 }}>TENANT SPACE ID:</span>
+                      <span style={{ fontFamily: 'var(--mono)', color: '#6366f1', fontWeight: 800, fontSize: '8px' }}>
+                        {user?.id ? user.id : (activeEntity || 'sandbox-default-local')}
+                      </span>
+                    </div>
 
-                      {/* Real User Tenant Space ID */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '8px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '4px 6px', borderRadius: '4px' }}>
-                        <span style={{ color: 'var(--muted)', fontWeight: 700 }}>TENANT SPACE ID:</span>
-                        <span style={{ fontFamily: 'var(--mono)', color: '#6366f1', fontWeight: 800, fontSize: '8px' }}>
-                          {user?.id ? user.id : (activeEntity || 'sandbox-default-local')}
-                        </span>
-                      </div>
-
-                      {/* Quota & Token Alerts Preview */}
-                      {(() => {
-                        const q = getQuotaMetrics(userTierData);
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
-                              <span style={{ color: 'var(--muted)', fontWeight: 700 }}>USAGE QUOTA:</span>
-                              <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
-                            </div>
-                            <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
-                              <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                              <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>TOKEN ALERTS:</span>
-                              <span style={{ fontSize: '7.5px', fontWeight: 800, color: q.statusColor }}>
-                                {q.percentUsed > 90 ? '🚨 CRITICAL ALERT (<10% REMAINING)' : q.percentUsed > 75 ? '⚠️ QUOTA WARNING' : '✓ HEALTHY ALLOCATION'}
-                              </span>
-                            </div>
+                    {/* Quota & Token Alerts Preview */}
+                    {(() => {
+                      const q = getQuotaMetrics(userTierData);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8px' }}>
+                            <span style={{ color: 'var(--muted)', fontWeight: 700 }}>USAGE QUOTA:</span>
+                            <span style={{ color: 'var(--text)', fontWeight: 800 }}>{q.percentUsed}% ({q.usedTokensThisMonth.toLocaleString()} / {q.monthlyQuotaTokens.toLocaleString()})</span>
                           </div>
-                        );
-                      })()}
+                          <div style={{ height: '6px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${q.percentUsed}%`, height: '100%', background: q.statusColor }} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                            <span style={{ fontSize: '7.5px', color: 'var(--muted)' }}>TOKEN ALERTS:</span>
+                            <span style={{ fontSize: '7.5px', fontWeight: 800, color: q.statusColor }}>
+                              {q.percentUsed > 90 ? '🚨 CRITICAL ALERT (<10% REMAINING)' : q.percentUsed > 75 ? '⚠️ QUOTA WARNING' : '✓ HEALTHY ALLOCATION'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                      {/* Active TOKEN BILLING & ROUTING METHOD */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 8px', borderRadius: '5px' }}>
-                        <div style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
-                          ⚡ Active Token Billing & Routing Method
-                        </div>
-                        <div style={{ fontSize: '8.5px', fontWeight: 800, color: customApiKey ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span>{customApiKey ? '🔑 Direct BYOK (Custom Gemini Key)' : '🌐 Fabrica Shared API Credit Proxy'}</span>
-                        </div>
+                    {/* Active TOKEN BILLING & ROUTING METHOD */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', padding: '6px 8px', borderRadius: '5px' }}>
+                      <div style={{ fontSize: '7.5px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                        ⚡ Active Token Billing & Routing Method
                       </div>
-
-                      <div style={{ fontSize: '7.5px', color: 'var(--muted)', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
-                        💡 Click button to manage Account, Workspace & BYOK Credentials.
+                      <div style={{ fontSize: '8.5px', fontWeight: 800, color: customApiKey ? '#10b981' : '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>{customApiKey ? '🔑 Direct BYOK (Custom Gemini Key)' : '🌐 Fabrica Shared API Credit Proxy'}</span>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* 4-BUTTON DIRECTIONAL CONTROL PAD IN TOP-BAR RIGHT */}
-                <div style={{
-                  display: 'inline-flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '1px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border-soft)',
-                  borderRadius: '4px',
-                  padding: '1px 2px',
-                  flexShrink: 0
-                }}>
-                  {/* TOP BUTTON: Pointing UP (▲) -> Top Section Vertical Toggle */}
+                    <div style={{ fontSize: '7.5px', color: 'var(--muted)', borderTop: '1px solid var(--border-soft)', paddingTop: '4px' }}>
+                      💡 Click button to manage Account, Workspace & BYOK Credentials.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 4-BUTTON DIRECTIONAL CONTROL PAD IN TOP-BAR RIGHT */}
+              <div style={{
+                display: 'inline-flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border-soft)',
+                borderRadius: '4px',
+                padding: '1px 2px',
+                flexShrink: 0
+              }}>
+                {/* TOP BUTTON: Pointing UP (▲) -> Top Section Vertical Toggle */}
+                <button
+                  type="button"
+                  onClick={() => toggleMissionsVertical()}
+                  title={minCenter ? "Expand Top Section (Restore Layout)" : "Collapse Top Section Upward (Maximize Bottom)"}
+                  style={{
+                    width: '40px',
+                    height: '10px',
+                    background: minCenter ? 'var(--accent)' : 'var(--surface-alt)',
+                    border: '1px solid var(--border-soft)',
+                    color: minCenter ? '#ffffff' : 'var(--text-bright)',
+                    borderRadius: '2px',
+                    fontSize: '7px',
+                    lineHeight: '8px',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }}
+                >
+                  ▲
+                </button>
+
+                {/* BOTTOM ROW: 3 Buttons (◀ Left, ▼ Below, ▶ Right) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                  {/* LEFT BUTTON: Pointing LEFT (◀) -> Collapse Left Section (Artifact Workspace) */}
                   <button
                     type="button"
-                    onClick={() => toggleMissionsVertical()}
-                    title={minCenter ? "Expand Top Section (Restore Layout)" : "Collapse Top Section Upward (Maximize Bottom)"}
+                    onClick={() => toggleArtifactHorizontal()}
+                    title={minArtifactSection ? "Expand Left Section (Artifact Workspace)" : "Collapse Left Section (Artifact Workspace)"}
                     style={{
-                      width: '40px',
-                      height: '10px',
-                      background: minCenter ? 'var(--accent)' : 'var(--surface-alt)',
+                      width: '12px',
+                      height: '11px',
+                      background: minArtifactSection ? 'var(--accent)' : 'var(--surface-alt)',
                       border: '1px solid var(--border-soft)',
-                      color: minCenter ? '#ffffff' : 'var(--text-bright)',
+                      color: minArtifactSection ? '#ffffff' : 'var(--text-bright)',
                       borderRadius: '2px',
                       fontSize: '7px',
                       lineHeight: '8px',
@@ -9648,89 +9527,245 @@ ${isDirector ? `
                       padding: 0
                     }}
                   >
-                    ▲
+                    ◀
                   </button>
 
-                  {/* BOTTOM ROW: 3 Buttons (◀ Left, ▼ Below, ▶ Right) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                    {/* LEFT BUTTON: Pointing LEFT (◀) -> Collapse Left Section (Artifact Workspace) */}
-                    <button
-                      type="button"
-                      onClick={() => toggleArtifactHorizontal()}
-                      title={minArtifactSection ? "Expand Left Section (Artifact Workspace)" : "Collapse Left Section (Artifact Workspace)"}
-                      style={{
-                        width: '12px',
-                        height: '11px',
-                        background: minArtifactSection ? 'var(--accent)' : 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: minArtifactSection ? '#ffffff' : 'var(--text-bright)',
-                        borderRadius: '2px',
-                        fontSize: '7px',
-                        lineHeight: '8px',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0
-                      }}
-                    >
-                      ◀
-                    </button>
+                  {/* MIDDLE BUTTON: Pointing DOWN (▼) -> Collapse Bottom Section Downward */}
+                  <button
+                    type="button"
+                    onClick={() => toggleBottomVertical()}
+                    title={minBottomVertical ? "Expand Bottom Workspace" : "Collapse Bottom Workspace Downward"}
+                    style={{
+                      width: '14px',
+                      height: '11px',
+                      background: minBottomVertical ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minBottomVertical ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '8px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ▼
+                  </button>
 
-                    {/* MIDDLE BUTTON: Pointing DOWN (▼) -> Collapse Bottom Section Downward */}
-                    <button
-                      type="button"
-                      onClick={() => toggleBottomVertical()}
-                      title={minBottomVertical ? "Expand Bottom Workspace" : "Collapse Bottom Workspace Downward"}
-                      style={{
-                        width: '14px',
-                        height: '11px',
-                        background: minBottomVertical ? 'var(--accent)' : 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: minBottomVertical ? '#ffffff' : 'var(--text-bright)',
-                        borderRadius: '2px',
-                        fontSize: '7px',
-                        lineHeight: '8px',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0
-                      }}
-                    >
-                      ▼
-                    </button>
-
-                    {/* RIGHT BUTTON: Pointing RIGHT (▶) -> Collapse Right Section (Data & Systems) */}
-                    <button
-                      type="button"
-                      onClick={() => toggleProjectsHorizontal()}
-                      title={minSide ? "Expand Right Section (Data & Systems)" : "Collapse Right Section (Data & Systems)"}
-                      style={{
-                        width: '12px',
-                        height: '11px',
-                        background: minSide ? 'var(--accent)' : 'var(--surface-alt)',
-                        border: '1px solid var(--border-soft)',
-                        color: minSide ? '#ffffff' : 'var(--text-bright)',
-                        borderRadius: '2px',
-                        fontSize: '7px',
-                        lineHeight: '8px',
-                        fontWeight: 900,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: 0
-                      }}
-                    >
-                      ▶
-                    </button>
-                  </div>
+                  {/* RIGHT BUTTON: Pointing RIGHT (▶) -> Collapse Right Section (Data & Systems) */}
+                  <button
+                    type="button"
+                    onClick={() => toggleProjectsHorizontal()}
+                    title={minSide ? "Expand Right Section (Data & Systems)" : "Collapse Right Section (Data & Systems)"}
+                    style={{
+                      width: '12px',
+                      height: '11px',
+                      background: minSide ? 'var(--accent)' : 'var(--surface-alt)',
+                      border: '1px solid var(--border-soft)',
+                      color: minSide ? '#ffffff' : 'var(--text-bright)',
+                      borderRadius: '2px',
+                      fontSize: '7px',
+                      lineHeight: '8px',
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ▶
+                  </button>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ============ MAIN WORKSPACE ROW: MISSIONS HQ (CENTER) + LIVE APP PREVIEW (RIGHT) ============ */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+            
+            {/* ============ CENTER COLUMN: MISSIONS HQ BOARD & ARTIFACTS/PROJECTS ============ */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, height: '100%', overflow: 'hidden' }}>
+              
+              {/* ============ TOP SECTION: MISSIONS HQ BOARD ============ */}
+              <div style={{
+                flex: minCenter ? '0 0 auto' : (minBottomVertical ? '1 1 100%' : '1 1 50%'),
+                minHeight: minCenter ? '36px' : '200px',
+                maxHeight: minCenter ? '36px' : 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                borderBottom: '1px solid var(--border-soft)',
+                transition: 'all 0.2s ease'
+              }}>
+                <section className="col top" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <div className="pane" style={{ flex: 1, padding: 0, gap: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                
+                {/* Mission bar switcher & controls in a single row */}
+                <div className="mhq-bar" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', padding: '2px 8px', minHeight: '28px', flexWrap: 'nowrap', overflowX: 'hidden', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)' }}>
+                  
+                  {/* Left Group: Specified order (New - Pipeline Config - sort - search - priorities - types) OR metrics when minimized */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 1, minWidth: 0, overflowX: 'auto', padding: '0px' }}>
+                    {minCenter ? (
+                      <div
+                        onClick={() => toggleMissionsVertical(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        title="Click to expand Missions HQ"
+                      >
+                        <span style={{ fontSize: '7.5px', fontWeight: 900, background: 'var(--accent)', color: '#ffffff', padding: '1px 4px', borderRadius: '3px', textTransform: 'uppercase' }}>MISSIONS</span>
+                        <span style={{ fontSize: '8.5px', fontWeight: 900, color: 'var(--text-bright)' }}>
+                          AI AGENT MISSIONS ({mDraft.length} DRAFTING • {mPlan.length} PLANNING • {mExec.length} EXECUTION • {mArchive.length} DELIVERY • TOTAL {filteredMissions.length})
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* 1. New */}
+                        <button
+                          onClick={() => setIsAddMissionOpen(true)}
+                          title="Register New Mission"
+                          style={{
+                            height: '18px',
+                            padding: '0 4px',
+                            fontSize: '7.5px',
+                            fontWeight: 900,
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            border: '1px solid #10b981',
+                            color: '#ffffff',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '2px',
+                            lineHeight: '1',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          <span style={{ fontSize: '8px' }}>✨</span>
+                          <span>{dtxt.btnNewMission}</span>
+                        </button>
+
+                        {/* 2. Pipeline Config */}
+                        <button
+                          onClick={() => setIsGatesModalOpen(true)}
+                          title="Configure Approval Gates & Loop EFFORT Parameters"
+                          style={{
+                            height: '18px',
+                            padding: '0 4px',
+                            fontSize: '7.5px',
+                            fontWeight: 800,
+                            background: 'rgba(59, 130, 246, 0.15)',
+                            border: '1px solid rgba(59, 130, 246, 0.4)',
+                            color: '#3b82f6',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            lineHeight: '1',
+                            flexShrink: 0
+                          }}
+                        >
+                          <span style={{ fontSize: '8px' }}>⚙️</span>
+                          <span>Pipeline Config</span>
+                        </button>
+
+                        {/* 3. Sort */}
+                        <select
+                          style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '3px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '7px',
+                            fontWeight: 700,
+                            padding: '0 2px',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            height: '18px',
+                            maxWidth: '65px',
+                            flexShrink: 0
+                          }}
+                          value={sortOption}
+                          onChange={(e) => setSortOption(e.target.value)}
+                        >
+                          <option value="default">Sort: Default</option>
+                          <option value="name">Sort: Name</option>
+                          <option value="priority">Sort: Priority</option>
+                        </select>
+
+                        {/* 4. Search */}
+                        <div className="mhq-search" style={{ height: '18px', padding: '0 3px', gap: '2px', background: 'var(--surface)', border: '1px solid var(--border-soft)', borderRadius: '3px', display: 'flex', alignItems: 'center', flexShrink: 1, minWidth: '50px', maxWidth: '90px' }}>
+                          <span style={{ fontSize: '7px', color: 'var(--muted)', flexShrink: 0 }}>⌕</span>
+                          <input 
+                            type="text" 
+                            placeholder={dtxt.searchPlaceholder} 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)} 
+                            style={{ fontSize: '7px', width: '100%', minWidth: 0, background: 'transparent', border: 'none', outline: 'none', padding: 0, height: '100%', color: 'var(--text-primary)' }}
+                          />
+                        </div>
+
+                        {/* 5. Priorities */}
+                        <select
+                          style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '3px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '7px',
+                            fontWeight: 700,
+                            padding: '0 2px',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            height: '18px',
+                            maxWidth: '65px',
+                            flexShrink: 0
+                          }}
+                          value={prioFilter}
+                          onChange={(e) => setPrioFilter(e.target.value)}
+                        >
+                          <option value="ALL">{dtxt.allPriorities}</option>
+                          <option value="CRITICAL">CRITICAL</option>
+                          <option value="HIGH">HIGH</option>
+                          <option value="MEDIUM">MEDIUM</option>
+                          <option value="LOW">LOW</option>
+                        </select>
+
+                        {/* 6. Types */}
+                        <select
+                          style={{
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border-soft)',
+                            borderRadius: '3px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '7px',
+                            fontWeight: 700,
+                            padding: '0 2px',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            height: '18px',
+                            maxWidth: '75px',
+                            flexShrink: 0
+                          }}
+                          value={typeFilter}
+                          onChange={(e) => setTypeFilter(e.target.value)}
+                        >
+                          <option value="ALL">{dtxt.allTypes || 'All Types'}</option>
+                          <option value="standard">{getCategoryLabel('standard')}</option>
+                          <option value="full_pipeline">{getCategoryLabel('full_pipeline')}</option>
+                          <option value="quick_pipeline">{getCategoryLabel('quick_pipeline')}</option>
+                          <option value="custom_entry_pipeline">{getCategoryLabel('custom_entry_pipeline')}</option>
+                          <option value="custom_selection_pipeline">{getCategoryLabel('custom_selection_pipeline')}</option>
+                        </select>
+                      </>
+                    )}
+                  </div>
+                </div>
 
             {/* Main content viewport */}
             <div className="mhq-body" style={{ flex: 1, padding: '12px', overflow: 'hidden' }}>
@@ -10940,7 +10975,18 @@ ${isDirector ? `
           )}
         </div>
       </div>
-    </main>
+
+        {/* ============ RIGHT COLUMN: LIVE APP PREVIEW & FILES/CODE ============ */}
+        <aside className="col side" style={{ width: '420px', minWidth: '320px', flexShrink: 0, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border-soft)' }}>
+          <RightPanel
+            tenantId={user?.id || activeEntity || 'usr-123'}
+            containerState={isChatLoading ? 'waking_up' : 'warm'}
+          />
+        </aside>
+
+          </div>
+        </div>
+      </main>
                        {/* Realtime Event Payload Modal */}
       {selectedRealtimeEvent && (
         <div

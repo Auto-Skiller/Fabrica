@@ -1,191 +1,474 @@
-# Migration Plan: GCP Cloud Run + Cloud Storage FUSE (Per-Tenant Dedicated CLI Binary & Storage)
+# Migration Plan: Dedicated GCP Cloud Run Container + Dedicated GCS Bucket per User
 
-## 💡 Non-Technical Explanation: Where Will Things Live?
+## 💡 Architecture Blueprint: Dedicated Per-User Micro-Containers & Buckets
 
-### "Where will the files and CLI binaries be stored?"
-1. **Google Cloud Storage (GCS) Bucket** (`gs://fabrica-tenant-workspaces/`):
-   * All user files (`workspace.json`, `harness.json`, `missions/`, `.pi/` skills) and each user's **dedicated Agent CLI binary** (`.npm-global/bin/pi`) will be stored in Google Cloud's secure, infinite cloud storage.
-   * **They do NOT take up permanent disk space or memory on the web server itself.**
-   * This means if 1,000 users sign up, your web server never runs out of disk space or crashes.
+### "Where will user files and CLI binaries be executed and stored?"
 
----
+1. **Dedicated User Cloud Run Containers (`fabrica-runner-<tenant_id>`)**:
+   * Each user gets their own **isolated Cloud Run container instance** (`fabrica-runner-usr-123`).
+   * **Scale-to-Zero ($0 Idle Cost)**: Every user's container scales to **0 active instances** when idle. Computing costs are strictly $0.00 when the user is not actively executing an agent mission.
+   * **100% Hard Hardware & Process Isolation**: The Agent CLI process (`pi`) runs strictly inside the user's dedicated container instance. User A cannot view, inspect, or interact with User B's container, memory, CPU, or process space under any circumstance.
 
-### "What does 'mounted virtually to the server' mean?"
-Think of **Google Cloud Storage FUSE** like plugging a **virtual USB flash drive** over the internet into your server:
-* When your Cloud Run web server starts up, it creates a virtual folder shortcut called `/mnt/workspaces/`.
-* When **User A** logs in, the server opens `/mnt/workspaces/user_a/`. Behind the scenes, Cloud Storage FUSE streams user_a's files and binary from Cloud Storage into that virtual folder instantly.
-* To the Agent CLI process, `/mnt/workspaces/user_a/` **looks and behaves exactly like a real, local folder on the hard drive**.
-* When the Agent CLI makes a live edit (e.g., updates code or creates a file), the edit happens instantly in `/mnt/workspaces/user_a/` and is automatically saved back to Cloud Storage in real time.
-* If **User A** closes their browser and comes back 3 weeks later (even if the server restarted 100 times in between), their dedicated Agent CLI binary, installed npm packages, and workspace files are loaded right back into `/mnt/workspaces/user_a/`.
+2. **Dedicated Cloud Storage (GCS) Bucket per User (`gs://fabrica-tenant-<tenant_id>/`)**:
+   * Each user gets a **dedicated GCP Cloud Storage bucket** (`gs://fabrica-tenant-usr-123/`).
+   * Mounted directly to `/mnt/workspace/` inside the user's dedicated Cloud Run container via Cloud Storage FUSE.
+   * All workspace files (`workspace.json`, `harness.json`, `missions.json`, `workspace/`, `.pi/` skills, and `.npm-global/` CLI binary) persist infinitely in the user's dedicated GCS bucket.
+   * The runner container accesses `/mnt/workspace/` as a real native filesystem with zero `subPath` multiplexing.
 
 ---
 
-## 🛡️ Zero Feature Loss & Adaptation Strategy
+## 🗄️ Storage Architecture: Dedicated Bucket per User Strategy
 
-To ensure **100% feature preservation** and **zero downtime or broken functionality**, the migration preserves and adapts every single existing Fabrica feature:
+### "Why Dedicated GCP Bucket per User?"
 
-| Existing Feature | Current Behavior | Adapted Behavior in New Architecture |
+We have selected **Option B (Dedicated GCP Bucket per User)** to maximize security and GCP resource-level isolation:
+
+* **100% Native GCP Resource Isolation**: Zero shared storage boundaries between users. User A's container only possesses IAM mount rights to `gs://fabrica-tenant-usr-aaaaa/` and physically cannot address or touch User B's bucket (`gs://fabrica-tenant-usr-bbbbb/`).
+* **Clean Mount Setup**: Mounted cleanly directly at root `/mnt/workspace/` without relying on GCS prefix path translation (`subPath`).
+* **Granular Per-User Billing & Analytics**: GCP Cost Explorer and GCS Inventory give exact storage and bandwidth metrics per tenant bucket.
+* **Instant Offboarding / Wipe**: Deleting a user's entire dataset is a single non-destructive GCP call: `gcloud storage buckets delete gs://fabrica-tenant-usr-123 --recursive`.
+
+---
+
+## ⚡ Real-Time Storage Synchronization
+
+### "Is everything in GCS and the container synced 24/7?"
+
+**Yes, instantly and transparently via POSIX filesystem operations:**
+* **Direct Mount (Not a background sync process)**: Cloud Storage FUSE translates file operations (`write`, `read`, `delete`, `mkdir`) directly into GCS Object Storage API calls in real-time.
+* **Real-Time Consistency**: Whenever the Agent CLI (`pi`) creates or modifies a file in `/mnt/workspace/`, it is written **immediately** into the user's dedicated GCS bucket (`gs://fabrica-tenant-<tenant_id>/`).
+* **Zero-Loss Scale-to-Zero**: When Cloud Run shuts down an idle container instance after 15 minutes, **100% of user workspace data, code files, and CLI configurations remain safe in their dedicated GCS bucket**. When the container wakes back up, `/mnt/workspace/` instantly mounts and reflects the latest GCS state.
+
+---
+
+## 💰 Cost Breakdown & GCP Free Tier Impact
+
+### "Will having a dedicated Cloud Run container and GCS bucket per user cost money?"
+
+**No, if configured with scale-to-zero (`min-instances = 0`).**
+
+| Resource | GCP Free Tier Allowance (Every Month) | Cost Impact Per User Container |
 | :--- | :--- | :--- |
-| **Tenant Initialization (`POST /api/tenant/initialize`)** | Creates local `workspaces/<tenant_id>/` folder | Creates `/mnt/workspaces/<tenant_id>/` in GCS FUSE mount & provisions user's **own dedicated CLI binary** |
-| **Agent CLI Execution (`src/core/harness.ts`)** | Runs shared server binary `pi` | Runs the user's **dedicated binary** at `/mnt/workspaces/<tenant_id>/.npm-global/bin/pi` |
-| **Workspace Configuration (`workspace.json`, `tenant.json`, `harness.json`)** | Saved on local disk | Saved in `/mnt/workspaces/<tenant_id>/` (instantly synced to GCS) |
-| **Agent Workspace Skills (`.pi/` directory)** | Stored locally | Stored inside `/mnt/workspaces/<tenant_id>/.pi/` (100% persistent) |
-| **Missions & Logs (`missions.json`, `user_logs.json`)** | Saved locally | Saved inside `/mnt/workspaces/<tenant_id>/` |
+| **Cloud Run Requests** | 2,000,000 requests / month | **$0.00** (Uses free request pool) |
+| **Compute Memory** | 360,000 GB-seconds / month | **$0.00** when idle (`min-instances=0`) |
+| **Compute CPU** | 180,000 vCPU-seconds / month | **$0.00** when idle (`min-instances=0`) |
+| **Cloud Storage (GCS)** | 5 GB standard storage / month | **$0.02 / GB / month** beyond 5 GB |
+
+### 🔑 Key Takeaways for Billing:
+* **Idle Containers Cost $0**: A user who signs up and leaves their browser window closed incurs **$0.00 Cloud Run compute cost**.
+* **Scale-to-Zero**: Cloud Run automatically spins down the user container after 15 minutes of inactivity.
+* **On-Demand Warmup**: When the user sends a message or triggers an agent mission, Cloud Run boots their container in ~1.5–2 seconds.
 
 ---
 
-## 🏗️ Architectural Overview
+## 🏗️ System Architecture & Interaction Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                          Google Cloud Run Service                                       │
-│                                                                                         │
-│   ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│   │                         Fabrica Node.js Server                                  │   │
-│   │                                                                                 │   │
-│   │   tenant.ts ──> getTenantRoot(tenantId)                                         │   │
-│   │                    │                                                            │   │
-│   │                    ▼                                                            │   │
-│   │          /mnt/workspaces/<tenant_id>/                                           │   │
-│   │          ├── workspace.json                                                     │   │
-│   │          ├── harness.json                                                       │   │
-│   │          ├── missions/                                                          │   │
-│   │          ├── .pi/ (Dedicated User Agent Skills & Directives)                    │   │
-│   │          └── .npm-global/                                                       │   │
-│   │              └── bin/                                                           │   │
-│   │                  └── pi (DEDICATED PER-TENANT AGENT CLI BINARY)                 │   │
-│   └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                                    │
-│                                    │ (Cloud Storage FUSE Virtual Mount)                 │
-│                                    ▼                                                    │
-│        ┌──────────────────────────────────────────────────────┐                         │
-│        │   GCP Bucket: gs://fabrica-tenant-workspaces/       │                         │
-│        └──────────────────────────────────────────────────────┘                         │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   Central Gateway (Control Plane)                                │
+│                                   Cloud Run: fabrica-gateway                                     │
+│                                                                                                  │
+│  - User Authentication & Auth Tokens (.stash/auth.json in GCS Control Bucket)                   │
+│  - Web Application Dashboard Frontend (Next.js SPA)                                              │
+│  - Cloud Run Orchestrator Service (Creates dedicated GCS bucket & boots runner container)        │
+└────────────────────────────────────────────────┬─────────────────────────────────────────────────┘
+                                                 │
+                        ┌────────────────────────┴────────────────────────┐
+                        │ Proxy Requests / Internal Service Invocation   │
+                        ▼                                                 ▼
+┌───────────────────────────────────────────────┐ ┌───────────────────────────────────────────────┐
+│ User A Container (Cloud Run)                  │ │ User B Container (Cloud Run)                  │
+│ Service Name: fabrica-runner-usr-aaaaa        │ │ Service Name: fabrica-runner-usr-bbbbb        │
+│ Scale to 0 when idle                          │ │ Scale to 0 when idle                          │
+│                                               │ │                                               │
+│ ┌───────────────────────────────────────────┐ │ │ ┌───────────────────────────────────────────┐ │
+│ │ Runner Express API & Agent CLI Process    │ │ │ │ Runner Express API & Agent CLI Process    │ │
+│ └─────────────────────┬─────────────────────┘ │ │ └─────────────────────┬─────────────────────┘ │
+│                       │                       │ │                       │                       │
+│                       ▼ (GCS FUSE Mount)      │ │                       ▼ (GCS FUSE Mount)      │
+│            /mnt/workspace/                    │ │            /mnt/workspace/                    │
+└───────────────────────┼───────────────────────┘ └───────────────────────┼───────────────────────┘
+                        │                                                 │
+                        ▼                                                 ▼
+┌───────────────────────────────────────────────┐ ┌───────────────────────────────────────────────┐
+│ Dedicated GCS Bucket:                         │ │ Dedicated GCS Bucket:                         │
+│ gs://fabrica-tenant-usr-aaaaa/                │ │ gs://fabrica-tenant-usr-bbbbb/                │
+│ (Directly mounted to User A /mnt/workspace)   │ │ (Directly mounted to User B /mnt/workspace)   │
+└───────────────────────────────────────────────┘ └───────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📋 Step 1: Infrastructure Setup
+## 🖥️ Dashboard UI & User Interaction Design
 
-### 1.1 Create GCS Storage Bucket
-Provision a dedicated Google Cloud Storage bucket in your GCP region:
+To ensure a seamless user experience, the Fabrica Next.js Dashboard (`frontend-next/app/dashboard/page.tsx`) preserves **100% of all existing dashboard UI components** (Tenant Switcher, Agent Chat, Workspace Selector, Missions Panel) while adding non-intrusive container diagnostics and a **new dedicated Right Panel**:
+
+### 1. New Right Panel (Positioned to the Right of Missions & Workspace)
+A brand-new collapsible inspection panel located on the right side of the dashboard layout featuring two main switchable tabs:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              Fabrica Dashboard Layout                                  │
+├───────────────────┬────────────────────────────────┬───────────────────────────────────┤
+│ Left / Sidebar    │ Center Section                 │ NEW Right Panel                   │
+│ (Existing UI)     │ (Existing UI)                  │ (Switchable Tabs)                 │
+│                   │                                │                                   │
+│ • Tenant Switcher │ • Agent Chat & Turn Feed       │ [ Live Preview ]  [ Files & Code ]│
+│ • Mission List    │ • Active Mission Harness Controls │ ───────────────────────────────── │
+│ • Workspace List  │ • Execution Logs               │ (Embedded iFrame or Interactive   │
+│                   │                                │  GCS File Tree & Code Viewer)     │
+└───────────────────┴────────────────────────────────┴───────────────────────────────────┘
+```
+
+#### 🌐 Tab A: Live Preview Panel (`<LiveAppPreview />`)
+* **Embedded iFrame**: Renders `https://fabrica-runner-<tenant_id>.run.app` directly inside the dashboard.
+* **Top Toolbar Controls**:
+  * 🔄 **Reload iFrame**: Refreshes the web app preview without reloading the whole dashboard.
+  * ↗️ **Open in New Tab**: Launches the app in a standalone browser window.
+  * 📱 **Viewport Switcher**: Toggles between Mobile, Tablet, and Desktop responsive frame widths.
+  * ⚡ **Container Status Pill**: Shows whether the user's runner container is **Warm (Active)** or **Waking Up (~1.8s)**.
+* **Cold Start Mask**: If the container is scaled to 0, an overlay spinner appears over the iFrame stating: *"Waking up container `fabrica-runner-usr-123`..."* until the first HTTP ping succeeds.
+
+#### 📁 Tab B: Files & Code Explorer (`<GcsFileExplorer />`)
+* **GCS-Backed File Tree**:
+  * Queries `/api/tenant/files` (which fetches directly from `gs://fabrica-tenant-<tenant_id>/` mounted at `/mnt/workspace/`).
+  * Displays a full directory tree (`workspace.json`, `harness.json`, `missions/`, `.pi/` skills, user source code).
+* **Instant Code Viewer**:
+  * Clicking any file opens a high-contrast syntax-highlighted editor/viewer view.
+  * Displays file size, last modified timestamp in GCS, and line count.
+  * Includes a **Download File** and **Copy Content** quick action button.
+
+---
+
+### 2. Header Status Badge (`<ContainerStatusBadge />`)
+* **Location**: Top Navigation Bar (next to Model Switcher & Profile).
+* **Live Indicators**:
+  * 🟢 **Active / Warm**: Container is booted and ready (`Instances: 1`).
+  * 🟡 **Waking Up...**: Cold start triggered on prompt send (`~1.5s countdown loader`).
+  * ⚪ **Idle (Scaled to 0)**: Container is sleeping at $0 idle cost (`Instances: 0`).
+* **Interactive Drawer**: Clicking opens container resource metrics.
+
+### 3. Tenant Settings Drawer: Dedicated Runner & Storage Panel (`<TenantContainerCard />`)
+* **Location**: Fabrica Settings tab or Account Drawer.
+* **Container Diagnostics**:
+  * **Service Name**: `fabrica-runner-usr-123`
+  * **Cloud Run Region**: `europe-west2`
+  * **Compute Resources**: `1 vCPU / 2 GiB RAM`
+  * **Dedicated GCS Bucket**: `gs://fabrica-tenant-usr-123/`
+  * **Mount Location**: `/mnt/workspace/`
+* **User Actions**:
+  * **⚡ Manual Warmup / Pre-boot**: Pre-warms container before executing complex multi-file missions.
+  * **🔄 Restart Container**: Hard reboots the runner container if a process or binary gets stuck.
+  * **🧹 Purge Workspace**: Wipes files inside `gs://fabrica-tenant-usr-123/` while keeping tenant setup intact.
+  * **📥 Export Workspace Backup**: Downloads a zipped bundle of workspace files directly from GCS.
+
+### 4. Agent Execution Stream: Cold-Start Badge (`<AgentExecutionNotice />`)
+* **Location**: Directly inside the Agent Chat / Execution Terminal feed.
+* **Flow**:
+  * When a user submits an agent mission while the container is scaled to 0, an inline badge appears:
+    `⚡ Spinning up dedicated user container (fabrica-runner-usr-123)... (~1.8s cold start)`
+  * Once `/api/runner/turn` responds, the badge turns green and streams execution logs in real time.
+
+---
+
+## 🛡️ Zero Feature Loss & Codebase Distribution
+
+Every single module in the Fabrica codebase is divided cleanly between the **Control Plane Gateway** and the **Per-User Runner Containers**:
+
+| Component / Module | Existing File | Target Execution Container | Role in Dedicated Container Architecture |
+| :--- | :--- | :--- | :--- |
+| **Authentication & Key Pools** | `src/core/auth.ts` | **Control Plane Gateway** | Manages user login, AES-256 encrypted BYOK keys, and user token tiers |
+| **Container Orchestration** | `src/services/cloudrun.orchestrator.ts` *(New)* | **Control Plane Gateway** | Automatically provisions dedicated GCS bucket + boots `fabrica-runner-<tenant_id>` container |
+| **Agent CLI Harness** | `src/core/harness.ts` | **Per-User Runner Container** | Spawns `@earendil-works/pi-coding-agent` binary locally inside the user container |
+| **Workspace & Missions** | `src/core/workspace.ts`, `src/core/missions.ts` | **Per-User Runner Container** | Operates directly on `/mnt/workspace/` mounted via Cloud Storage FUSE |
+| **Kernel Prompts & Skills** | `Fabrica_kernel/` | **Per-User Runner Container** | Bundled in container image (`/app/Fabrica_kernel/`) for local prompt assembly |
+| **Entities Directory** | `src/utils.ts` | **Per-User Runner Container** | Resolves entities at `/mnt/workspace/entities/` |
+
+---
+
+## 📋 Step 1: GCP Infrastructure Setup
+
+### 1.1 Provision Central System Control Bucket
 ```bash
-gcloud storage buckets create gs://fabrica-tenant-workspaces \
+# Bucket for Gateway system storage (.stash/auth.json)
+gcloud storage buckets create gs://fabrica-system-control \
   --location=europe-west2 \
   --uniform-bucket-level-access
 ```
 
-### 1.2 Assign IAM Permissions
-Grant the Cloud Run Service Account object administration rights:
+### 1.2 Enable Required GCP APIs
 ```bash
-gcloud storage buckets add-iam-policy-binding gs://fabrica-tenant-workspaces \
-  --member="serviceAccount:YOUR_CLOUD_RUN_SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com" \
-  --role="roles/storage.objectAdmin"
+gcloud services enable \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  iam.googleapis.com \
+  storage.googleapis.com
 ```
 
-### 1.3 Add Environment Variables
-Update `.env.example` to declare the storage mount path:
-```env
-# Storage Mount Directory (Defaults to local ./workspaces for dev, /mnt/workspaces for Cloud Run)
-WORKSPACES_STORAGE_PATH=/mnt/workspaces
+### 1.3 Create Service Account & Grant Permissions for Gateway
+```bash
+# Create Service Account for Gateway Control Plane
+gcloud iam service-accounts create fabrica-gateway-sa \
+  --display-name="Fabrica Gateway Control Plane SA"
+
+# Grant permission to create and invoke per-user Cloud Run instances
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:fabrica-gateway-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:fabrica-gateway-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+
+# Grant permission to create dedicated per-user GCS buckets on demand
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+  --member="serviceAccount:fabrica-gateway-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/storage.admin"
 ```
 
 ---
 
-## 💻 Step 2: Codebase Adaptation
+## 💻 Step 2: Codebase Implementation Details
 
-### 2.1 `getTenantRoot` in `src/core/tenant.ts`
-Update `src/core/tenant.ts` to resolve the tenant's workspace root directly in the Cloud Storage FUSE mount path `/mnt/workspaces/<tenant_id>`:
-
-```typescript
-export function getTenantRoot(tenantId: string): string {
-  const safeTenant = (tenantId || 'usr_anon').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const baseStorageDir = path.resolve(process.env.WORKSPACES_STORAGE_PATH || '/mnt/workspaces');
-
-  const userRoot = path.join(baseStorageDir, safeTenant);
-  if (!fs.existsSync(userRoot)) {
-    fs.mkdirSync(userRoot, { recursive: true });
-  }
-
-  return userRoot;
-}
-```
-
-### 2.2 Provision Per-User Dedicated Agent CLI Binary on Tenant Initialization
-In `src/core/tenant.ts`, ensure that every tenant gets their own dedicated `@earendil-works/pi-coding-agent` binary installed in their persistent directory:
+### 2.1 Cloud Run Orchestrator Service (`src/services/cloudrun.orchestrator.ts`)
+The Gateway server dynamically provisions the user's **dedicated GCS bucket** and **dedicated Cloud Run container** using the GCP Node SDK:
 
 ```typescript
-export function ensureTenantAgentCliBinary(tenantId: string): string {
-  const userRoot = getTenantRoot(tenantId);
-  const globalNpmDir = path.join(userRoot, '.npm-global');
-  const tenantBinaryPath = path.join(globalNpmDir, 'bin', 'pi');
+import { ServicesClient } from '@google-cloud/run';
+import { Storage } from '@google-cloud/storage';
 
-  if (!fs.existsSync(tenantBinaryPath)) {
-    console.log(`[Tenant ${tenantId}] Installing dedicated Agent CLI binary into ${globalNpmDir}...`);
-    try {
-      execSync(`npm install -g --prefix "${globalNpmDir}" --ignore-scripts @earendil-works/pi-coding-agent`, {
-        env: { ...process.env, NPM_CONFIG_PREFIX: globalNpmDir },
-        stdio: 'inherit'
+const runClient = new ServicesClient();
+const storage = new Storage();
+
+export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<string> {
+  const projectId = process.env.GCP_PROJECT_ID || 'fabrica-production';
+  const region = process.env.GCP_REGION || 'europe-west2';
+  const safeTenant = tenantId.replace(/[^a-zA-Z0-9_\-]/g, '-').toLowerCase();
+  
+  // 1. Define dedicated GCS Bucket & Cloud Run Service name
+  const tenantBucket = `fabrica-tenant-${safeTenant}`;
+  const serviceName = `fabrica-runner-${safeTenant}`;
+  const parent = `projects/${projectId}/locations/${region}`;
+  const servicePath = `${parent}/services/${serviceName}`;
+
+  // 2. Ensure Dedicated GCS Bucket Exists for User
+  try {
+    const bucket = storage.bucket(tenantBucket);
+    const [exists] = await bucket.exists();
+    if (!exists) {
+      console.log(`[Orchestrator] Creating dedicated GCS bucket for user: ${tenantBucket}...`);
+      await storage.createBucket(tenantBucket, {
+        location: region,
+        uniformBucketLevelAccess: true
       });
-    } catch (err) {
-      console.error(`[Tenant ${tenantId}] Error installing dedicated agent binary:`, err);
     }
+  } catch (err: any) {
+    console.error(`[Orchestrator] GCS Bucket check/creation warning: ${err.message}`);
   }
 
-  return tenantBinaryPath;
+  // 3. Check if user container already exists
+  try {
+    const [existingService] = await runClient.getService({ name: servicePath });
+    if (existingService && existingService.uri) {
+      return existingService.uri;
+    }
+  } catch (err: any) {
+    // 404 means container does not exist yet; proceed to provision
+  }
+
+  console.log(`[Orchestrator] Provisioning dedicated Cloud Run container: ${serviceName}...`);
+
+  // 4. Provision new scale-to-zero container for user mounting their dedicated bucket
+  const runnerImage = process.env.RUNNER_CONTAINER_IMAGE || `gcr.io/${projectId}/fabrica-user-runner:latest`;
+
+  const [operation] = await runClient.createService({
+    parent,
+    serviceId: serviceName,
+    service: {
+      template: {
+        scaling: {
+          minInstanceCount: 0, // Scale to 0 when idle = $0 compute cost!
+          maxInstanceCount: 2
+        },
+        containers: [
+          {
+            image: runnerImage,
+            resources: {
+              limits: {
+                memory: '2Gi',
+                cpu: '1000m'
+              }
+            },
+            volumeMounts: [
+              {
+                name: 'tenant-gcs-mount',
+                mountPath: '/mnt/workspace' // Mounts user's dedicated bucket directly to workspace
+              }
+            ],
+            env: [
+              { name: 'TENANT_ID', value: tenantId },
+              { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt/workspace' }
+            ]
+          }
+        ],
+        volumes: [
+          {
+            name: 'tenant-gcs-mount',
+            gcsVolumeSource: {
+              bucket: tenantBucket, // Mounts user's dedicated GCS bucket
+              readOnly: false
+            }
+          }
+        ]
+      }
+    }
+  });
+
+  const [response] = await operation.promise();
+  return response.uri!;
 }
 ```
 
-### 2.3 Execute Per-Tenant Dedicated Binary in `src/core/harness.ts`
-When running agent commands or CLI tasks, execute the user's **dedicated CLI binary**:
+### 2.2 Control Plane Gateway Harness Proxy (`src/api/routes/harness.routes.ts`)
+The Gateway proxies agent turn requests directly to the user's dedicated runner container:
 
 ```typescript
-const tenantRoot = getTenantRoot(tenantId);
-const globalNpmDir = path.join(tenantRoot, '.npm-global');
-const tenantBinaryPath = path.join(globalNpmDir, 'bin', 'pi');
+harnessRouter.post('/turn', async (req, res) => {
+  try {
+    const tenantId = req.user?.id || 'default_user';
+    
+    // Get or boot user's dedicated Cloud Run container URL
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    
+    // Proxy request securely to user's dedicated container instance
+    const response = await fetch(`${runnerUrl}/api/runner/turn`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.INTERNAL_RUNNER_SECRET}`
+      },
+      body: JSON.stringify(req.body)
+    });
 
-// Use tenant's own binary if present, else fall back to provisioned binary
-const binaryToRun = fs.existsSync(tenantBinaryPath) ? tenantBinaryPath : 'pi';
-
-const agentProcess = spawn(binaryToRun, args, {
-  cwd: tenantRoot,
-  env: {
-    ...process.env,
-    NPM_CONFIG_PREFIX: globalNpmDir,
-    PATH: `${path.join(globalNpmDir, 'bin')}:${process.env.PATH}`
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: `Failed to execute turn on user container: ${err.message}` });
   }
+});
+```
+
+### 2.3 Per-User Runner Container Entry Server (`src/runner/server.ts`)
+Each user container executes the `@earendil-works/pi-coding-agent` binary locally inside `/mnt/workspace/`:
+
+```typescript
+import express from 'express';
+import { runAgentCliTurn } from '../core/harness';
+
+const app = express();
+app.use(express.json());
+
+const PORT = process.env.PORT || 3000;
+const TENANT_ID = process.env.TENANT_ID || 'default_user';
+
+// Health check endpoint
+app.get('/health', (req, res) => res.json({ status: 'ok', tenantId: TENANT_ID }));
+
+// Agent Turn Execution Handler (Runs inside dedicated user container)
+app.post('/api/runner/turn', async (req, res) => {
+  try {
+    const workspaceRoot = '/mnt/workspace';
+    const result = await runAgentCliTurn(TENANT_ID, workspaceRoot, req.body);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`[User Runner Container] Dedicated runner active for tenant ${TENANT_ID} on port ${PORT}`);
 });
 ```
 
 ---
 
-## 🚀 Step 3: Cloud Run Deployment
+## 🐳 Step 3: Container Build Setup
 
-Deploy the application to Cloud Run with the mounted GCS bucket:
+### 3.1 Gateway Dockerfile (`Dockerfile.gateway`)
+```dockerfile
+FROM node:20-slim
+WORKDIR /app
+COPY package*.json ./
+COPY frontend-next/package*.json ./frontend-next/
+RUN npm ci && cd frontend-next && npm ci
+COPY . .
+RUN npm run build:frontend
+RUN npm run build
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+```
 
-```bash
-gcloud run deploy fabrica-app \
-  --image gcr.io/YOUR_PROJECT_ID/fabrica:latest \
-  --region europe-west2 \
-  --execution-environment gen2 \
-  --add-volume name=workspaces-volume,type=cloud-storage,bucket=fabrica-tenant-workspaces \
-  --add-volume-mount volume=workspaces-volume,mount-path=/mnt/workspaces \
-  --set-env-vars WORKSPACES_STORAGE_PATH=/mnt/workspaces
+### 3.2 Per-User Runner Container Dockerfile (`Dockerfile.runner`)
+```dockerfile
+FROM node:20-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+
+# Pre-install agent CLI into container image for fast cold starts
+RUN npm install -g @earendil-works/pi-coding-agent
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+CMD ["node", "dist/runner/server.js"]
 ```
 
 ---
 
-## 🧪 Step 4: Verification & Validation
+## 🚀 Step 4: Build & Deploy Strategy
 
-1. **Dedicated Binary Provisioning Test**:
-   - Register a new user on the deployed app.
-   - Verify `POST /api/tenant/initialize` installs the dedicated CLI binary into `/mnt/workspaces/<tenant_id>/.npm-global/bin/pi`.
-2. **Binary Isolation & Persistence Verification**:
-   - Verify that running agent tasks uses `/mnt/workspaces/<tenant_id>/.npm-global/bin/pi`.
-   - Update or customize the CLI binary for Tenant A (or install a custom plugin). Verify Tenant B's binary remains entirely unaffected.
-   - Restart the Cloud Run container instance and verify the tenant's installed binary and workspace files remain 100% intact.
-3. **Real-Time Live Editing**:
-   - Trigger an agent turn and monitor live file system modifications performed by the tenant's dedicated CLI binary.
+### 4.1 Build and Push Docker Images to GCP Artifact Registry
+```bash
+# Build and push Gateway image
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/fabrica-gateway:latest -f Dockerfile.gateway .
 
+# Build and push Per-User Runner base image
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/fabrica-user-runner:latest -f Dockerfile.runner .
+```
 
+### 4.2 Deploy Central Gateway Server
+```bash
+gcloud run deploy fabrica-gateway \
+  --image gcr.io/YOUR_PROJECT_ID/fabrica-gateway:latest \
+  --region europe-west2 \
+  --service-account fabrica-gateway-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+  --set-env-vars GCP_PROJECT_ID=YOUR_PROJECT_ID,GCP_REGION=europe-west2,RUNNER_CONTAINER_IMAGE=gcr.io/YOUR_PROJECT_ID/fabrica-user-runner:latest
+```
+
+---
+
+## 🧪 Step 5: Verification & Validation Playbook
+
+1. **Dynamic Bucket & Container Provisioning Test**:
+   - Register User A and send an agent prompt.
+   - Verify that Gateway creates `gs://fabrica-tenant-usr-aaaaa/` and deploys `fabrica-runner-usr-aaaaa`.
+2. **Scale-to-Zero Verification**:
+   - Leave User A idle for 15 minutes.
+   - Run `gcloud run services list` and confirm instance count drops to 0 ($0 compute cost).
+3. **Hard Multi-Tenant Storage Isolation Verification**:
+   - Confirm User A's container only mounts `gs://fabrica-tenant-usr-aaaaa/`.
+   - Confirm User A has no IAM rights or visibility to User B's bucket (`gs://fabrica-tenant-usr-bbbbb/`).
+4. **Persistent Workspace State**:
+   - Save a workspace mission in User A's container.
+   - Restart User A's container.
+   - Verify all workspace files, `.pi/` skills, and session histories remain 100% persistent in User A's dedicated GCS bucket.
