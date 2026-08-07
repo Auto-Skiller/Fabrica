@@ -27,7 +27,7 @@ export function isCloudRunRunnerEnabled(): boolean {
  * Gets an existing dedicated Cloud Run runner URL for a user tenant,
  * or provisions a new scale-to-zero container with dedicated GCS bucket FUSE mount.
  */
-export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<string> {
+export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<string | null> {
   if (runnerUrlCache.has(tenantId)) {
     return runnerUrlCache.get(tenantId)!;
   }
@@ -74,60 +74,65 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
 
   // 4. Provision new scale-to-zero container for user mounting their dedicated bucket
   const runnerImage = process.env.RUNNER_CONTAINER_IMAGE || `gcr.io/${projectId}/fabrica-user-runner:latest`;
-  const client = getRunClient();
+  try {
+    const client = getRunClient();
 
-  const [operation] = (await client.createService({
-    parent,
-    serviceId: serviceName,
-    service: {
-      template: {
-        scaling: {
-          minInstanceCount: 0,
-          maxInstanceCount: 2
-        },
-        containers: [
-          {
-            image: runnerImage,
-            resources: {
-              limits: {
-                memory: '2Gi',
-                cpu: '1000m'
-              }
-            },
-            volumeMounts: [
-              {
-                name: 'tenant-gcs-mount',
-                mountPath: '/mnt/workspace'
-              }
-            ],
-            env: [
-              { name: 'TENANT_ID', value: tenantId },
-              { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt/workspace' },
-              { name: 'GEMINI_API_KEY', value: process.env.GEMINI_API_KEY || '' }
-            ]
-          }
-        ],
-        volumes: [
-          {
-            name: 'tenant-gcs-mount',
-            gcs: {
-              bucket: tenantBucket,
-              readOnly: false
+    const [operation] = (await client.createService({
+      parent,
+      serviceId: serviceName,
+      service: {
+        template: {
+          scaling: {
+            minInstanceCount: 0,
+            maxInstanceCount: 2
+          },
+          containers: [
+            {
+              image: runnerImage,
+              resources: {
+                limits: {
+                  memory: '2Gi',
+                  cpu: '1000m'
+                }
+              },
+              volumeMounts: [
+                {
+                  name: 'tenant-gcs-mount',
+                  mountPath: '/mnt/workspace'
+                }
+              ],
+              env: [
+                { name: 'TENANT_ID', value: tenantId },
+                { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt/workspace' },
+                { name: 'GEMINI_API_KEY', value: process.env.GEMINI_API_KEY || '' }
+              ]
             }
-          } as any
-        ]
+          ],
+          volumes: [
+            {
+              name: 'tenant-gcs-mount',
+              gcs: {
+                bucket: tenantBucket,
+                readOnly: false
+              }
+            } as any
+          ]
+        }
       }
-    }
-  })) as any;
+    })) as any;
 
-  const [response] = await operation.promise();
-  if (response && response.uri) {
-    const uri = response.uri;
-    runnerUrlCache.set(tenantId, uri);
-    return uri;
+    const [response] = await operation.promise();
+    if (response && response.uri) {
+      const uri = response.uri;
+      runnerUrlCache.set(tenantId, uri);
+      return uri;
+    }
+  } catch (err: any) {
+    console.warn(`[Orchestrator] Cloud Run provision error (${err.message}). Defaulting to in-process execution.`);
+    return null;
   }
 
-  throw new Error(`Failed to provision Cloud Run runner container for tenant ${tenantId}`);
+  return null;
 }
 
 /**

@@ -28,12 +28,8 @@ router.get('/data', (req: AuthenticatedRequest, res: Response) => {
 // POST /api/missions/create — Create new mission
 router.post('/create', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId!;
-  const { title, objective, type } = req.body || {};
-  if (!title || !objective) {
-    res.status(400).json({ ok: false, error: 'Title and objective are required.' });
-    return;
-  }
-  const mission = createMission(tenantId, { title, objective, type });
+  const body = req.body || {};
+  const mission = createMission(tenantId, body);
   res.json({ ok: true, mission });
 });
 

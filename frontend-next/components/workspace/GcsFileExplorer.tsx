@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { workspaceApi } from './api';
 
 export interface GcsFileNode {
   id: string;
@@ -24,157 +25,49 @@ interface GcsFileExplorerProps {
   style?: React.CSSProperties;
 }
 
-const DEFAULT_MOCK_TREE: GcsFileNode[] = [
-  {
-    id: 'root-workspace-json',
-    name: 'workspace.json',
-    path: 'workspace.json',
-    type: 'file',
-    size: 1420,
-    updatedAt: new Date().toISOString(),
-    content: JSON.stringify({
-      version: '2.0.0',
-      workspace_id: 'ws-tenant-primary',
-      tenant_id: 'tenant-usr-123',
-      storage_backend: 'gcs_fuse_mount',
-      gcs_bucket: 'gs://fabrica-tenant-usr-123/',
-      mount_path: '/mnt/workspace',
-      active_project: 'market_intelligence',
-      created_at: new Date().toISOString()
-    }, null, 2)
-  },
-  {
-    id: 'root-harness-json',
-    name: 'harness.json',
-    path: 'harness.json',
-    type: 'file',
-    size: 2840,
-    updatedAt: new Date().toISOString(),
-    content: JSON.stringify({
-      runner_service: 'fabrica-runner-usr-123',
-      region: 'europe-west2',
-      autonomy_level: 'supervised',
-      auto_missions: true,
-      max_iterations: 15,
-      thinking_level: 'medium',
-      llm_model: 'gemini-2.5-flash'
-    }, null, 2)
-  },
-  {
-    id: 'dir-src',
-    name: 'src',
-    path: 'src',
-    type: 'directory',
-    children: [
-      {
-        id: 'src-server-ts',
-        name: 'server.ts',
-        path: 'src/server.ts',
-        type: 'file',
-        size: 3820,
-        updatedAt: new Date().toISOString(),
-        content: `import express from 'express';
-import { runAgentCliTurn } from './core/harness';
+function buildTreeFromItems(items: Array<{ name: string; relativePath: string; isDirectory: boolean; size?: number; updatedAt?: string }>): GcsFileNode[] {
+  const rootNodes: GcsFileNode[] = [];
+  const dirMap = new Map<string, GcsFileNode>();
 
-const app = express();
-app.use(express.json());
+  for (const item of items) {
+    if (!item || !item.relativePath) continue;
+    const parts = item.relativePath.split('/');
+    let currentPath = '';
 
-const PORT = process.env.PORT || 3000;
-const TENANT_ID = process.env.TENANT_ID || 'tenant-usr-123';
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
+      const isLast = i === parts.length - 1;
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
 
-// GCS Mount Health Status Endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    tenant_id: TENANT_ID,
-    storage_type: 'GCS_DEDICATED_BUCKET',
-    bucket: \`gs://fabrica-tenant-\${TENANT_ID}/\`,
-    mount_path: '/mnt/workspace'
-  });
-});
+      if (!dirMap.has(currentPath)) {
+        const isDir = !isLast || item.isDirectory;
+        const node: GcsFileNode = {
+          id: currentPath,
+          name: part,
+          path: currentPath,
+          type: isDir ? 'directory' : 'file',
+          size: isDir ? undefined : item.size || 0,
+          updatedAt: item.updatedAt || new Date().toISOString(),
+          children: isDir ? [] : undefined
+        };
+        dirMap.set(currentPath, node);
 
-// Execute Agent CLI Turn locally inside tenant Cloud Run container
-app.post('/api/runner/turn', async (req, res) => {
-  try {
-    const workspaceRoot = '/mnt/workspace';
-    const result = await runAgentCliTurn(TENANT_ID, workspaceRoot, req.body);
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+        if (i === 0) {
+          rootNodes.push(node);
+        } else {
+          const parentPath = parts.slice(0, i).join('/');
+          const parentNode = dirMap.get(parentPath);
+          if (parentNode && parentNode.children) {
+            parentNode.children.push(node);
+          }
+        }
+      }
+    }
   }
-});
 
-app.listen(PORT, () => {
-  console.log(\`[User Runner] Dedicated server online for tenant \${TENANT_ID} on port \${PORT}\`);
-});`
-      },
-      {
-        id: 'src-utils-ts',
-        name: 'utils.ts',
-        path: 'src/utils.ts',
-        type: 'file',
-        size: 940,
-        updatedAt: new Date().toISOString(),
-        content: `export function formatBytes(bytes: number, decimals = 2): string {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}`
-      }
-    ]
-  },
-  {
-    id: 'dir-missions',
-    name: 'missions',
-    path: 'missions',
-    type: 'directory',
-    children: [
-      {
-        id: 'mission-001',
-        name: 'mission-standard-scaffold.json',
-        path: 'missions/mission-standard-scaffold.json',
-        type: 'file',
-        size: 1890,
-        updatedAt: new Date().toISOString(),
-        content: JSON.stringify({
-          id: 'mission-001',
-          title: 'Initialize Market Intelligence Microservice',
-          status: 'COMPLETED',
-          effort: 'MEDIUM',
-          gcs_synced: true,
-          steps_completed: 4,
-          total_steps: 4
-        }, null, 2)
-      }
-    ]
-  },
-  {
-    id: 'dir-pi',
-    name: '.pi',
-    path: '.pi',
-    type: 'directory',
-    children: [
-      {
-        id: 'pi-skills',
-        name: 'skills.json',
-        path: '.pi/skills.json',
-        type: 'file',
-        size: 1120,
-        updatedAt: new Date().toISOString(),
-        content: JSON.stringify({
-          installed_skills: [
-            'gcs-fuse-sync',
-            'cloudrun-orchestrator',
-            'google-genai-sdk'
-          ]
-        }, null, 2)
-      }
-    ]
-  }
-];
+  return rootNodes;
+}
 
 export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   tenantId = 'usr-123',
@@ -187,12 +80,13 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   style
 }) => {
   const actualBucket = bucketName || `gs://fabrica-tenant-${tenantId.toLowerCase().replace(/[^a-z0-9_\-]/g, '-')}/`;
-  const [fileTree, setFileTree] = useState<GcsFileNode[]>(DEFAULT_MOCK_TREE);
-  const [selectedFile, setSelectedFile] = useState<GcsFileNode | null>(DEFAULT_MOCK_TREE[0]);
+  const [fileTree, setFileTree] = useState<GcsFileNode[]>([]);
+  const [selectedFile, setSelectedFile] = useState<GcsFileNode | null>(null);
   const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [modalSelectedFile, setModalSelectedFile] = useState<GcsFileNode | null>(null);
   const [modalFileContent, setModalFileContent] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
+    'workspace': true,
     'src': true,
     'missions': true,
     '.pi': false
@@ -201,6 +95,27 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [autoMonitor, setAutoMonitor] = useState<boolean>(true);
+
+  // Fetch real workspace files from workspaceApi
+  const loadWorkspaceFiles = async () => {
+    try {
+      const res = await workspaceApi.getWorkspaceFiles('');
+      if (res && res.ok && Array.isArray(res.files)) {
+        const tree = buildTreeFromItems(res.files);
+        setFileTree(tree);
+        if (tree.length > 0 && !selectedFile) {
+          const firstFile = tree.find(n => n.type === 'file') || tree[0];
+          setSelectedFile(firstFile);
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading workspace files in GcsFileExplorer:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadWorkspaceFiles();
+  }, [tenantId]);
 
   // Toggle directory expansion
   const toggleFolder = (folderPath: string) => {
@@ -229,14 +144,26 @@ export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
 
   const filteredTree = useMemo(() => filterNodes(fileTree, searchQuery), [fileTree, searchQuery]);
 
-  const handleSelectFile = (file: GcsFileNode) => {
+  const handleSelectFile = async (file: GcsFileNode) => {
     setSelectedFile(file);
     setModalSelectedFile(file);
-    setModalFileContent(file.content || '');
+    setModalFileContent(file.content || 'Loading file content...');
     if (openModalOnSelect) {
       setIsEditorModalOpen(true);
     }
     if (onFileSelect) onFileSelect(file);
+
+    try {
+      const res = await workspaceApi.readWorkspaceFile(file.path);
+      if (res && res.ok && typeof res.content === 'string') {
+        const updatedFile = { ...file, content: res.content };
+        setSelectedFile(updatedFile);
+        setModalSelectedFile(updatedFile);
+        setModalFileContent(res.content);
+      }
+    } catch (e) {
+      console.warn(`Failed reading content for ${file.path}:`, e);
+    }
   };
 
   const handleCopyContent = () => {

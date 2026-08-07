@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
 import { api, harnessApi } from '../../components/api';
+import { missionsApi } from '../../components/missions/api';
 import { getActiveTenantId } from '../../components/auth/api';
 import { RuntimeYaml } from '../../components/harness/types';
 
@@ -5230,6 +5231,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
       // Path setup
       const path = [newMissionCategory, formattedId];
 
+      try {
+        await missionsApi.createMission(formattedId, newMissionObjective, newMissionCategory);
+      } catch (mErr) {
+        console.warn('Direct missionsApi create call notice:', mErr);
+      }
+
       const res = await api.patchEntity(activeEntity, 'missions', path, missionObj);
       if (res.ok) {
         setIsAddMissionOpen(false);
@@ -5600,29 +5607,17 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
     const missionCategory = mission.category || mission.type || 'standard';
     const missionPhase = mission.phase || mission.status || mission.state?.class || 'DRAFT';
 
-    const promptMessage = `[REAL-TIME MISSION EVENT]
-⚡ Action: User ${action} mission in UI
-🆔 Mission ID: ${missionId}
-📌 Title / Objective: "${missionTitle}"
-🏷️ Category / Type: ${missionCategory}
-📊 Current Phase / Status: ${missionPhase}
-🤖 Active Autonomy Mode: ${modeStr}
-${extraInfo ? `ℹ️ Details: ${extraInfo}` : ''}
+    const eventLogText = `[MISSION ${action}] ID: ${missionId} | Title: "${missionTitle}" | Category: ${missionCategory} | Phase: ${missionPhase} | Mode: ${modeStr}${extraInfo ? ` | ${extraInfo}` : ''}`;
 
-DIRECTIVE FOR AGENT:
-You are the Fabrica Agent Kernel handling workspace missions in ${modeStr}.
-${isDirector ? `
-1. Review this mission's objective, specs, goals, tasks, and system inputs in the workspace database.
-2. Automatically fill any missing parameters, goals, tasks, target stack, research topics, or verification gates in the mission.
-3. Advance the mission phase or status as appropriate for completion using your workspace tools or updates.
-4. Begin execution on this mission immediately under DIRECTOR mode.
-` : `
-1. Review this mission's objective, specs, goals, tasks, and system inputs.
-2. Analyze if anything is missing or incomplete (objective details, goals, tasks, target stack, or verification gates).
-3. Provide a concise, professional review summary to the operator. Point out any identified gaps or suggested additions, and ask for operator approval before advancing or starting execution.
-`}`;
+    try {
+      await harnessApi.appendUserAction('missions_actions', eventLogText);
+    } catch (err) {
+      console.warn('Failed logging mission action:', err);
+    }
 
-    await handleSendChat(promptMessage);
+    try {
+      await api.appendAuditLog(eventLogText, 'mission', missionId);
+    } catch (_) {}
   };
 
   const triggerMissionAgentNotification = (action: 'ADDED' | 'MOVED', mission: any, extraInfo?: string) => {

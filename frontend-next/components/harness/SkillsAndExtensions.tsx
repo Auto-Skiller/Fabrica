@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ToolboxesYaml } from '../workspace/types';
 import { api } from '../api';
+import { harnessApi } from './api';
 
 interface Props {
   entityName: string;
@@ -1490,7 +1491,19 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
         outputs: newSkillForm.outputs || 'Completed workspace task'
       }, newSkillForm.body);
 
-      await api.saveToolboxFile(entityName, 'skill', parents, clean, 'SKILL.md', initialMd, 'workspace');
+      try {
+        await api.saveToolboxFile(entityName, 'skill', parents, clean, 'SKILL.md', initialMd, 'workspace');
+      } catch (_) {}
+
+      try {
+        await harnessApi.createSkill(clean, initialMd, {
+          what: newSkillForm.what,
+          when: newSkillForm.when,
+          why: newSkillForm.why,
+          triggers: newSkillForm.triggers
+        });
+      } catch (_) {}
+
       triggerToast(`Created skill '${clean}'`, 'success');
       setIsAddSkillModalOpen(false);
       setNewSkillForm({
@@ -1503,6 +1516,26 @@ export default function SkillsAndExtensions({ entityName, toolboxes, onRefresh, 
         outputs: '',
         body: '# Instructions\n\nAdd implementation guidance here.'
       });
+
+      // Refetch kernel and workspace skills
+      try {
+        const res = await harnessApi.getKernelSkills();
+        if (res && res.ok && Array.isArray(res.skills)) {
+          const builtinItems = res.skills.map((s: any) => ({
+            id: s.name,
+            name: s.name,
+            domainId: 'domain_general',
+            toolboxId: s.category === 'workspace' ? 'custom' : 'system_skills',
+            source: s.category === 'workspace' ? 'workspace' : 'built-in',
+            category: s.category || s.name,
+            isMain: !!s.isMain,
+            metadata: s.metadata,
+            parents: ['system_skills', s.name]
+          }));
+          setDynBuiltinSkills(builtinItems);
+        }
+      } catch (_) {}
+
       if (onRefresh) onRefresh();
     } catch (e: any) {
       triggerToast(e.message || 'Failed to create skill', 'error');

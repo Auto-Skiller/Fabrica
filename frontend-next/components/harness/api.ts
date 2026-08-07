@@ -118,6 +118,8 @@ export const harnessApi = {
   getPiModels: () => request<{ ok: boolean; models: any[] }>('/api/harness/models'),
   getHarnessLogs: () => request<{ ok: boolean; logs: any[] }>('/api/harness/logs'),
   getKernelSkills: () => request<{ ok: boolean; skills: any[] }>('/api/harness/skills'),
+  createSkill: (name: string, content?: string, metadata?: any) =>
+    request<{ ok: boolean; name: string; path: string }>('/api/harness/skills', { method: 'POST', body: JSON.stringify({ name, content, metadata }) }),
   getHarnessConfig: () => request<{ ok: boolean; config: any }>('/api/harness/config'),
   getHarnessState: (tenantId: string = 'default_user') => request<{ ok: boolean; harness: any }>(`/api/harness/state?tenantId=${encodeURIComponent(tenantId)}`),
   updateHarnessState: (updates: Record<string, any>) => request<{ ok: boolean; harness: any }>('/api/harness/state', { method: 'POST', body: JSON.stringify(updates) }),

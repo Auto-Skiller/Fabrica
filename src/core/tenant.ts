@@ -254,7 +254,9 @@ export async function startUserAgent(tenantId: string = 'default_user'): Promise
   try {
     // Trigger agent CLI targeting user tenant directory via dedicated runner container
     const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
-    await proxyTurnToRunner(runnerUrl, { tenantId, prompt: 'Agent initialization handshake.' });
+    if (runnerUrl) {
+      await proxyTurnToRunner(runnerUrl, { tenantId, prompt: 'Agent initialization handshake.' });
+    }
   } catch (err: any) {
     console.warn('Agent CLI trigger warning:', err?.message || err);
   }

@@ -2,12 +2,15 @@ import { Router, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
+import { getTenantRoot } from '../../core/tenant.js';
 import {
   getOrCreateTenantRunnerUrl,
   proxyTurnToRunnerStream,
   proxyTurnToRunner
 } from '../../services/cloudrun.orchestrator.js';
 import {
+  runPiAgentStream,
+  runPiAgent,
   stopPiAgent,
   listPiDaemons,
   listPiSessions,
@@ -43,19 +46,41 @@ router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
-    await proxyTurnToRunnerStream(runnerUrl, {
-      prompt,
-      tenantId,
-      sessionId,
-      model,
-      customKey,
-      agentLang,
-      webSearchEnabled,
-      thinkingLevel
-    }, (chunkData: string) => {
-      res.write(chunkData);
-    });
+    let runnerUrl: string | null = null;
+    try {
+      runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    } catch (e: any) {
+      console.warn(`[HarnessRoutes] Orchestrator lookup failed: ${e.message}`);
+    }
+
+    if (runnerUrl) {
+      await proxyTurnToRunnerStream(runnerUrl, {
+        prompt,
+        tenantId,
+        sessionId,
+        model,
+        customKey,
+        agentLang,
+        webSearchEnabled,
+        thinkingLevel
+      }, (chunkData: string) => {
+        res.write(chunkData);
+      });
+    } else {
+      // In-process agent execution fallback
+      await runPiAgentStream({
+        prompt,
+        tenantId,
+        sessionId,
+        model,
+        customKey,
+        agentLang,
+        webSearchEnabled,
+        thinkingLevel
+      }, (chunkData: string) => {
+        res.write(chunkData);
+      });
+    }
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err: any) {
@@ -76,19 +101,39 @@ router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
-    const response = await proxyTurnToRunner(runnerUrl, {
-      prompt,
-      tenantId,
-      sessionId,
-      model,
-      customKey,
-      agentLang,
-      webSearchEnabled,
-      thinkingLevel
-    });
+    let runnerUrl: string | null = null;
+    try {
+      runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    } catch (e: any) {
+      console.warn(`[HarnessRoutes] Orchestrator lookup failed: ${e.message}`);
+    }
 
-    res.json(response);
+    if (runnerUrl) {
+      const response = await proxyTurnToRunner(runnerUrl, {
+        prompt,
+        tenantId,
+        sessionId,
+        model,
+        customKey,
+        agentLang,
+        webSearchEnabled,
+        thinkingLevel
+      });
+      res.json(response);
+    } else {
+      // In-process agent execution fallback
+      const response = await runPiAgent({
+        prompt,
+        tenantId,
+        sessionId,
+        model,
+        customKey,
+        agentLang,
+        webSearchEnabled,
+        thinkingLevel
+      });
+      res.json(response);
+    }
   } catch (err: any) {
     res.status(500).json({
       ok: false,
@@ -153,14 +198,14 @@ router.get('/logs', (req: AuthenticatedRequest, res: Response) => {
   res.json({ ok: true, logs });
 });
 
-// GET /api/harness/skills — List built-in kernel skills from Fabrica_kernel/skills
-router.get('/skills', (_req: AuthenticatedRequest, res: Response) => {
+// GET /api/harness/skills — List built-in kernel skills AND workspace user skills
+router.get('/skills', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
   try {
     const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
-    if (!fs.existsSync(kernelSkillsDir)) {
-      res.json({ ok: true, skills: [] });
-      return;
-    }
+    const userRoot = getTenantRoot(tenantId);
+    const userSkillsDir = path.join(userRoot, '.pi', 'skills');
+
     const skills: {
       name: string;
       path: string;
@@ -196,41 +241,78 @@ router.get('/skills', (_req: AuthenticatedRequest, res: Response) => {
       return meta;
     };
 
-    const scanSkillsDir = (dir: string) => {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          const skillMdPath = path.join(fullPath, 'SKILL.md');
-          if (fs.existsSync(skillMdPath)) {
-            const relPath = path.relative(kernelSkillsDir, fullPath);
-            const pathParts = relPath.split(path.sep);
-            const category = pathParts[0];
-            const isMain = pathParts.length === 1;
-            let metadata = { what: '', when: '', why: '', triggers: '', inputs: '', outputs: '' };
-            try {
-              const content = fs.readFileSync(skillMdPath, 'utf-8');
-              metadata = parseYamlOrMd(content);
-            } catch (e) {}
+    const scanSkillsDir = (dir: string, baseDir: string, defaultCategory: string) => {
+      if (!fs.existsSync(dir)) return;
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name.startsWith('.')) continue;
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            const skillMdPath = path.join(fullPath, 'SKILL.md');
+            if (fs.existsSync(skillMdPath)) {
+              const relPath = path.relative(baseDir, fullPath);
+              const pathParts = relPath.split(path.sep);
+              const category = pathParts.length > 1 ? pathParts[0] : defaultCategory;
+              const isMain = pathParts.length === 1;
+              let metadata = { what: '', when: '', why: '', triggers: '', inputs: '', outputs: '' };
+              try {
+                const content = fs.readFileSync(skillMdPath, 'utf-8');
+                metadata = parseYamlOrMd(content);
+              } catch (e) {}
 
-            skills.push({
-              name: entry.name,
-              path: relPath,
-              category,
-              isMain,
-              metadata
-            });
+              skills.push({
+                name: entry.name,
+                path: relPath,
+                category,
+                isMain,
+                metadata
+              });
+            }
+            scanSkillsDir(fullPath, baseDir, defaultCategory);
           }
-          scanSkillsDir(fullPath);
         }
-      }
+      } catch (_) {}
     };
 
-    scanSkillsDir(kernelSkillsDir);
+    scanSkillsDir(kernelSkillsDir, kernelSkillsDir, 'kernel');
+    scanSkillsDir(userSkillsDir, userSkillsDir, 'workspace');
+
     res.json({ ok: true, skills });
   } catch (err: any) {
     res.status(500).json({ ok: false, error: err.message, skills: [] });
+  }
+});
+
+// POST /api/harness/skills — Create or update user skill in .pi/skills/
+router.post('/skills', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId || 'default_user';
+  const { name, content, metadata } = req.body || {};
+  if (!name) {
+    res.status(400).json({ ok: false, error: 'Skill name is required.' });
+    return;
+  }
+  try {
+    const cleanName = name.toLowerCase().replace(/[^a-z0-9_\-]/g, '_');
+    const userRoot = getTenantRoot(tenantId);
+    const skillDir = path.join(userRoot, '.pi', 'skills', cleanName);
+    fs.mkdirSync(skillDir, { recursive: true });
+
+    const skillMdPath = path.join(skillDir, 'SKILL.md');
+    const initialContent = content || `---
+name: ${cleanName}
+description: ${metadata?.what || 'Custom workspace skill'}
+when_to_use: ${metadata?.when || 'When requested by user'}
+triggers: ${metadata?.triggers || cleanName}
+---
+
+# ${cleanName}
+${metadata?.why || 'Created via Fabrica UI.'}
+`;
+    fs.writeFileSync(skillMdPath, initialContent, 'utf8');
+    res.json({ ok: true, name: cleanName, path: `.pi/skills/${cleanName}` });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 

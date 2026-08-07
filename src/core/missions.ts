@@ -272,21 +272,35 @@ export function getMissions(tenantId: string = 'default_user'): Mission[] {
 
 export function createMission(
   tenantId: string = 'default_user',
-  missionData: { title: string; objective: string; type?: string }
+  missionData: {
+    id?: string;
+    title?: string;
+    objective?: string;
+    type?: string;
+    status?: string;
+    phase?: string;
+    metadata?: any;
+    inputs?: any;
+    goals?: any;
+    tasks?: any;
+  }
 ): Mission {
-  const id = `msn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const id = missionData.id || `msn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const title = missionData.title || missionData.objective || id || 'Untitled Mission';
+  const objective = missionData.objective || title || 'New Mission Objective';
+
   const newMission: Mission = {
     id,
-    title: missionData.title,
-    objective: missionData.objective,
+    title,
+    objective,
     type: missionData.type || 'standard',
     user_id: tenantId,
-    status: 'drafting',
-    phase: 'discovery',
+    status: (missionData.status as any) || 'drafting',
+    phase: (missionData.phase as any) || 'discovery',
     scratchpad: `missions/${id}/`,
-    metadata: { tasks: [] },
+    metadata: missionData.metadata || { tasks: missionData.tasks || [] },
     workflow_history: [
-      { timestamp: new Date().toISOString(), phase: 'discovery', status: 'created' }
+      { timestamp: new Date().toISOString(), phase: missionData.phase || 'discovery', status: 'created' }
     ],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
