@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
-import { Auth, ThemeSupa } from '../../components/auth';
 
 function renderDashboardMock() {
   return (
@@ -625,21 +624,17 @@ export default function OAuthPage() {
                     '--colors-messageText': '#CC7A4A',
                     '--colors-anchorTextColor': '#CC7A4A'
                   } as any}>
-                    <Auth
-                      supabaseClient={supabase}
-                      appearance={{
-                        theme: ThemeSupa,
-                        style: {
-                          button: { background: '#CC7A4A', color: '#ffffff', border: 'none', fontWeight: '800', borderRadius: '6px', fontSize: '11px', padding: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' },
-                          input: { background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#1c1c1e', fontSize: '11px', padding: '8px 12px' },
-                          label: { fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', color: '#475569', marginBottom: '4px', letterSpacing: '0.04em' },
-                          anchor: { color: '#CC7A4A', fontSize: '10px', fontWeight: 700 }
-                        }
-                      }}
-                      theme="default"
-                      providers={[]}
-                      redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/oauth` : undefined}
-                    />
+                    <form onSubmit={handleSandboxLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>Email</label>
+                        <input type="email" required value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)} placeholder="user@example.com" style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', outline: 'none' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>Password</label>
+                        <input type="password" required value={sandboxPassword} onChange={(e) => setSandboxPassword(e.target.value)} placeholder="••••••••" style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', outline: 'none' }} />
+                      </div>
+                      <button type="submit" style={{ background: '#CC7A4A', color: '#ffffff', border: 'none', fontWeight: 800, borderRadius: '6px', fontSize: '11px', padding: '10px', textTransform: 'uppercase', cursor: 'pointer' }}>Authenticate</button>
+                    </form>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>

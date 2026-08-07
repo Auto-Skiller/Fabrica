@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { ensureUserHarness, runPiAgent } from './harness.js';
+import { ensureUserHarness } from './harness.js';
+import { getOrCreateTenantRunnerUrl, proxyTurnToRunner } from '../services/cloudrun.orchestrator.js';
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
 
@@ -251,8 +252,9 @@ export async function startUserAgent(tenantId: string = 'default_user'): Promise
   const userRoot = getTenantRoot(tenantId);
 
   try {
-    // Trigger agent CLI targeting user tenant directory (cwd: userRoot)
-    await runPiAgent({ tenantId, prompt: 'Agent initialization handshake.' });
+    // Trigger agent CLI targeting user tenant directory via dedicated runner container
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    await proxyTurnToRunner(runnerUrl, { tenantId, prompt: 'Agent initialization handshake.' });
   } catch (err: any) {
     console.warn('Agent CLI trigger warning:', err?.message || err);
   }
@@ -417,9 +419,13 @@ export function getTenantTelemetry(tenantId: string = 'default_user'): TenantTel
 
   calculateSize(root);
 
+  const cpuUsage = process.cpuUsage();
+  const uptime = process.uptime() || 1;
+  const cpuUsagePercent = Math.min(100, Math.max(1, Math.round(((cpuUsage.user + cpuUsage.system) / 1000000) / uptime)));
+
   return {
     tenantId,
-    cpuUsagePercent: Math.min(100, Math.round(Math.random() * 15 + 5)),
+    cpuUsagePercent,
     memoryUsageMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
     activeDaemonsCount: 1,
     totalMissionsCount: 0,

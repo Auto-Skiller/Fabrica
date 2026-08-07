@@ -75,15 +75,6 @@ export function smartWrite(filePath: string, oldData: any, newData: any): boolea
   return false;
 }
 
-export function listEntities(config: any, tenantId: string = 'default_user'): [string, string][] {
-  const userEntitiesDir = path.join(process.cwd(), 'workspaces', tenantId, 'entities');
-  if (fs.existsSync(userEntitiesDir)) {
-    const subs = fs.readdirSync(userEntitiesDir).filter(s => !s.startsWith('.'));
-    return subs.map(s => [s, path.join(userEntitiesDir, s)]);
-  }
-  return [];
-}
-
 export function rglobFiles(dirPath: string, rootDir: string): string[] {
   const result: string[] = [];
   function traverse(cur: string) {

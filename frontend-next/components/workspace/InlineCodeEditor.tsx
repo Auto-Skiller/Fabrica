@@ -373,25 +373,6 @@ export const InlineCodeEditor: React.FC<InlineCodeEditorProps> = ({
           >
             {copied ? '✓ Copied' : '📋 Copy'}
           </button>
-          <button
-            onClick={handleSave}
-            title="Save file changes to GCS mount"
-            style={{
-              backgroundColor: savedBadge ? '#10b981' : '#0284c7',
-              border: 'none',
-              color: '#ffffff',
-              borderRadius: '3px',
-              padding: '2px 8px',
-              fontSize: '8px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px'
-            }}
-          >
-            {savedBadge ? '✓ Saved!' : '💾 Save'}
-          </button>
           {onMinimize && (
             <button
               onClick={onMinimize}
@@ -426,13 +407,13 @@ export const InlineCodeEditor: React.FC<InlineCodeEditorProps> = ({
         <div
           ref={lineNumsRef}
           style={{
-            width: '32px',
-            padding: '8px 0',
+            width: '28px',
+            padding: '4px 0',
             backgroundColor: '#090d16',
             color: '#475569',
             fontFamily: 'var(--mono, monospace)',
-            fontSize: '9.5px',
-            lineHeight: '1.6',
+            fontSize: '8.5px',
+            lineHeight: '1.4',
             textAlign: 'right',
             userSelect: 'none',
             overflow: 'hidden',
@@ -441,7 +422,7 @@ export const InlineCodeEditor: React.FC<InlineCodeEditorProps> = ({
           }}
         >
           {Array.from({ length: lineCount }).map((_, idx) => (
-            <div key={idx} style={{ paddingRight: '6px' }}>
+            <div key={idx} style={{ paddingRight: '4px' }}>
               {idx + 1}
             </div>
           ))}
@@ -461,10 +442,10 @@ export const InlineCodeEditor: React.FC<InlineCodeEditorProps> = ({
             color: '#e2e8f0',
             border: 'none',
             outline: 'none',
-            padding: '8px 10px',
+            padding: '4px 6px',
             fontFamily: 'var(--mono, monospace)',
-            fontSize: '9.5px',
-            lineHeight: '1.6',
+            fontSize: '8.5px',
+            lineHeight: '1.4',
             resize: 'none',
             whiteSpace: 'pre',
             tabSize: 2,

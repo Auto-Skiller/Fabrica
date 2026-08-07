@@ -3,8 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import {
-  runPiAgent,
-  runPiAgentStream,
+  getOrCreateTenantRunnerUrl,
+  proxyTurnToRunnerStream,
+  proxyTurnToRunner
+} from '../../services/cloudrun.orchestrator.js';
+import {
   stopPiAgent,
   listPiDaemons,
   listPiSessions,
@@ -40,7 +43,8 @@ router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    await runPiAgentStream({
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    await proxyTurnToRunnerStream(runnerUrl, {
       prompt,
       tenantId,
       sessionId,
@@ -72,7 +76,8 @@ router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const response = await runPiAgent({
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    const response = await proxyTurnToRunner(runnerUrl, {
       prompt,
       tenantId,
       sessionId,

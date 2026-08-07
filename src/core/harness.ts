@@ -31,9 +31,7 @@ export interface HarnessConfig {
 export interface UserHarnessInfo {
   tenantId: string;
   harnessDir: string;
-  entitiesDir: string;
   config: HarnessConfig;
-  entities: string[];
 }
 
 export interface PiExecutionOptions {
@@ -333,9 +331,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
   return {
     tenantId,
     harnessDir: '',
-    entitiesDir: '',
-    config,
-    entities: []
+    config
   };
 }
 

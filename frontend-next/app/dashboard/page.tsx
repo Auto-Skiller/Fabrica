@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../components/auth/supabase';
-import { Auth, ThemeSupa } from '../../components/auth';
 import { api, harnessApi } from '../../components/api';
 import { getActiveTenantId } from '../../components/auth/api';
 import { RuntimeYaml } from '../../components/harness/types';
@@ -1141,6 +1140,7 @@ export default function Dashboard() {
   const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState<string>('');
   const [activeCodePath, setActiveCodePath] = useState<string>('src/server.ts');
   const [activeCodeContent, setActiveCodeContent] = useState<string | undefined>(undefined);
+  const [expandedFolderPaths, setExpandedFolderPaths] = useState<Record<string, boolean>>({ 'src/': true, 'src': true });
 
   const router = useRouter();
 
@@ -3608,7 +3608,8 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   // Master grid column template (Left: Agent Section, Center: Missions & Workspace, Right: Live App Preview & Files)
   const getGridTemplateColumns = () => {
     const lw = `${leftSideW}%`;
-    return `${lw} minmax(0, 1fr) 420px`;
+    const sw = minSide ? '36px' : '270px';
+    return `${lw} minmax(0, 1fr) ${sw}`;
   };
 
   // Agent Chat Input Height Resizer Drag Mechanics
@@ -9726,60 +9727,60 @@ ${isDirector ? `
                 </div>
 
             {/* Main content viewport */}
-            <div className="mhq-body" style={{ flex: 1, padding: '12px', overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', height: '100%', minHeight: 0 }}>
+            <div className="mhq-body" style={{ flex: 1, padding: '3px 4px', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', height: '100%', minHeight: 0 }}>
                   
                   {/* Drafting Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>Drafting ({mDraft.length})</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '2px', height: '22px' }}>
+                      <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--muted)', fontFamily: 'var(--sans)' }}>Drafting ({mDraft.length})</span>
                       <select
                         value={draftingPhaseFilter}
                         onChange={(e) => setDraftingPhaseFilter(e.target.value)}
-                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7px', padding: '0px 2px', outline: 'none', cursor: 'pointer' }}
                         title="Filter Drafting Phase"
                       >
                         <option value="ALL">Phase: All</option>
                         <option value="discovery_scoping">Discovery & Scoping</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '2px' }}>
                       {mDraft.map(m => (
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group" style={{ width: '100%' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
-                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
-                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '7.5px', lineHeight: 1.15 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '5.5px', fontWeight: 800, padding: '0.5px 2px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                                   ⚡ {m.priority || 'MEDIUM'}
                                 </span>
                               </div>
-                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
+                              <span className="mcard-slug mono" style={{ fontSize: '5.5px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '6.5px', margin: '0.5px 0', lineHeight: 1.2 }}>{m.objective}</p>
                           {m.target_stack && (
-                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                            <div style={{ fontSize: '5.5px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
                               🛠️ {m.target_stack}
                             </div>
                           )}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: '2px', alignItems: 'center' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
-                            <span style={{ fontSize: '6px', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '0.5px 3px', borderRadius: '2px' }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: '1px', alignItems: 'center' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '5.5px', padding: '0.5px 2px' }}>🧠 {getCategoryLabel(m.type || m.category)}</span>
+                            <span style={{ fontSize: '5.5px', fontWeight: 800, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '0.5px 2px', borderRadius: '2px' }}>
                               ⚡ {loopEfforts['discovery_scoping'] || 'Medium'} EFFORT
                             </span>
                             {approvalGates['discovery_scoping'] !== false && (
-                              <span style={{ fontSize: '6px', fontWeight: 800, color: '#3b82f6', background: 'rgba(59, 130, 246, 0.12)', padding: '0.5px 3px', borderRadius: '2px' }}>
+                              <span style={{ fontSize: '5.5px', fontWeight: 800, color: '#3b82f6', background: 'rgba(59, 130, 246, 0.12)', padding: '0.5px 2px', borderRadius: '2px' }}>
                                 🛡️ Gate On
                               </span>
                             )}
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1px' }}>
                             <button
                               type="button"
                               onClick={(e) => {
@@ -9797,13 +9798,13 @@ ${isDirector ? `
                                 });
                                 setIsLogsModalOpen(true);
                               }}
-                              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-soft)', color: 'var(--text-secondary)', fontSize: '6.5px', padding: '1px 4px', borderRadius: '3px', cursor: 'pointer' }}
+                              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-soft)', color: 'var(--text-secondary)', fontSize: '6px', padding: '0.5px 3px', borderRadius: '2px', cursor: 'pointer' }}
                             >
                               📜 Logs
                             </button>
                             <button
                               className="mini accent"
-                              style={{ fontSize: '6.5px', padding: '1px 4px' }}
+                              style={{ fontSize: '6px', padding: '0.5px 3px' }}
                               onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                             >Plan ➔</button>
                           </div>
@@ -9812,44 +9813,44 @@ ${isDirector ? `
                       {mDraft.length === 0 && (
                         <div style={{
                           border: '1.5px dashed var(--border-soft)',
-                          padding: '16px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 6px',
+                          borderRadius: '6px',
                           textAlign: 'center',
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: 'var(--muted)',
                           fontFamily: 'var(--sans)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
+                          gap: '4px',
                           background: 'rgba(255,255,255,0.015)'
                         }}>
-                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>💡</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Drafting Items</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                            Formulate a new strategic directive or concept.
+                          <div style={{ fontSize: '16px', filter: 'grayscale(0.3) opacity(0.85)' }}>💡</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '9px' }}>No Drafting Items</div>
+                          <p style={{ margin: 0, fontSize: '7.5px', color: 'var(--muted)', lineHeight: '1.2' }}>
+                            Formulate a new strategic directive.
                           </p>
                           <button
                             onClick={() => setIsAddMissionOpen(true)}
                             style={{
-                              fontSize: '8px',
+                              fontSize: '7.5px',
                               fontWeight: 800,
                               background: 'var(--accent)',
                               color: '#fff',
                               border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 10px',
+                              borderRadius: '3px',
+                              padding: '2px 8px',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '3px',
                               marginTop: '2px',
                               boxShadow: '0 2px 6px rgba(99, 102, 241, 0.25)'
                             }}
                           >
                             <span>✨</span>
-                            <span>+ Draft New Mission</span>
+                            <span>+ Draft New</span>
                           </button>
                         </div>
                       )}
@@ -9857,13 +9858,13 @@ ${isDirector ? `
                   </div>
 
                   {/* Planning Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--sans)' }}>{dtxt.colPlanning} ({mPlan.length})</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '2px', height: '22px' }}>
+                      <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--sans)' }}>{dtxt.colPlanning} ({mPlan.length})</span>
                       <select
                         value={planningPhaseFilter}
                         onChange={(e) => setPlanningPhaseFilter(e.target.value)}
-                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7px', padding: '0px 2px', outline: 'none', cursor: 'pointer' }}
                         title="Filter Planning Phase"
                       >
                         <option value="ALL">Phase: All</option>
@@ -9872,47 +9873,47 @@ ${isDirector ? `
                         <option value="strategic_synthesis">Strategic Synthesis</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '2px' }}>
                       {mPlan.map(m => (
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group" style={{ width: '100%' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
-                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
-                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '7.5px', lineHeight: 1.15 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '5.5px', fontWeight: 800, padding: '0.5px 2px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--accent)', whiteSpace: 'nowrap' }}>
                                   ⚡ {m.priority || 'HIGH'}
                                 </span>
                               </div>
-                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
+                              <span className="mcard-slug mono" style={{ fontSize: '5.5px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '6.5px', margin: '0.5px 0', lineHeight: 1.2 }}>{m.objective}</p>
                           {m.phase === 'qa' && (
-                            <div style={{ fontSize: '6px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '1px 3px', borderRadius: '2px', border: '1px solid rgba(244,63,94,0.2)' }}>
+                            <div style={{ fontSize: '5.5px', color: '#f43f5e', background: 'rgba(244,63,94,0.08)', padding: '0.5px 2px', borderRadius: '2px', border: '1px solid rgba(244,63,94,0.2)' }}>
                               🛡️ QA Gating Active
                             </div>
                           )}
                           {m.target_stack && (
-                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                            <div style={{ fontSize: '5.5px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
                               🛠️ {m.target_stack}
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧪 {getCategoryLabel(m.type || m.category)}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '5.5px', padding: '0.5px 2px' }}>🧪 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini accent"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Launch ➔</button>
                             </div>
@@ -9922,43 +9923,43 @@ ${isDirector ? `
                       {mPlan.length === 0 && (
                         <div style={{
                           border: '1.5px dashed var(--border-soft)',
-                          padding: '16px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 6px',
+                          borderRadius: '6px',
                           textAlign: 'center',
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: 'var(--muted)',
                           fontFamily: 'var(--sans)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
+                          gap: '4px',
                           background: 'rgba(255,255,255,0.015)'
                         }}>
-                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🧪</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>Planning Stage Clear</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                            No missions awaiting architectural approval or QA gating.
+                          <div style={{ fontSize: '16px', filter: 'grayscale(0.3) opacity(0.85)' }}>🧪</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '9px' }}>Planning Clear</div>
+                          <p style={{ margin: 0, fontSize: '7.5px', color: 'var(--muted)', lineHeight: '1.2' }}>
+                            No missions awaiting approval.
                           </p>
                           {mDraft.length > 0 && (
                             <div style={{ marginTop: '2px' }}>
                               <button
                                 onClick={() => handleUpdateMissionStatus(mDraft[0], 'planning')}
                                 style={{
-                                  fontSize: '8px',
+                                  fontSize: '7.5px',
                                   fontWeight: 800,
                                   background: 'rgba(99, 102, 241, 0.12)',
                                   color: 'var(--accent)',
                                   border: '1px solid var(--accent)',
-                                  borderRadius: '4px',
-                                  padding: '4px 8px',
+                                  borderRadius: '3px',
+                                  padding: '2px 6px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '3px'
+                                  gap: '2px'
                                 }}
                               >
-                                <span>Promote "{mDraft[0].id.slice(0, 10)}..." ➔</span>
+                                <span>Promote ➔</span>
                               </button>
                             </div>
                           )}
@@ -9968,13 +9969,13 @@ ${isDirector ? `
                   </div>
 
                   {/* Execution Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--sans)' }}>{dtxt.colExecution} ({mExec.length})</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '2px', height: '22px' }}>
+                      <span style={{ fontSize: '8.5px', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--sans)' }}>{dtxt.colExecution} ({mExec.length})</span>
                       <select
                         value={executionPhaseFilter}
                         onChange={(e) => setExecutionPhaseFilter(e.target.value)}
-                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7px', padding: '0px 2px', outline: 'none', cursor: 'pointer' }}
                         title="Filter Execution Phase"
                       >
                         <option value="ALL">Phase: All</option>
@@ -9982,56 +9983,56 @@ ${isDirector ? `
                         <option value="verification">Verification</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '2px' }}>
                       {mExec.map(m => (
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group" style={{ width: '100%' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
-                                <b className="mcard-title-text" style={{ fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
-                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ fontSize: '7.5px', lineHeight: 1.15 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '5.5px', fontWeight: 800, padding: '0.5px 2px', borderRadius: '2px', background: 'rgba(245,158,11,0.12)', color: '#f59e0b', whiteSpace: 'nowrap' }}>
                                   ⚡ {m.priority || 'CRITICAL'}
                                 </span>
                               </div>
-                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
+                              <span className="mcard-slug mono" style={{ fontSize: '5.5px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '6.5px', margin: '0.5px 0', lineHeight: 1.2 }}>{m.objective}</p>
                           
                           <div className="bar-row" style={{ margin: '1px 0' }}>
                             <div className="bar" style={{ height: '3px' }}>
                               <i style={{ width: m.metrics?.progress_percentage || '0%' }}></i>
                             </div>
-                            <span className="bar-pct" style={{ fontSize: '6px' }}>{m.metrics?.progress_percentage || '0%'}</span>
+                            <span className="bar-pct" style={{ fontSize: '5.5px' }}>{m.metrics?.progress_percentage || '0%'}</span>
                           </div>
 
                           {m.target_stack && (
-                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                            <div style={{ fontSize: '5.5px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
                               🛠️ {m.target_stack}
                             </div>
                           )}
 
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>🧬 {getCategoryLabel(m.type || m.category)}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '5.5px', padding: '0.5px 2px' }}>🧬 {getCategoryLabel(m.type || m.category)}</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'planning'); }}
                               >◀ Plan</button>
                               <button
                                 className="mini accent-2"
-                                style={{ fontSize: '6.5px', padding: '1px 3px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px', background: 'var(--accent-2)', color: '#fff', border: 'none' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'archive'); }}
                               >Deliver ✓</button>
                             </div>
@@ -10041,63 +10042,63 @@ ${isDirector ? `
                       {mExec.length === 0 && (
                         <div style={{
                           border: '1.5px dashed var(--border-soft)',
-                          padding: '16px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 6px',
+                          borderRadius: '6px',
                           textAlign: 'center',
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: 'var(--muted)',
                           fontFamily: 'var(--sans)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
+                          gap: '4px',
                           background: 'rgba(255,255,255,0.015)'
                         }}>
-                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>⚡</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Active Execution</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                            All runtime components are standing by.
+                          <div style={{ fontSize: '16px', filter: 'grayscale(0.3) opacity(0.85)' }}>⚡</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '9px' }}>No Active Execution</div>
+                          <p style={{ margin: 0, fontSize: '7.5px', color: 'var(--muted)', lineHeight: '1.2' }}>
+                            Runtime components standing by.
                           </p>
                           <div style={{ marginTop: '2px' }}>
                             {mPlan.length > 0 ? (
                               <button
                                 onClick={() => handleUpdateMissionStatus(mPlan[0], 'execution')}
                                 style={{
-                                  fontSize: '8px',
+                                  fontSize: '7.5px',
                                   fontWeight: 800,
                                   background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                                   color: '#fff',
                                   border: 'none',
-                                  borderRadius: '4px',
-                                  padding: '4px 8px',
+                                  borderRadius: '3px',
+                                  padding: '2px 6px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '3px',
+                                  gap: '2px',
                                   boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
                                 }}
                               >
-                                <span>🚀 Launch "{mPlan[0].id.slice(0, 10)}..."</span>
+                                <span>🚀 Launch ➔</span>
                               </button>
                             ) : (
                               <button
                                 onClick={() => setIsAddMissionOpen(true)}
                                 style={{
-                                  fontSize: '8px',
+                                  fontSize: '7.5px',
                                   fontWeight: 800,
                                   background: 'var(--surface-alt)',
                                   color: 'var(--text-bright)',
                                   border: '1px solid var(--border-soft)',
-                                  borderRadius: '4px',
-                                  padding: '4px 8px',
+                                  borderRadius: '3px',
+                                  padding: '2px 6px',
                                   cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '3px'
+                                  gap: '2px'
                                 }}
                               >
-                                <span>+ Quick Register</span>
+                                <span>+ Register</span>
                               </button>
                             )}
                           </div>
@@ -10107,55 +10108,55 @@ ${isDirector ? `
                   </div>
 
                   {/* Delivery Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minHeight: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '4px', height: '28px' }}>
-                      <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>Delivery ({mArchive.length})</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minHeight: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid var(--border)', paddingBottom: '2px', height: '22px' }}>
+                      <span style={{ fontSize: '8.5px', fontWeight: 800, color: 'var(--accent-2)', fontFamily: 'var(--sans)' }}>Delivery ({mArchive.length})</span>
                       <select
                         value={deliveryPhaseFilter}
                         onChange={(e) => setDeliveryPhaseFilter(e.target.value)}
-                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7.5px', padding: '1px 3px', outline: 'none', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '3px', color: 'var(--text-secondary)', fontSize: '7px', padding: '0px 2px', outline: 'none', cursor: 'pointer' }}
                         title="Filter Delivery Phase"
                       >
                         <option value="ALL">Phase: All</option>
                         <option value="review_handover">Review & Handover</option>
                       </select>
                     </div>
-                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px', paddingRight: '2px' }}>
                       {mArchive.map(m => (
                         <div
                           key={m.id}
                           className="mcard sm"
                           onClick={() => setSelectedMission(m)}
-                          style={{ display: 'flex', flexDirection: 'column', gap: '2px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '4px 6px' }}
+                          style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
                             <div className="mcard-title-group" style={{ width: '100%' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', width: '100%' }}>
-                                <b className="mcard-title-text" style={{ textDecoration: 'line-through', fontSize: '8px', lineHeight: 1.2 }}>{m.id.replace(/_/g, ' ')}</b>
-                                <span style={{ fontSize: '6px', fontWeight: 800, padding: '0.5px 3px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3px', width: '100%' }}>
+                                <b className="mcard-title-text" style={{ textDecoration: 'line-through', fontSize: '7.5px', lineHeight: 1.15 }}>{m.id.replace(/_/g, ' ')}</b>
+                                <span style={{ fontSize: '5.5px', fontWeight: 800, padding: '0.5px 2px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', color: 'var(--muted)', whiteSpace: 'nowrap' }}>
                                   ⚡ {m.priority || 'LOW'}
                                 </span>
                               </div>
-                              <span className="mcard-slug mono" style={{ fontSize: '6px', opacity: 0.8 }}>{m.id}</span>
+                              <span className="mcard-slug mono" style={{ fontSize: '5.5px', opacity: 0.8 }}>{m.id}</span>
                             </div>
                           </div>
-                          <p className="mcard-desc" style={{ fontSize: '7px', margin: '1px 0', lineHeight: 1.25 }}>{m.objective}</p>
+                          <p className="mcard-desc" style={{ fontSize: '6.5px', margin: '0.5px 0', lineHeight: 1.2 }}>{m.objective}</p>
                           {m.target_stack && (
-                            <div style={{ fontSize: '6px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
+                            <div style={{ fontSize: '5.5px', color: 'var(--accent)', fontFamily: 'var(--mono)' }}>
                               🛠️ {m.target_stack}
                             </div>
                           )}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '6px', padding: '1px 3px' }}>✓ archived</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1px' }}>
+                            <span className="mcard-meta-badge model-badge" style={{ fontSize: '5.5px', padding: '0.5px 2px' }}>✓ archived</span>
                             <div style={{ display: 'flex', gap: '2px' }}>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'drafting'); }}
                               >◀ Draft</button>
                               <button
                                 className="mini ghost"
-                                style={{ fontSize: '6.5px', padding: '1px 3px' }}
+                                style={{ fontSize: '6px', padding: '0.5px 3px' }}
                                 onClick={(e) => { e.stopPropagation(); handleUpdateMissionStatus(m, 'execution'); }}
                               >Re-open ↺</button>
                             </div>
@@ -10165,23 +10166,23 @@ ${isDirector ? `
                       {mArchive.length === 0 && (
                         <div style={{
                           border: '1.5px dashed var(--border-soft)',
-                          padding: '16px 12px',
-                          borderRadius: '8px',
+                          padding: '8px 6px',
+                          borderRadius: '6px',
                           textAlign: 'center',
-                          fontSize: '9px',
+                          fontSize: '8.5px',
                           color: 'var(--muted)',
                           fontFamily: 'var(--sans)',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px',
+                          gap: '4px',
                           background: 'rgba(255,255,255,0.015)'
                         }}>
-                          <div style={{ fontSize: '22px', filter: 'grayscale(0.3) opacity(0.85)' }}>🎉</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '10px' }}>No Completed Items</div>
-                          <p style={{ margin: 0, fontSize: '8px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                            Completed missions will appear here when archived.
+                          <div style={{ fontSize: '16px', filter: 'grayscale(0.3) opacity(0.85)' }}>🎉</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-bright)', fontSize: '9px' }}>No Completed Items</div>
+                          <p style={{ margin: 0, fontSize: '7.5px', color: 'var(--muted)', lineHeight: '1.2' }}>
+                            Completed missions will appear here.
                           </p>
                         </div>
                       )}
@@ -10406,111 +10407,16 @@ ${isDirector ? `
                   overflow: 'hidden',
                   background: 'var(--surface-alt)'
                 }}>
-                  {yourDataSystemsView === ('artifact' as any) ? (
-                    /* ARTIFACT VIEWER MODE */
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, gap: '6px', padding: '6px' }}>
-                      {/* Artifact Selector Header */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', background: 'var(--surface)', borderRadius: '4px', border: '1px solid var(--border-soft)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button
-                            onClick={() => setYourDataSystemsView('list' as any)}
-                            style={{
-                              fontSize: '8px',
-                              fontWeight: 800,
-                              padding: '2px 7px',
-                              borderRadius: '3px',
-                              border: '1px solid var(--border-soft)',
-                              background: 'var(--surface-alt)',
-                              color: 'var(--text-bright)',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ◀ Back to Workspace Subsystem
-                          </button>
-                          <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--accent)' }}>SELECT DELIVERABLE:</span>
-                          <select
-                            value={selectedArtifact?.id || selectedArtifact?.name || ''}
-                            onChange={(e) => {
-                              const found = systemComponents.find((sc: any) => (sc.id || sc.name) === e.target.value);
-                              setSelectedArtifact(found || null);
-                            }}
-                            style={{
-                              fontSize: '8.5px',
-                              fontWeight: 700,
-                              background: 'var(--surface-alt)',
-                              color: 'var(--text-bright)',
-                              border: '1px solid var(--border-soft)',
-                              borderRadius: '3px',
-                              padding: '2px 6px',
-                              maxWidth: '220px',
-                              outline: 'none'
-                            }}
-                          >
-                            <option value="">-- Choose Deliverable --</option>
-                            {systemComponents.map((sc: any) => (
-                              <option key={sc.id || sc.name} value={sc.id || sc.name}>
-                                ⚡ {sc.name || sc.title || 'Deliverable Item'} ({sc.metadata?.sub_section || sc.sub_section || 'executions'})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <span style={{ fontSize: '8px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                          {selectedArtifact ? `ID: ${selectedArtifact.id || selectedArtifact.name}` : 'No selection'}
-                        </span>
-                      </div>
-
-                      {/* Artifact Content Display */}
-                      <div style={{ flex: 1, border: '1px solid var(--border-soft)', borderRadius: '4px', background: 'var(--surface)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        {selectedArtifact ? (
-                          (() => {
-                            const sc = selectedArtifact;
-                            if (!sc) return <div style={{ padding: '12px', fontSize: '10px', color: 'var(--muted)' }}>Deliverable not found.</div>;
-                            
-                            const content = sc.content || sc.description || JSON.stringify(sc.metadata || {}, null, 2);
-                            const isCode = typeof content === 'string' && (content.includes('import ') || content.includes('function') || content.includes('<div') || content.includes('export '));
-
-                            return (
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                                <div style={{ padding: '6px 10px', background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-bright)' }}>
-                                    📄 {sc.name || 'Deliverable Content'}
-                                  </span>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(content);
-                                        setToast({ message: 'Copied content to clipboard!', type: 'info', isOpen: true });
-                                      }}
-                                      style={{ fontSize: '7.5px', padding: '1px 5px', borderRadius: '2px', border: '1px solid var(--border-soft)', background: 'var(--surface)', cursor: 'pointer' }}
-                                    >
-                                      📋 Copy
-                                    </button>
-                                  </div>
-                                </div>
-                                <div style={{ flex: 1, padding: '10px', overflowY: 'auto', fontFamily: isCode ? 'var(--mono)' : 'inherit', fontSize: '9px', color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
-                                  {content}
-                                </div>
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '10px' }}>
-                            No deliverable selected.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    /* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (VERTICAL STACKED LIST WITH TOP SEARCH BAR) */
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+                  {/* WORKSPACE SUBSYSTEM 7 SUB-SECTIONS (VERTICAL STACKED LIST WITH TOP SEARCH BAR) */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
                       {/* TOP SEARCH BAR */}
                       <div style={{
-                        padding: '6px 8px',
+                        padding: '4px 6px',
                         background: 'var(--surface-alt)',
                         borderBottom: '1px solid var(--border-soft)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        gap: '4px',
                         flexShrink: 0
                       }}>
                         {/* Minimize icon on the left of the workspace top-bar */}
@@ -10518,9 +10424,9 @@ ${isDirector ? `
                           onClick={() => toggleProjectsHorizontal(true)}
                           title="Minimize Workspace section as right sidebar"
                           style={{
-                            height: '20px',
-                            width: '20px',
-                            fontSize: '9px',
+                            height: '18px',
+                            width: '18px',
+                            fontSize: '8px',
                             fontWeight: 800,
                             backgroundColor: '#1e293b',
                             border: '1px solid #334155',
@@ -10539,22 +10445,22 @@ ${isDirector ? `
                         <div style={{ position: 'relative', flex: 1 }}>
                           <input
                             type="text"
-                            placeholder="🔍 Search 7 sub-systems & docs..."
+                            placeholder="🔍 Search 7 sub-systems..."
                             value={workspaceSearchQuery}
                             onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
                             style={{
                               width: '100%',
-                              padding: '3px 20px 3px 22px',
-                              fontSize: '8.5px',
+                              padding: '2px 18px 2px 20px',
+                              fontSize: '8px',
                               background: 'var(--surface)',
                               border: '1px solid var(--border-soft)',
-                              borderRadius: '4px',
+                              borderRadius: '3px',
                               color: 'var(--text-bright)',
                               outline: 'none',
                               boxSizing: 'border-box'
                             }}
                           />
-                          <span style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', fontSize: '9px', color: 'var(--muted)' }}>
+                          <span style={{ position: 'absolute', left: '5px', top: '50%', transform: 'translateY(-50%)', fontSize: '8px', color: 'var(--muted)' }}>
                             🔍
                           </span>
                           {workspaceSearchQuery && (
@@ -10568,7 +10474,7 @@ ${isDirector ? `
                                 background: 'transparent',
                                 border: 'none',
                                 color: 'var(--muted)',
-                                fontSize: '9px',
+                                fontSize: '8px',
                                 cursor: 'pointer',
                                 padding: '1px 3px'
                               }}
@@ -10580,7 +10486,7 @@ ${isDirector ? `
                       </div>
 
                       {/* 7 SUB-SECTIONS LIST */}
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '6px', gap: '6px' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '2px 3px', gap: '3px' }}>
                       {(() => {
                         const SECTION_WORKSPACE_FILES: Record<string, Array<{ id: string; name: string; path: string; isDir?: boolean; icon: string; content?: string }>> = {
                           discovery_scoping: [
@@ -10658,115 +10564,193 @@ ${isDirector ? `
                               flexShrink: 0,
                               background: 'var(--surface)',
                               border: '1px solid var(--border-soft)',
-                              borderRadius: '5px',
-                              padding: '6px 8px',
+                              borderRadius: '4px',
+                              padding: '3px 4px',
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '5px'
+                              gap: '2px'
                             }}>
                               {/* SUB-SECTION HEADER */}
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid var(--border-soft)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                                  <span style={{ fontSize: '11px', flexShrink: 0 }}>{sec.icon}</span>
-                                  <span style={{ fontSize: '9px', fontWeight: 900, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '2px', borderBottom: '1px solid var(--border-soft)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', overflow: 'hidden' }}>
+                                  <span style={{ fontSize: '9px', flexShrink: 0 }}>{sec.icon}</span>
+                                  <span style={{ fontSize: '8px', fontWeight: 900, color: 'var(--text-bright)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                                     {sec.label}
                                   </span>
                                   <span style={{
-                                    fontSize: '7px',
+                                    fontSize: '6px',
                                     fontWeight: 800,
                                     color: sec.color,
                                     background: sec.bg,
-                                    padding: '1px 5px',
-                                    borderRadius: '3px',
+                                    padding: '0.5px 3px',
+                                    borderRadius: '2px',
                                     fontFamily: 'var(--mono)'
                                   }}>
                                     {allItems.length} {isSource ? 'Docs' : 'Items'}
                                   </span>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '3px' }}>
+                                <div style={{ display: 'flex', gap: '2px' }}>
                                   <button
                                     onClick={() => setIsImportModalOpen(true)}
                                     title={`Add new document to ${sec.label}`}
                                     style={{
-                                      fontSize: '7.5px',
+                                      fontSize: '6.5px',
                                       fontWeight: 800,
                                       background: 'var(--surface-alt)',
                                       border: '1px solid var(--border-soft)',
                                       color: 'var(--text-bright)',
                                       borderRadius: '2px',
-                                      padding: '1px 4px',
+                                      padding: '0.5px 2.5px',
                                       cursor: 'pointer'
                                     }}
                                   >
                                     + Add
                                   </button>
                                   <button
-                                    onClick={() => setIsImportModalOpen(true)}
-                                    title={`Import item into ${sec.label}`}
+                                    onClick={() => setIsExportModalOpen(true)}
+                                    title={`Export item from ${sec.label}`}
                                     style={{
-                                      fontSize: '7.5px',
+                                      fontSize: '6.5px',
                                       fontWeight: 800,
                                       background: 'var(--surface-alt)',
                                       border: '1px solid var(--border-soft)',
                                       color: 'var(--text-bright)',
                                       borderRadius: '2px',
-                                      padding: '1px 4px',
+                                      padding: '0.5px 2.5px',
                                       cursor: 'pointer'
                                     }}
                                   >
-                                    📥 Import
+                                    📤 Export
                                   </button>
                                 </div>
                               </div>
 
                               {/* SUB-SECTION ITEMS SCROLLABLE LIST */}
-                              <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ maxHeight: '180px', minHeight: '80px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 {allItems.length > 0 ? (
                                   allItems.map((item: any) => {
-                                    const targetPath = item.isDir ? (item.path === 'src/' ? 'src/server.ts' : item.path) : (item.path || item.name || item.title || 'src/server.ts');
-                                    const isEditing = activeCodePath === targetPath || activeCodePath === item.name || activeCodePath === item.path;
-                                    const itemIcon = item.icon || (item.isDir ? '📁' : isSource ? '📄' : '⚡');
+                                    const itemPath = item.path || item.name || item.title || '';
+                                    const folderKey = item.isDir ? itemPath : (itemPath.includes('/') ? itemPath.split('/')[0] + '/' : '');
+                                    
+                                    // If this is a child file inside a folder, check if parent folder is collapsed
+                                    if (!item.isDir && folderKey) {
+                                      const isParentDirInList = allItems.some((dirItem: any) => dirItem.isDir && (dirItem.path === folderKey || dirItem.name === folderKey));
+                                      if (isParentDirInList && expandedFolderPaths[folderKey] === false) {
+                                        // Parent folder is collapsed, hide this child file
+                                        return null;
+                                      }
+                                    }
+
+                                    const isDirExpanded = item.isDir ? (expandedFolderPaths[itemPath] !== false) : false;
+                                    const targetPath = item.isDir ? itemPath : (itemPath || 'src/server.ts');
+                                    const isEditing = !item.isDir && (activeCodePath === targetPath || activeCodePath === item.name);
+                                    
+                                    // Helper function for realistic file/folder icons based on exact file types
+                                    const getRealFileIcon = (nameOrPath: string, isDir?: boolean, isExpanded?: boolean): string => {
+                                      if (isDir) {
+                                        const dirLower = String(nameOrPath || '').toLowerCase();
+                                        if (dirLower.includes('node_modules')) return '📦';
+                                        if (dirLower.includes('git')) return '🌿';
+                                        if (dirLower.includes('public')) return '🌐';
+                                        if (dirLower.includes('component')) return '🧩';
+                                        if (dirLower.includes('style') || dirLower.includes('css')) return '🎨';
+                                        if (dirLower.includes('test') || dirLower.includes('qa')) return '🧪';
+                                        if (dirLower.includes('data')) return '📊';
+                                        if (dirLower.includes('doc')) return '📚';
+                                        return isExpanded ? '📂' : '📁';
+                                      }
+
+                                      const cleanName = String(nameOrPath || '').split('/').pop() || nameOrPath || '';
+                                      const lower = cleanName.toLowerCase();
+
+                                      if (lower === 'package.json' || lower === 'package-lock.json' || lower === 'pnpm-lock.yaml' || lower === 'yarn.lock') return '📦';
+                                      if (lower === 'tsconfig.json' || lower === 'jsconfig.json') return '⚙️';
+                                      if (lower.includes('docker')) return '🐳';
+                                      if (lower.startsWith('.env')) return '🔑';
+                                      if (lower.includes('git') || lower === '.gitignore') return '🌿';
+                                      if (lower === 'readme.md') return '📖';
+                                      if (lower.includes('vite.config') || lower.includes('next.config') || lower.includes('webpack')) return '🛠️';
+                                      if (lower.includes('audit') || lower.includes('security')) return '🛡️';
+
+                                      if (lower.endsWith('.tsx') || lower.endsWith('.jsx')) return '⚛️';
+                                      if (lower.endsWith('.ts')) return '📘';
+                                      if (lower.endsWith('.js') || lower.endsWith('.mjs') || lower.endsWith('.cjs')) return '🟨';
+                                      if (lower.endsWith('.json')) return '📑';
+                                      if (lower.endsWith('.css') || lower.endsWith('.scss') || lower.endsWith('.less')) return '🎨';
+                                      if (lower.endsWith('.html') || lower.endsWith('.htm')) return '🌐';
+                                      if (lower.endsWith('.md') || lower.endsWith('.markdown')) return '📝';
+                                      if (lower.endsWith('.csv')) return '📊';
+                                      if (lower.endsWith('.log') || lower.endsWith('.txt')) return '📜';
+                                      if (lower.endsWith('.py')) return '🐍';
+                                      if (lower.endsWith('.sql') || lower.endsWith('.db') || lower.endsWith('.sqlite')) return '🗄️';
+                                      if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.svg') || lower.endsWith('.webp') || lower.endsWith('.gif')) return '🖼️';
+                                      if (lower.endsWith('.pdf')) return '📕';
+                                      if (lower.endsWith('.zip') || lower.endsWith('.tar') || lower.endsWith('.gz')) return '🗜️';
+                                      if (lower.endsWith('.sh') || lower.endsWith('.bash')) return '💻';
+
+                                      return '📄';
+                                    };
+
+                                    const itemIcon = getRealFileIcon(item.name || item.path || item.title, item.isDir, isDirExpanded);
+                                    const isChildFile = !item.isDir && folderKey && allItems.some((dirItem: any) => dirItem.isDir && (dirItem.path === folderKey || dirItem.name === folderKey));
 
                                     return (
                                       <div
                                         key={item.id || item.path || item.name}
                                         onClick={() => {
-                                          const targetContent = item.content || item.description || (typeof item.metadata?.content === 'string' ? item.metadata.content : (item.metadata ? JSON.stringify(item.metadata, null, 2) : undefined));
-                                          setActiveCodePath(targetPath);
-                                          if (targetContent) setActiveCodeContent(targetContent);
-                                          setToast({ message: `Opened ${targetPath} in Code Editor`, type: 'info', isOpen: true });
+                                          if (item.isDir) {
+                                            // A folder cannot be opened in code editor. Clicking toggles its contents!
+                                            setExpandedFolderPaths(prev => {
+                                              const current = prev[itemPath] !== false;
+                                              const next = !current;
+                                              setToast({ message: next ? `Expanded folder ${item.name || itemPath}` : `Collapsed folder ${item.name || itemPath}`, type: 'info', isOpen: true });
+                                              return { ...prev, [itemPath]: next };
+                                            });
+                                          } else {
+                                            // Open file in code editor
+                                            const targetContent = item.content || item.description || (typeof item.metadata?.content === 'string' ? item.metadata.content : (item.metadata ? JSON.stringify(item.metadata, null, 2) : undefined));
+                                            setActiveCodePath(targetPath);
+                                            if (targetContent) setActiveCodeContent(targetContent);
+                                            setToast({ message: `Opened ${targetPath} in Code Editor`, type: 'info', isOpen: true });
+                                          }
                                         }}
                                         style={{
                                           background: isEditing ? 'rgba(56,189,248,0.12)' : 'var(--surface-alt)',
                                           border: isEditing ? '1px solid var(--accent)' : '1px solid var(--border-soft)',
-                                          borderRadius: '3px',
-                                          padding: '4px 6px',
+                                          borderRadius: '2px',
+                                          padding: '2.5px 4px',
+                                          marginLeft: isChildFile ? '8px' : '0px',
+                                          borderLeft: isChildFile ? '1.5px solid var(--accent)' : isEditing ? '1px solid var(--accent)' : '1px solid var(--border-soft)',
                                           display: 'flex',
                                           flexDirection: 'column',
-                                          gap: '2px',
-                                          fontSize: '8px',
+                                          gap: '1px',
+                                          fontSize: '7.5px',
                                           cursor: 'pointer',
                                           transition: 'all 0.15s ease'
                                         }}
                                       >
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                          <div style={{ fontWeight: isEditing ? 800 : 700, color: isEditing ? 'var(--accent)' : 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <div style={{ fontWeight: isEditing ? 800 : 700, color: isEditing ? 'var(--accent)' : 'var(--text-bright)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: '3px' }}>
                                             <span>{itemIcon}</span>
                                             <span>{item.name || item.title || 'Workspace Item'}</span>
                                           </div>
-                                          {isEditing ? (
-                                            <span style={{ fontSize: '6px', fontWeight: 800, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '1px 4px', borderRadius: '2px' }}>
+                                          {item.isDir ? (
+                                            <span style={{ fontSize: '5.5px', color: 'var(--accent)', background: 'rgba(56,189,248,0.12)', padding: '0.5px 3px', borderRadius: '2px', fontWeight: 800 }}>
+                                              {isDirExpanded ? '📂 DIR ▾' : '📁 DIR ▸'}
+                                            </span>
+                                          ) : isEditing ? (
+                                            <span style={{ fontSize: '5.5px', fontWeight: 800, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '0.5px 3px', borderRadius: '2px' }}>
                                               🟢 OPEN
                                             </span>
                                           ) : (
-                                            <span style={{ fontSize: '6px', color: 'var(--muted)', background: 'var(--surface)', padding: '1px 3px', borderRadius: '2px' }}>
-                                              {item.isDir ? 'DIR' : 'FILE'}
+                                            <span style={{ fontSize: '5.5px', color: 'var(--muted)', background: 'var(--surface)', padding: '0.5px 2px', borderRadius: '2px' }}>
+                                              FILE
                                             </span>
                                           )}
                                         </div>
                                         {(item.path || item.metadata?.description || item.description) && (
-                                          <div style={{ fontSize: '7px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          <div style={{ fontSize: '6.5px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {item.path ? `workspace/${item.path}` : (item.metadata?.description || item.description)}
                                           </div>
                                         )}
@@ -10777,15 +10761,15 @@ ${isDirector ? `
                                   <div style={{
                                     flex: 1,
                                     border: '1px dashed var(--border-soft)',
-                                    borderRadius: '4px',
-                                    padding: '12px 8px',
+                                    borderRadius: '3px',
+                                    padding: '6px 4px',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '4px',
+                                    gap: '2px',
                                     textAlign: 'center',
-                                    fontSize: '7.5px',
+                                    fontSize: '7px',
                                     color: 'var(--muted)',
                                     background: 'rgba(255,255,255,0.01)'
                                   }}>
@@ -10799,7 +10783,6 @@ ${isDirector ? `
                       })()}
                       </div>
                     </div>
-                  )}
                 </div>
               </div>
             }

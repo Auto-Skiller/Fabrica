@@ -87,28 +87,6 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
       }}>
         {/* Navigation & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading || activeState === 'waking_up'}
-            title="Reload Preview"
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border-soft)',
-              color: 'var(--text)',
-              borderRadius: '3px',
-              padding: '1px 4px',
-              fontSize: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px'
-            }}
-          >
-            <span style={{ display: 'inline-block', transform: isLoading ? 'rotate(360deg)' : 'none', transition: 'transform 0.5s', fontSize: '8px' }}>
-              🔄
-            </span>
-          </button>
-
           {/* Viewport Mode Switcher */}
           <div style={{
             display: 'flex',
@@ -185,7 +163,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
               backgroundColor: 'var(--surface)',
               border: '1px solid var(--border-soft)',
               borderRadius: '3px',
-              padding: '1px 22px 1px 5px',
+              padding: '1px 5px',
               fontSize: '8px',
               fontFamily: 'var(--mono)',
               color: 'var(--text)',
@@ -193,13 +171,32 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
               height: '18px'
             }}
           />
-          <span style={{ position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', fontSize: '7px', color: 'var(--status-success)', fontWeight: 800 }}>
-            🔒 SSL
-          </span>
         </div>
 
-        {/* External Link & Optional Minimize Left */}
+        {/* External Link, Refresh & Optional Minimize Left */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading || activeState === 'waking_up'}
+            title="Reload Preview"
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text)',
+              borderRadius: '3px',
+              padding: '1px 5px',
+              fontSize: '11px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '18px'
+            }}
+          >
+            <span style={{ display: 'inline-block', transform: isLoading ? 'rotate(360deg)' : 'none', transition: 'transform 0.5s', fontSize: '11px' }}>
+              🔄
+            </span>
+          </button>
           <a
             href={currentUrl}
             target="_blank"
@@ -258,7 +255,7 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'var(--surface-alt)',
-        padding: viewportMode === 'desktop' ? '0' : '16px',
+        padding: viewportMode === 'desktop' ? '0' : '6px',
         overflow: 'auto'
       }}>
         {/* Cold Start Mask Overlay */}
@@ -274,22 +271,22 @@ export const LiveAppPreview: React.FC<LiveAppPreviewProps> = ({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '24px',
+            padding: '12px',
             textAlign: 'center'
           }}>
             <div style={{
-              width: '36px',
-              height: '36px',
+              width: '24px',
+              height: '24px',
               borderRadius: '50%',
-              border: '3px solid rgba(245, 158, 11, 0.2)',
+              border: '2px solid rgba(245, 158, 11, 0.2)',
               borderTopColor: 'var(--status-warn)',
               animation: 'spin 1s linear infinite',
-              marginBottom: '12px'
+              marginBottom: '8px'
             }} />
-            <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text)', marginBottom: '3px' }}>
               ⚡ Spinning Up User Container...
             </div>
-            <div style={{ fontSize: '9.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '12px' }}>
+            <div style={{ fontSize: '8.5px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '8px' }}>
               (~1.8s cold start)
             </div>
             <div style={{
