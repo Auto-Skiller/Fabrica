@@ -20,10 +20,7 @@ Code blocks or API proxies that connect the agent to external platforms (e.g., S
 ### B. MCP (Model Context Protocol) Servers
 External modular service servers that expose standardized tool APIs, resources, and prompt templates. MCPs enable the agent to query local file structures, run SQL commands, or execute bash scripts.
 
-### C. Sandboxed Code Execution Engine (`POST /api/sandbox/execute`)
-A secure VM execution channel allowing agents to run dynamically generated JavaScript/TypeScript routines within an isolated context with prototype locks and time budgets.
-
-### D. Model Selection & Live Streaming Voice
+### C. Model Selection & Live Streaming Voice
 - **Model Selector (`chatModel`)**: Dynamic model provider switching (`gemini-3.6-flash`, `claude-3-5-sonnet`, `openrouter/`).
 - **Live Voice Stream (🎙️)**: Real-time bi-directional voice streaming channel adjacent to active session controls.
 

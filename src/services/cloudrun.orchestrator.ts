@@ -42,10 +42,9 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
   const parent = `projects/${projectId}/locations/${region}`;
   const servicePath = `${parent}/services/${serviceName}`;
 
-  const storage = getStorageClient();
-
   // 2. Ensure Dedicated GCS Bucket Exists for User
   try {
+    const storage = getStorageClient();
     const bucket = storage.bucket(tenantBucket);
     const [exists] = await bucket.exists();
     if (!exists) {
@@ -56,34 +55,34 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
       });
     }
   } catch (err: any) {
-    console.error(`[Orchestrator] GCS Bucket check/creation warning: ${err.message}`);
+    console.warn(`[Orchestrator] GCS Bucket check/creation warning: ${err.message}`);
   }
-
-  const client = getRunClient();
 
   // 3. Check if user container already exists
   try {
+    const client = getRunClient();
     const [existingService] = await client.getService({ name: servicePath });
     if (existingService && existingService.uri) {
       runnerUrlCache.set(tenantId, existingService.uri);
       return existingService.uri;
     }
   } catch (err: any) {
-    // 404 / NotFound means container does not exist yet; proceed to provision
+    // Service not found; proceed to provision
   }
 
   console.log(`[Orchestrator] Provisioning dedicated Cloud Run container: ${serviceName}...`);
 
   // 4. Provision new scale-to-zero container for user mounting their dedicated bucket
   const runnerImage = process.env.RUNNER_CONTAINER_IMAGE || `gcr.io/${projectId}/fabrica-user-runner:latest`;
+  const client = getRunClient();
 
-  const [operation] = await client.createService({
+  const [operation] = (await client.createService({
     parent,
     serviceId: serviceName,
     service: {
       template: {
         scaling: {
-          minInstanceCount: 0, // Scale to 0 when idle = $0 compute cost!
+          minInstanceCount: 0,
           maxInstanceCount: 2
         },
         containers: [
@@ -98,7 +97,7 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
             volumeMounts: [
               {
                 name: 'tenant-gcs-mount',
-                mountPath: '/mnt/workspace' // Mounts user's dedicated bucket directly to workspace
+                mountPath: '/mnt/workspace'
               }
             ],
             env: [
@@ -111,24 +110,28 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
         volumes: [
           {
             name: 'tenant-gcs-mount',
-            gcsVolumeSource: {
-              bucket: tenantBucket, // Mounts user's dedicated GCS bucket
+            gcs: {
+              bucket: tenantBucket,
               readOnly: false
             }
-          }
+          } as any
         ]
       }
     }
-  });
+  })) as any;
 
   const [response] = await operation.promise();
-  const uri = response.uri!;
-  runnerUrlCache.set(tenantId, uri);
-  return uri;
+  if (response && response.uri) {
+    const uri = response.uri;
+    runnerUrlCache.set(tenantId, uri);
+    return uri;
+  }
+
+  throw new Error(`Failed to provision Cloud Run runner container for tenant ${tenantId}`);
 }
 
 /**
- * Proxies an SSE stream turn request to a dedicated tenant runner container.
+ * Proxies an SSE stream turn request exclusively to a dedicated tenant runner container.
  */
 export async function proxyTurnToRunnerStream(
   runnerUrl: string,
@@ -158,7 +161,7 @@ export async function proxyTurnToRunnerStream(
 }
 
 /**
- * Proxies a synchronous turn request to a dedicated tenant runner container.
+ * Proxies a synchronous turn request exclusively to a dedicated tenant runner container.
  */
 export async function proxyTurnToRunner(runnerUrl: string, payload: any): Promise<any> {
   const response = await fetch(`${runnerUrl}/api/runner/turn`, {
@@ -171,6 +174,7 @@ export async function proxyTurnToRunner(runnerUrl: string, payload: any): Promis
     throw new Error(`Runner container returned error status: ${response.status}`);
   }
 
-  return response.json();
+  return await response.json();
 }
+
 

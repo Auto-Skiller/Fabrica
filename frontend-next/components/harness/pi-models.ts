@@ -25,12 +25,42 @@ export interface PiProviderGroup {
   }[];
 }
 
+export interface SupabaseProviderInfo {
+  id: string;
+  name: string;
+  default_model: string;
+  allowed_models: string[];
+  is_active?: boolean;
+}
+
 export const FABRICA_POOL_MODELS = [
   { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Free Pool)' },
   { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Free Pool)' },
   { id: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', name: 'Nvidia Nemotron 3 Ultra 550B (Free Pool)' },
   { id: 'openrouter/poolside/laguna-s-2.1:free', name: 'Poolside Laguna S 2.1 (Free Pool)' }
 ];
+
+export function buildPoolModelsFromProviders(providers?: SupabaseProviderInfo[]): { id: string; name: string }[] {
+  if (!providers || !Array.isArray(providers) || providers.length === 0) {
+    return FABRICA_POOL_MODELS;
+  }
+
+  const result: { id: string; name: string }[] = [];
+  for (const prov of providers) {
+    if (prov.is_active === false) continue;
+    const allowed = Array.isArray(prov.allowed_models) ? prov.allowed_models : [];
+    for (const m of allowed) {
+      const fullId = m.includes('/') ? m : `${prov.id}/${m}`;
+      const name = m.includes('/') ? m.split('/').pop()! : m;
+      result.push({
+        id: fullId,
+        name: `${name} (${prov.name || prov.id} Free Pool)`
+      });
+    }
+  }
+
+  return result.length > 0 ? result : FABRICA_POOL_MODELS;
+}
 
 export const DEFAULT_PI_CLI_MODELS: PiCliModelItem[] = [
   // Google

@@ -1303,8 +1303,12 @@ export default function Dashboard() {
           }
           setCheckingAuth(false);
           if (event === 'SIGNED_IN' && currentUser) {
-            setToast({ message: 'Securely authenticated via Supabase!', type: 'success', isOpen: true });
-            setAuthModalOpen(false);
+            setAuthModalOpen((wasOpen) => {
+              if (wasOpen) {
+                setToast({ message: 'Securely authenticated via Supabase!', type: 'success', isOpen: true });
+              }
+              return false;
+            });
           }
         });
         subscription = data.subscription;
@@ -7194,25 +7198,6 @@ ${isDirector ? `
                         {isSandboxSignUp ? 'Create Isolated Tenant ➔' : 'Secure Authenticate Session ➔'}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSandboxEmail('service.mrigel@gmail.com');
-                          setSandboxPassword('demopass123');
-                        }}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#CC7A4A',
-                          fontSize: '10px',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          marginTop: '4px',
-                          fontWeight: 600
-                        }}
-                      >
-                        💡 Autofill Quick-Demo Tenant Credentials
-                      </button>
                     </form>
 
                     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
@@ -10281,7 +10266,7 @@ ${isDirector ? `
                   <LiveAppPreview
                     tenantId={user?.id || activeEntity || 'usr-123'}
                     containerState={isChatLoading ? 'waking_up' : 'warm'}
-                    onMinimizeLeft={minCenter ? () => { setMinPreviewState(true); setMinEditorState(false); } : undefined}
+                    onMinimizeLeft={() => { setMinPreviewState(true); setMinEditorState(false); }}
                   />
                 </div>
               )}
@@ -10289,8 +10274,6 @@ ${isDirector ? `
               {/* RIGHT: ALWAYS-OPEN CODE / FILE EDITOR */}
               {minEditorState ? (
                 <div 
-                  onClick={() => setMinEditorState(false)}
-                  title="Click to re-expand Code Editor"
                   style={{
                     width: '32px',
                     minWidth: '32px',
@@ -10300,29 +10283,68 @@ ${isDirector ? `
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
+                    justifyContent: 'space-between',
                     userSelect: 'none',
                     padding: '8px 0',
                     gap: '8px',
                     flexShrink: 0
                   }}
                 >
-                  <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)' }}>◀</span>
-                  <div style={{
-                    writingMode: 'vertical-rl',
-                    transform: 'rotate(180deg)',
-                    fontSize: '9px',
-                    fontWeight: 800,
-                    color: 'var(--text-bright)',
-                    letterSpacing: '1px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span>📘 CODE EDITOR</span>
+                  <div
+                    onClick={() => setMinEditorState(false)}
+                    title="Click to re-expand Code Editor"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      flex: 1,
+                      justifyContent: 'flex-start',
+                      width: '100%'
+                    }}
+                  >
+                    <span style={{ fontSize: '10px', fontWeight: 900, color: 'var(--accent)' }}>◀</span>
+                    <div style={{
+                      writingMode: 'vertical-rl',
+                      transform: 'rotate(180deg)',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      color: 'var(--text-bright)',
+                      letterSpacing: '1px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <span>📘 CODE EDITOR</span>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleBottomVertical(true);
+                    }}
+                    title="Minimize Preview & Editor sections as bottom bar"
+                    style={{
+                      height: '20px',
+                      width: '20px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
+                      color: '#38bdf8',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    ▼
+                  </button>
                 </div>
               ) : (
                 <div style={{ flex: minPreviewState ? '1 1 100%' : '1 1 48%', minWidth: '260px', height: '100%', overflow: 'hidden' }}>
@@ -10332,8 +10354,8 @@ ${isDirector ? `
                     onSave={(path) => {
                       setToast({ message: `Saved ${path} to workspace!`, type: 'success', isOpen: true });
                     }}
-                    onMinimize={minCenter ? undefined : () => toggleBottomVertical(true)}
-                    onMinimizeRight={minCenter ? () => { setMinEditorState(true); setMinPreviewState(false); } : undefined}
+                    onMinimize={() => toggleBottomVertical(true)}
+                    onMinimizeRight={() => { setMinEditorState(true); setMinPreviewState(false); }}
                   />
                 </div>
               )}

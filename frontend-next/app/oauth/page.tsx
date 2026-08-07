@@ -233,9 +233,40 @@ export default function OAuthPage() {
     };
   }, [router]);
 
-  const handleSandboxLoginSubmit = (e: React.FormEvent) => {
+  const handleSandboxLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sandboxEmail) return;
+
+    if (supabase) {
+      try {
+        if (isSandboxSignUp) {
+          const { data, error } = await supabase.auth.signUp({
+            email: sandboxEmail,
+            password: sandboxPassword || 'defaultpass123',
+          });
+          if (error) throw error;
+          setToast({ message: `Account created successfully! Redirecting to setup...`, type: 'success', isOpen: true });
+          setTimeout(() => {
+            router.push('/onboard');
+          }, 600);
+          return;
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: sandboxEmail,
+            password: sandboxPassword || 'defaultpass123',
+          });
+          if (error) throw error;
+          setToast({ message: `Securely authenticated! Redirecting...`, type: 'success', isOpen: true });
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 600);
+          return;
+        }
+      } catch (err: any) {
+        console.warn('[auth] Supabase auth fallback to local session:', err.message);
+      }
+    }
+
     const mockUser = {
       email: sandboxEmail,
       id: 'usr_sandbox_' + Math.random().toString(36).substring(2, 9),
@@ -607,162 +638,95 @@ export default function OAuthPage() {
             </form>
           ) : (
             <>
-              {supabase ? (
-                <>
-                  <p style={{ margin: 0, fontSize: '11.5px', color: '#475569', lineHeight: 1.5, textAlign: 'center', marginBottom: '16px' }}>
-                    Please authenticate with your corporate credentials to access your isolated workspace records and active agent execution backlogs.
-                  </p>
-
-                  <div className="supabase-auth-wrapper" style={{
-                    '--colors-brand': '#CC7A4A',
-                    '--colors-brandAccent': '#b2693e',
-                    '--colors-inputBackground': '#ffffff',
-                    '--colors-inputText': '#1c1c1e',
-                    '--colors-inputBorder': '#cbd5e1',
-                    '--colors-inputLabelText': '#475569',
-                    '--colors-dividerBackground': '#e2e8f0',
-                    '--colors-messageText': '#CC7A4A',
-                    '--colors-anchorTextColor': '#CC7A4A'
-                  } as any}>
-                    <form onSubmit={handleSandboxLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>Email</label>
-                        <input type="email" required value={sandboxEmail} onChange={(e) => setSandboxEmail(e.target.value)} placeholder="user@example.com" style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', outline: 'none' }} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#475569' }}>Password</label>
-                        <input type="password" required value={sandboxPassword} onChange={(e) => setSandboxPassword(e.target.value)} placeholder="••••••••" style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '11px', outline: 'none' }} />
-                      </div>
-                      <button type="submit" style={{ background: '#CC7A4A', color: '#ffffff', border: 'none', fontWeight: 800, borderRadius: '6px', fontSize: '11px', padding: '10px', textTransform: 'uppercase', cursor: 'pointer' }}>Authenticate</button>
-                    </form>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsForgotPassword(true)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#CC7A4A',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        textDecoration: 'underline'
-                      }}
-                    >
-                      🔑 Forgot Password?
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{
-                    background: 'rgba(204, 122, 74, 0.05)',
-                    border: '1px solid rgba(204, 122, 74, 0.2)',
-                    borderRadius: '8px',
-                    padding: '12px 14px',
+              {/* Premium OAuth SSO Providers */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleOAuthSignIn('google')}
+                  style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <div style={{ color: '#CC7A4A', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      💡 Sandbox Demo Mode Active
-                    </div>
-                    <p style={{ margin: 0, fontSize: '10px', color: '#64748b', lineHeight: 1.45 }}>
-                      Real Supabase connection keys are not yet configured in your server environment variables. A high-fidelity sandbox is available to test the registration experience.
-                    </p>
-                  </div>
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    color: '#1C1C1E',
+                    padding: '10px 16px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                  </svg>
+                  <span>Continue with Google</span>
+                </button>
 
-                  {/* Premium OAuth SSO Providers */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '16px 0' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthSignIn('google')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        color: '#1C1C1E',
-                        padding: '10px 16px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
-                      </svg>
-                      <span>Continue with Google</span>
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => handleOAuthSignIn('github')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#1C1C1E',
+                    border: '1px solid #1C1C1E',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    padding: '10px 16px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                  </svg>
+                  <span>Continue with GitHub</span>
+                </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthSignIn('github')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        background: '#1C1C1E',
-                        border: '1px solid #1C1C1E',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        padding: '10px 16px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                      </svg>
-                      <span>Continue with GitHub</span>
-                    </button>
+                <button
+                  type="button"
+                  onClick={() => handleOAuthSignIn('facebook')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#1877F2',
+                    border: '1px solid #1877F2',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    padding: '10px 16px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Continue with Facebook</span>
+                </button>
+              </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOAuthSignIn('facebook')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        background: '#1877F2',
-                        border: '1px solid #1877F2',
-                        borderRadius: '8px',
-                        color: '#ffffff',
-                        padding: '10px 16px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                      </svg>
-                      <span>Continue with Facebook</span>
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0' }}>
-                    <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
-                    <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>or use secure email</span>
-                    <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
+                <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>or use email auth</span>
+                <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
+              </div>
 
                   <form onSubmit={handleSandboxLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
@@ -888,25 +852,6 @@ export default function OAuthPage() {
                       {isSandboxSignUp ? 'Create Isolated Tenant ➔' : 'Secure Authenticate Session ➔'}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSandboxEmail('service.mrigel@gmail.com');
-                        setSandboxPassword('demopass123');
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#CC7A4A',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        marginTop: '4px',
-                        fontWeight: 600
-                      }}
-                    >
-                      💡 Autofill Quick-Demo Tenant Credentials
-                    </button>
                   </form>
 
                   <div style={{ display: 'flex', justifyContent: 'center', marginTop: '14px', borderTop: '1px solid #f1f5f9', paddingTop: '12px' }}>
@@ -932,8 +877,6 @@ export default function OAuthPage() {
                       🔑 Forgot your password? Click here to reset
                     </button>
                   </div>
-                </>
-              )}
             </>
           )}
         </div>

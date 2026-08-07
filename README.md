@@ -75,7 +75,7 @@ Fabrica is built specifically for operators who need repeatable research ➔ ana
 ### 2. Enterprise Modular Backend Engine & Interactive Daemon Architecture
 * **Interactive Daemon Session & Strict Single Daemon Policy (`src/core/harness.ts`)**: Migrated all execution pathways from static `pi -p --mode json` commands to persistent interactive daemon sessions (`PiDaemonProcess`). Enforces a strict 1:1 binding per tenant ID with zero concurrent daemon threads per tenant.
 * **Workspace CWD & Native Session Isolation**: Working directory is explicitly bound to `/workspaces/<tenantId>/`. Utilizes `PI_CODING_AGENT_DIR=/workspaces/<tenantId>/.pi/` with native `pi` CLI session management inside `.pi/agent/sessions/`.
-* **Path Traversal Security & VM Sandbox Isolation (`src/core/vm_sandbox.ts`)**: Path resolving is protected by absolute boundary verification (`path.resolve` verifying target paths start with `/workspaces/<tenantId>`). `executeSandboxedCode` freezes global prototypes (`Object.freeze`), completely blocks `process`, `require`, `import`, `global`, `fetch`, and enforces strict execution timeouts (`1000ms`).
+* **Path Traversal Security (`src/core/tenant.ts`)**: Path resolving is protected by absolute boundary verification (`path.resolve` verifying target paths start with `/workspaces/<tenantId>`).
 * **Environment & API Key Hygiene (`src/core/auth.ts`)**: Managed LLM key pool rotation (`.stash/auth.json`) and BYOK keys are strictly scoped by model strategy. Tenant processes never inherit server master secrets unexpectedly.
 * **Domain Engine & Modular API Routes (`src/core/` & `src/api/routes/`)**: Clear separation across 5 core domains: `auth` (`auth.ts`), `tenant` (`tenant.ts`), `harness` (`harness.ts`), `missions` (`missions.ts`), and `workspace` (`workspace.ts`).
 
@@ -115,8 +115,7 @@ Fabrica/
 │   │   ├── tenant.ts                  # Tenant lifecycle, database persistence, profile, telemetry, audit logs
 │   │   ├── harness.ts                 # Pi CLI background daemon, interactive session manager, prompt loader
 │   │   ├── missions.ts                # Workflow pipeline orchestrator, step blueprints, mission state machine
-│   │   ├── workspace.ts               # Multi-tenant hybrid filesystem, phase storage, cloud sync
-│   │   └── vm_sandbox.ts              # Secure VM JS sandbox context & evaluation tools
+│   │   └── workspace.ts               # Multi-tenant hybrid filesystem, phase storage, cloud sync
 │   └── utils.ts                       # Vertex AI Search & system utilities
 ├── server.ts                          # Express 4 API server entrypoint
 └── frontend-next/                     # Next.js 16 App Router Client Application

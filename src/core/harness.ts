@@ -15,15 +15,10 @@ export interface HarnessConfig {
     model_preferences: {
       default_agent_model: string;
       research_model: string;
-      sandbox_timeout_ms: number;
     };
     memory: {
       context_window_tokens: number;
       persistence_mode: string;
-    };
-    tools_sandbox: {
-      isolation: string;
-      allow_network: boolean;
     };
   };
 }
@@ -225,8 +220,26 @@ export function getPiProcessLogs(tenantId?: string): PiProcessLogItem[] {
   return piProcessLogs.filter(l => l.tenantId === tenantId);
 }
 
+export function sanitizeText(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/AIzaSy[A-Za-z0-9_\-]{33}/g, 'AIzaSy*********************************')
+    .replace(/sk-proj-[A-Za-z0-9_\-]{30,}/g, 'sk-proj-********************************')
+    .replace(/sk-ant-[A-Za-z0-9_\-]{30,}/g, 'sk-ant-********************************')
+    .replace(/sk-or-v1-[A-Za-z0-9_\-]{30,}/g, 'sk-or-v1-********************************')
+    .replace(/sk-[A-Za-z0-9]{32,}/g, 'sk-********************************');
+}
+
 export function recordPiProcessLog(item: PiProcessLogItem) {
-  piProcessLogs.unshift(item);
+  const sanitizedItem: PiProcessLogItem = {
+    ...item,
+    prompt: sanitizeText(item.prompt),
+    args: item.args ? item.args.map(a => sanitizeText(a)) : [],
+    stdout: sanitizeText(item.stdout),
+    stderr: sanitizeText(item.stderr),
+    error: item.error ? sanitizeText(item.error) : undefined
+  };
+  piProcessLogs.unshift(sanitizedItem);
   if (piProcessLogs.length > 100) {
     piProcessLogs.pop();
   }
@@ -314,16 +327,11 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
       mode: "per_user_isolated",
       model_preferences: {
         default_agent_model: "gemini-3.6-flash",
-        research_model: "gemini-3.6-flash",
-        sandbox_timeout_ms: 10000
+        research_model: "gemini-3.6-flash"
       },
       memory: {
         context_window_tokens: 1000000,
         persistence_mode: "hybrid_fs_json"
-      },
-      tools_sandbox: {
-        isolation: "isolated_v8_vm",
-        allow_network: true
       }
     }
   };
@@ -1098,10 +1106,27 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
       }
     });
 
+    const streamStartTime = Date.now();
     child.on('close', (code) => {
       if (daemon) daemon.status = 'idle';
       updateHarnessState(tenantId, { status: 'idle' });
       try { clearUserActions(tenantId); } catch (_) {}
+
+      recordPiProcessLog({
+        id: `proc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: new Date().toISOString(),
+        tenantId,
+        sessionId,
+        model: fullModel,
+        prompt: options.prompt,
+        command: 'pi',
+        args,
+        executionTimeMs: Date.now() - streamStartTime,
+        stdout: accumulatedText || '',
+        stderr: '',
+        ok: code === 0 || accumulatedText.length > 0,
+        apiKeyStrategy
+      });
 
       const finalResponse: PiAgentResponse = {
         ok: code === 0 || accumulatedText.length > 0,

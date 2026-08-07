@@ -7,10 +7,34 @@ import {
   updateUserTier,
   getTokenQuotaSummary,
   verifyUserCard,
-  FREE_MODELS
+  FREE_MODELS,
+  getSupabaseApiProviders,
+  updateSupabaseApiProvider
 } from '../../core/auth.js';
 
 const router = Router();
+
+// GET /api/auth/providers — Get admin-configured API providers with default and allowed models
+router.get('/providers', (req: AuthenticatedRequest, res: Response) => {
+  const providers = getSupabaseApiProviders();
+  res.json({ ok: true, providers });
+});
+
+// POST /api/auth/providers/update — Admin update of provider default_model or allowed_models
+router.post('/providers/update', (req: AuthenticatedRequest, res: Response) => {
+  const { providerId, default_model, allowed_models, name, is_active } = req.body || {};
+  if (!providerId) {
+    res.status(400).json({ ok: false, error: 'providerId is required.' });
+    return;
+  }
+  const updatedProviders = updateSupabaseApiProvider(providerId, {
+    default_model,
+    allowed_models,
+    name,
+    is_active
+  });
+  res.json({ ok: true, providers: updatedProviders });
+});
 
 // GET /api/auth/tier — Get user tier and token quota summary
 router.get('/tier', (req: AuthenticatedRequest, res: Response) => {
@@ -50,7 +74,8 @@ router.post('/byok', (req: AuthenticatedRequest, res: Response) => {
 router.get('/key-pool', (req: AuthenticatedRequest, res: Response) => {
   const keys = keyPoolManager.getAllKeys();
   const status = getKeyPoolStatus();
-  res.json({ ok: true, status, keys, freeModels: FREE_MODELS });
+  const providers = getSupabaseApiProviders();
+  res.json({ ok: true, status, keys, freeModels: FREE_MODELS, providers });
 });
 
 // POST /api/auth/key-pool/add — Add new BYOK API key to rotation pool

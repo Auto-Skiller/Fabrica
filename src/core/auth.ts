@@ -1,6 +1,26 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+// ── Supabase Client Initialization ──────────────────────────────────────────
+
+let supabaseClientInstance: SupabaseClient | null = null;
+
+export function getSupabaseClient(): SupabaseClient | null {
+  if (supabaseClientInstance) return supabaseClientInstance;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (url && key) {
+    try {
+      supabaseClientInstance = createClient(url, key);
+      return supabaseClientInstance;
+    } catch (err) {
+      console.warn('[AuthCore] Failed to initialize Supabase client:', err);
+    }
+  }
+  return null;
+}
 
 // ── Cryptographic Security & Server Key Protection Engine ─────────────────────
 
@@ -52,6 +72,14 @@ export function maskApiKey(rawKey: string): string {
 }
 
 // ── Co-Located TypeScript Interfaces ──────────────────────────────────────────
+
+export interface SupabaseApiProvider {
+  id: string;
+  name: string;
+  default_model: string;
+  allowed_models: string[];
+  is_active: boolean;
+}
 
 export interface KeyPoolItem {
   id: string;
@@ -115,11 +143,39 @@ export interface TokenQuotaSummary {
 
 export interface AuthStoreData {
   key_pools: KeyPoolItem[];
+  providers?: SupabaseApiProvider[];
   tiers: Record<string, Partial<UserTierInfo>>;
   users: Record<string, any>;
 }
 
-// ── Constants & Initial State ──────────────────────────────────────────────────
+// ── Default Provider Initial Setup (Seeded in Server-Side Supabase Storage) ───
+
+export const DEFAULT_SUPABASE_PROVIDERS: SupabaseApiProvider[] = [
+  {
+    id: 'openrouter',
+    name: 'OpenRouter Multi-Model',
+    default_model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    allowed_models: [
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
+      'poolside/laguna-s-2.1:free',
+      'deepseek/deepseek-r1:free',
+      'meta-llama/llama-3.3-70b-instruct:free'
+    ],
+    is_active: true
+  },
+  {
+    id: 'google',
+    name: 'Google AI Studio (Gemini)',
+    default_model: 'gemini-3.6-flash',
+    allowed_models: [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-2.5-pro'
+    ],
+    is_active: true
+  }
+];
 
 export const FREE_MODELS: FreeModelInfo[] = [
   {
@@ -145,69 +201,153 @@ export const FREE_MODELS: FreeModelInfo[] = [
   }
 ];
 
-const AUTH_FILE_PATH = path.resolve(process.cwd(), '.stash/auth.json');
-const LEGACY_KEY_POOLS_PATH = path.resolve(process.cwd(), '.stash/key_pools.json');
-
-// Helper to ensure .stash directory exists and load auth store
-function ensureAuthStore(): AuthStoreData {
-  const stashDir = path.dirname(AUTH_FILE_PATH);
-  if (!fs.existsSync(stashDir)) {
-    fs.mkdirSync(stashDir, { recursive: true });
-  }
-
-  let store: AuthStoreData = { key_pools: [], tiers: {}, users: {} };
-
-  if (fs.existsSync(AUTH_FILE_PATH)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(AUTH_FILE_PATH, 'utf8'));
-      store = {
-        key_pools: Array.isArray(parsed.key_pools) ? parsed.key_pools : [],
-        tiers: parsed.tiers || {},
-        users: parsed.users || {}
-      };
-    } catch (_) {}
-  } else if (fs.existsSync(LEGACY_KEY_POOLS_PATH)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(LEGACY_KEY_POOLS_PATH, 'utf8'));
-      if (Array.isArray(parsed.keys)) {
-        store.key_pools = parsed.keys;
-      }
-    } catch (_) {}
-  }
-
-  return store;
+interface MemoryAuthStore {
+  key_pools: KeyPoolItem[];
+  providers: SupabaseApiProvider[];
+  tiers: Record<string, Partial<UserTierInfo>>;
+  users: Record<string, any>;
 }
 
-function saveAuthStore(data: AuthStoreData): void {
-  try {
-    const stashDir = path.dirname(AUTH_FILE_PATH);
-    if (!fs.existsSync(stashDir)) {
-      fs.mkdirSync(stashDir, { recursive: true });
-    }
-    fs.writeFileSync(AUTH_FILE_PATH, JSON.stringify(data, null, 2), 'utf8');
-  } catch (err) {
-    console.warn('[AuthCore] Error saving auth store:', err);
+const memoryAuthStore: MemoryAuthStore = {
+  key_pools: [],
+  providers: [...DEFAULT_SUPABASE_PROVIDERS],
+  tiers: {},
+  users: {}
+};
+
+function syncKeyPoolsToSupabase(): void {
+  const client = getSupabaseClient();
+  if (client && memoryAuthStore.key_pools.length > 0) {
+    Promise.resolve(client.from('key_pools').upsert(
+      memoryAuthStore.key_pools.map((k: KeyPoolItem) => ({
+        id: k.id,
+        provider: k.provider,
+        encrypted_key: k.encryptedKey,
+        key_hash: k.keyHash,
+        masked_key: k.maskedKey,
+        is_active: k.isActive,
+        is_byok: k.isByok,
+        usage_count: k.usageCount,
+        error_count: k.errorCount,
+        last_used_at: k.lastUsedAt,
+        updated_at: new Date().toISOString()
+      }))
+    )).then(({ error }) => {
+      if (error) console.warn('[AuthCore] Supabase key_pools sync:', error.message);
+    }).catch((err: any) => console.warn('[AuthCore] Supabase key_pools error:', err));
   }
+}
+
+// ── Supabase Initial Hydration ────────────────────────────────────────────────
+
+export async function hydrateFromSupabase(): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) return;
+  try {
+    const { data: kpData } = await client.from('key_pools').select('*');
+    if (Array.isArray(kpData) && kpData.length > 0) {
+      memoryAuthStore.key_pools = kpData.map((row: any) => ({
+        id: row.id,
+        provider: row.provider,
+        encryptedKey: row.encrypted_key,
+        keyHash: row.key_hash,
+        maskedKey: row.masked_key,
+        isActive: row.is_active ?? true,
+        isByok: row.is_byok ?? false,
+        usageCount: row.usage_count ?? 0,
+        errorCount: row.error_count ?? 0,
+        lastUsedAt: row.last_used_at,
+        createdAt: row.created_at || new Date().toISOString()
+      }));
+    }
+
+    const { data: utData } = await client.from('user_tiers').select('*');
+    if (Array.isArray(utData) && utData.length > 0) {
+      utData.forEach((row: any) => {
+        if (row.tenant_id) {
+          memoryAuthStore.tiers[row.tenant_id] = {
+            tenantId: row.tenant_id,
+            plan: row.plan || 'pro',
+            hasVerifiedCard: Boolean(row.has_verified_card),
+            monthlyTokenQuota: Number(row.monthly_token_quota) || 1000000000,
+            usedTokensThisMonth: Number(row.used_tokens_this_month) || 0
+          };
+        }
+      });
+    }
+
+    const { data: apData } = await client.from('api_providers').select('*');
+    if (Array.isArray(apData) && apData.length > 0) {
+      memoryAuthStore.providers = apData.map((row: any) => ({
+        id: row.provider_slug || row.id,
+        name: row.provider_name || row.provider_slug || row.id,
+        default_model: row.default_model || '',
+        allowed_models: Array.isArray(row.allowed_models) ? row.allowed_models : [],
+        is_active: row.is_active ?? true,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+      }));
+    }
+  } catch (err: any) {
+    console.warn('[AuthCore] Supabase hydration warning:', err?.message || err);
+  }
+}
+
+// Trigger initial hydration on module initialization
+hydrateFromSupabase();
+
+export function getSupabaseApiProviders(): SupabaseApiProvider[] {
+  return memoryAuthStore.providers || DEFAULT_SUPABASE_PROVIDERS;
+}
+
+export function updateSupabaseApiProvider(providerId: string, updates: Partial<SupabaseApiProvider>): SupabaseApiProvider[] {
+  const currentProviders = memoryAuthStore.providers || [...DEFAULT_SUPABASE_PROVIDERS];
+  const idx = currentProviders.findIndex((p: SupabaseApiProvider) => p.id === providerId);
+  if (idx !== -1) {
+    currentProviders[idx] = { ...currentProviders[idx], ...updates };
+  } else {
+    currentProviders.push({
+      id: providerId,
+      name: updates.name || providerId,
+      default_model: updates.default_model || '',
+      allowed_models: updates.allowed_models || [],
+      is_active: updates.is_active ?? true
+    });
+  }
+  memoryAuthStore.providers = currentProviders;
+
+  const client = getSupabaseClient();
+  if (client) {
+    const providerObj = currentProviders.find((p: SupabaseApiProvider) => p.id === providerId);
+    Promise.resolve(client.from('api_providers').upsert({
+      provider_slug: providerId,
+      provider_name: providerObj?.name || providerId,
+      default_model: providerObj?.default_model || '',
+      allowed_models: providerObj?.allowed_models || [],
+      updated_at: new Date().toISOString()
+    })).then(({ error }) => {
+      if (error) console.warn('[AuthCore] Supabase api_providers sync:', error.message);
+    }).catch((err: any) => console.warn('[AuthCore] Supabase api_providers error:', err));
+  }
+
+  return currentProviders;
 }
 
 // ── Key Pool Rotation Engine ───────────────────────────────────────────────────
 
 export class KeyPoolManager {
-  private keys: KeyPoolItem[] = [];
+  private keys: KeyPoolItem[] = memoryAuthStore.key_pools;
 
   constructor() {
     this.reloadKeys();
   }
 
   public reloadKeys(): void {
-    const store = ensureAuthStore();
-    this.keys = store.key_pools;
+    this.keys = memoryAuthStore.key_pools;
   }
 
   public saveKeys(): void {
-    const store = ensureAuthStore();
-    // Ensure all stored keys are encrypted and raw plain-text is stripped before writing to disk
-    store.key_pools = this.keys.map(k => {
+    memoryAuthStore.key_pools = this.keys.map(k => {
       const raw = k.key || '';
       const enc = k.encryptedKey || (raw ? encryptSecret(raw) : '');
       const hash = k.keyHash || (raw ? hashApiKey(raw) : '');
@@ -220,7 +360,7 @@ export class KeyPoolManager {
         maskedKey: masked
       };
     });
-    saveAuthStore(store);
+    syncKeyPoolsToSupabase();
   }
 
   public addKey(item: Omit<KeyPoolItem, 'id' | 'usageCount' | 'errorCount' | 'createdAt'> & { key?: string }): KeyPoolItem {
@@ -333,8 +473,7 @@ export function getKeyPoolStatus() {
 // ── Tier Quota & Credit Management Engine ──────────────────────────────────────
 
 export function getUserTier(tenantId: string): UserTierInfo {
-  const store = ensureAuthStore();
-  const rawTier = store.tiers[tenantId] || {};
+  const rawTier = memoryAuthStore.tiers[tenantId] || {};
 
   const plan = rawTier.plan || 'pro';
   const hasVerifiedCard = Boolean(rawTier.hasVerifiedCard || rawTier.cardVerified || rawTier.paymentVerified || process.env.GEMINI_API_KEY || true);
@@ -360,11 +499,24 @@ export function getUserTier(tenantId: string): UserTierInfo {
 }
 
 export function updateUserTier(tenantId: string = 'default_user', updates: Partial<UserTierInfo>): UserTierInfo {
-  const store = ensureAuthStore();
-  const current = store.tiers[tenantId] || {};
+  const current = memoryAuthStore.tiers[tenantId] || {};
   const updated = { ...current, ...updates, tenantId };
-  store.tiers[tenantId] = updated;
-  saveAuthStore(store);
+  memoryAuthStore.tiers[tenantId] = updated;
+
+  const client = getSupabaseClient();
+  if (client) {
+    Promise.resolve(client.from('user_tiers').upsert({
+      tenant_id: tenantId,
+      plan: updated.plan || 'pro',
+      has_verified_card: Boolean(updated.hasVerifiedCard),
+      monthly_token_quota: updated.monthlyTokenQuota || 1000000000,
+      used_tokens_this_month: updated.usedTokensThisMonth || 0,
+      updated_at: new Date().toISOString()
+    })).then(({ error }) => {
+      if (error) console.warn('[AuthCore] Supabase user_tiers sync:', error.message);
+    }).catch((err: any) => console.warn('[AuthCore] Supabase user_tiers error:', err));
+  }
+
   return getUserTier(tenantId);
 }
 

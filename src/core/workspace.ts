@@ -250,6 +250,9 @@ export function getWorkspaceMap(tenantId: string = 'default_user'): WorkspaceMap
           }
         }
       };
+      if (!parsed.all || !Array.isArray(parsed.all)) {
+        needsResync = true;
+      }
       if (parsed.discovery_and_scoping) checkItems(parsed.discovery_and_scoping);
       if (parsed.deep_research) checkItems(parsed.deep_research);
       if (parsed.data_analysis) checkItems(parsed.data_analysis);

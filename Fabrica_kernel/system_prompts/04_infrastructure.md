@@ -1,9 +1,9 @@
 # Infrastructure & Systems Guide
 
 > **Brand Mandate**: Turn RAW BUSINESS SYSTEMS into AUDITED CLIENT DELIVERABLES via AUTONOMOUS OPERATIONS.
-> All infrastructure services (sandboxed VM execution, multi-tenant database partitioning, hybrid storage, search engines, and agent daemons) are engineered to support the 24/7 autonomous business pipeline without requiring any technical setup from the user.
+> All infrastructure services (multi-tenant database partitioning, hybrid storage, search engines, and agent daemons) are engineered to support the 24/7 autonomous business pipeline without requiring any technical setup from the user.
 
-This guide describes the physical and logical layout of the Fabrica application, including database clients, sandboxed execution, daemon processes, hybrid storage, search engines, and multi-user scaling.
+This guide describes the physical and logical layout of the Fabrica application, including database clients, isolated container runtime execution, daemon processes, hybrid storage, search engines, and multi-user scaling.
 
 ## 1. RUNTIME & NETWORK CONSTRAINTS
 - **The Port 3000 Rule**: The application runs behind an Nginx reverse proxy routing external web traffic exclusively on **Port 3000**. All development and production web servers MUST run on port 3000. Other ports are inaccessible from outside the sandboxed container.
@@ -24,12 +24,8 @@ The system operates as a full-stack Node.js application:
 
 ---
 
-## 3. SANDBOXED CODE EXECUTION ENGINE (`/src/core/vm_sandbox.ts`)
-To safely execute dynamic user or AI-generated scripts without security risks:
-- **Isolated Node.js VM Context**: Code runs inside `vm.createContext()` with prototype freezing (`Object.freeze`) and zero access to file system or environment variables.
-- **Global Object Locks**: Global channels (`process`, `require`, `import`, `module`, `exports`, `global`, `fetch`, `setTimeout`) are explicitly removed.
-- **CPU Time Budgeting**: Strict execution timeouts (default `1000ms`) prevent infinite loops and resource exhaustion attacks.
-- **API Endpoint**: Execution handled server-side via `src/core/vm_sandbox.ts` (`executeSandboxedCode`).
+## 3. CONTAINER RUNTIME EXECUTION
+Each tenant executes within their own dedicated, isolated container runtime environment. User workspace commands and agent executions run natively inside the tenant's container boundaries.
 
 ---
 
