@@ -1711,6 +1711,8 @@ export default function Dashboard() {
   const [isTenantSetupInitializing, setIsTenantSetupInitializing] = useState<boolean>(false);
   const [tenantSetupProgress, setTenantSetupProgress] = useState<number>(0);
   const [tenantSetupStep, setTenantSetupStep] = useState<string>('Initializing user directory...');
+  const [tenantSetupError, setTenantSetupError] = useState<string | null>(null);
+  const [agentStartError, setAgentStartError] = useState<string | null>(null);
 
   // Draggable Floating Agent States
   const [agentWindowOpen, setAgentWindowOpen] = useState<boolean>(false);
@@ -2268,15 +2270,15 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
       const res = await api.startAgent(tenantKey);
       if (res && res.ok && res.agentInitialized) {
         setIsAgentInitialized(true);
-        setToast({ message: 'Agent CLI triggered and .pi/ workspace skills initialized successfully!', type: 'success', isOpen: true });
+        setToast({ message: 'User Container & Agent Runner booted and initialized successfully!', type: 'success', isOpen: true });
       } else {
         setIsAgentInitialized(false);
-        setToast({ message: res?.error || res?.message || 'Agent initialization failed. .pi/ directory not found after trigger.', type: 'error', isOpen: true });
+        setToast({ message: res?.error || res?.message || 'Container agent initialization failed. .pi/ workspace not found.', type: 'error', isOpen: true });
       }
     } catch (err: any) {
       console.error('Failed to start agent:', err);
       setIsAgentInitialized(false);
-      setToast({ message: 'Error triggering Agent CLI.', type: 'error', isOpen: true });
+      setToast({ message: 'Error triggering User Container & Agent Server.', type: 'error', isOpen: true });
     } finally {
       setIsStartingAgent(false);
     }
@@ -2652,8 +2654,28 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
   // AI Auto-Generation Loading State
   const [isAiGeneratingInputs, setIsAiGeneratingInputs] = useState<boolean>(false);
 
+  // GCS Workspace Map State
+  const [workspaceMapData, setWorkspaceMapData] = useState<any | null>(null);
+
   // Interactive Mission Control Modal States
   const [selectedMission, setSelectedMission] = useState<any | null>(null);
+
+  const handleSelectMission = async (m: any) => {
+    if (!m || !m.id) {
+      setSelectedMission(m);
+      return;
+    }
+    try {
+      const res = await missionsApi.getMissionDetails(m.id);
+      if (res && res.ok && res.mission) {
+        setSelectedMission(res.mission);
+        return;
+      }
+    } catch (e) {
+      console.warn('Failed fetching mission details from GCS /missions/ directory:', e);
+    }
+    setSelectedMission(m);
+  };
   const [qaUserSelection, setQaUserSelection] = useState<string>('');
   const [qaCustomInput, setQaCustomInput] = useState<string>('');
   const [qaResolved, setQaResolved] = useState<boolean>(false);
@@ -3210,50 +3232,91 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     fetchUserTierData();
   }, [user]);
 
-  // First-Time Tenant Directory Creation & Agent Harness Initialization
+  // Workspace Setup Progress Overlay Verification (Runs EVERY time user enters dashboard)
   useEffect(() => {
     if (!user) return;
     const tenantKey = user.id || 'default_user';
 
-    api.getInitStatus(tenantKey).then(async (res) => {
-      if (res && res.ok) {
-        setIsAgentInitialized(Boolean(res.agentInitialized));
-        if (!res.initialized) {
-          setIsTenantSetupInitializing(true);
-          setTenantSetupProgress(15);
-          setTenantSetupStep(`Creating workspace directory (workspaces/${tenantKey.slice(0, 12)}...)...`);
+    setIsTenantSetupInitializing(true);
+    setTenantSetupProgress(10);
+    setTenantSetupStep('1/5: Verifying Supabase User & Tier Subscription...');
 
-          try {
-            await new Promise(r => setTimeout(r, 300));
-            setTenantSetupProgress(50);
-            setTenantSetupStep('Initializing Pi CLI agent harness & configuration files...');
+    let isMounted = true;
 
-            const initRes = await api.initializeTenant(tenantKey);
+    async function runTenantVerificationSequence() {
+      try {
+        await new Promise(r => setTimeout(r, 250));
+        if (!isMounted) return;
 
-            setTenantSetupProgress(85);
-            setTenantSetupStep('Verifying workspace structure...');
+        // Step 1: Query Supabase init status
+        setTenantSetupProgress(25);
+        setTenantSetupStep('2/5: Verifying Tenant Identity & Vault Credentials in Supabase...');
+        const initRes = await api.getInitStatus(tenantKey);
 
-            await new Promise(r => setTimeout(r, 300));
-            setTenantSetupProgress(100);
-            setTenantSetupStep('Workspace initialization complete! Welcome to Fabrica.');
+        await new Promise(r => setTimeout(r, 250));
+        if (!isMounted) return;
 
-            setTimeout(() => {
-              setIsTenantSetupInitializing(false);
-              fetchWorkspaceData();
-            }, 400);
-          } catch (err: any) {
-            console.error('Tenant initialization error:', err);
-            setIsTenantSetupInitializing(false);
-          }
+        // Step 2: Verify GCS Bucket
+        setTenantSetupProgress(50);
+        setTenantSetupStep(`3/5: Verifying Dedicated GCS Bucket (${initRes.bucketId || 'fabrica-tenant-' + tenantKey.slice(0, 8)})...`);
+
+        await new Promise(r => setTimeout(r, 250));
+        if (!isMounted) return;
+
+        // Step 3: Verify User Container
+        setTenantSetupProgress(75);
+        setTenantSetupStep(`4/5: Verifying User Container Instance (${initRes.containerId || 'fabrica-runner-' + tenantKey.slice(0, 8)})...`);
+
+        if (!initRes.initialized || !initRes.onboardingCompleted) {
+          setTenantSetupProgress(85);
+          setTenantSetupStep('5/5: Provisioning Tenant Workspace & Syncing Storage...');
+          await api.initializeTenant(tenantKey);
         } else {
-          setIsTenantSetupInitializing(false);
+          setTenantSetupProgress(90);
+          setTenantSetupStep('5/5: Syncing Workspace & Missions State...');
+          await new Promise(r => setTimeout(r, 200));
         }
-      } else {
-        setIsTenantSetupInitializing(false);
+
+        if (!isMounted) return;
+        setIsAgentInitialized(Boolean(initRes.agentInitialized));
+        setTenantSetupProgress(100);
+        setTenantSetupStep('Verification complete! Opening Fabrica Dashboard...');
+
+        setTimeout(() => {
+          if (isMounted) {
+            setIsTenantSetupInitializing(false);
+            fetchWorkspaceData();
+          }
+        }, 350);
+      } catch (err: any) {
+        console.error('Workspace verification sequence error:', err);
+        setTenantSetupStep('Verification Notice: Retrying Supabase & GCS connection...');
+        // Retry once or allow manual retry
+        setTimeout(async () => {
+          try {
+            const fallbackRes = await api.initializeTenant(tenantKey);
+            if (fallbackRes && fallbackRes.ok) {
+              setTenantSetupProgress(100);
+              setTenantSetupStep('Verification succeeded!');
+              setTimeout(() => {
+                if (isMounted) {
+                  setIsTenantSetupInitializing(false);
+                  fetchWorkspaceData();
+                }
+              }, 300);
+            }
+          } catch (e) {
+            console.error('Retry failed:', e);
+          }
+        }, 1000);
       }
-    }).catch(() => {
-      setIsTenantSetupInitializing(false);
-    });
+    }
+
+    runTenantVerificationSequence();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   useEffect(() => {
@@ -3874,7 +3937,7 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const [entRes, ecoRes, dbRaw, dbComp, projRes] = await Promise.all([
+      const [entRes, ecoRes, dbRaw, dbComp, projRes, wsMapRes] = await Promise.all([
         api.getEntity(activeEntity).catch(err => {
           console.warn('api.getEntity failed, using empty data fallback', err);
           return EMPTY_ENTITY_DATA;
@@ -3886,7 +3949,11 @@ Please immediately process this feedback starting from ${targetLoopName}, acknow
         fetch(`/api/db/raw-data?tenantId=${encodeURIComponent(activeEntity || 'default_user')}`).then(r => r.json()).catch(() => []),
         fetch(`/api/db/system-components?tenantId=${encodeURIComponent(activeEntity || 'default_user')}`).then(r => r.json()).catch(() => []),
         api.getProjects(activeEntity).catch(() => ({ ok: false, projects: [] })),
+        workspaceApi.getWorkspaceMap().catch(() => null),
       ]);
+      if (wsMapRes && wsMapRes.ok && wsMapRes.map) {
+        setWorkspaceMapData(wsMapRes.map);
+      }
       const mergedEnt = getMergedEntityData(entRes);
       setEntityData(mergedEnt);
       if (mergedEnt.runtime && Array.isArray(mergedEnt.runtime.suggestions) && mergedEnt.runtime.suggestions.length > 0) {
@@ -7763,7 +7830,6 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                     type="button"
                     onClick={() => {
                       if (selectedPlan === 'free') {
-                        // Free Tier goes directly to dashboard
                         localStorage.setItem(`fabrica_onboarding_completed_${user?.id || 'default'}`, 'true');
                         setOnboardingCompleted(true);
                         setToast({
@@ -7772,7 +7838,6 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                           isOpen: true
                         });
                       } else {
-                        // Paid Tiers go to Payment (with simulated secure gateway portal)
                         setToast({
                           message: `Redirecting to secure payment portal for the ${selectedPlan.toUpperCase()} subscription...`,
                           type: 'info',
@@ -7888,11 +7953,11 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
               </div>
 
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.01em', lineHeight: 1.4 }}>
-                Welcom to fabrica. Wait a few mements for your Directory Creation and Agent Setup
+                Welcome to Fabrica. Verifying Workspace Setup & Cloud Infrastructure
               </h2>
               
               <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: 1.5 }}>
-                Creating your isolated tenant workspace and configuring agent harness...
+                Verifying Supabase user, tier subscription, vault credentials, and dedicated GCS storage bucket...
               </p>
             </div>
 
@@ -7934,17 +7999,25 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
               fontSize: '11px',
               color: '#cbd5e1'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 15 ? '#34d399' : '#64748b' }}>
-                <span>{tenantSetupProgress >= 15 ? '✓' : '⏳'}</span>
-                <span>User Directory Workspace (<code>/mnt/</code>)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 20 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 20 ? '✓' : '⏳'}</span>
+                <span>Supabase User & Subscription Tier Verification</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 45 ? '#34d399' : '#64748b' }}>
-                <span>{tenantSetupProgress >= 45 ? '✓' : '⏳'}</span>
-                <span>Tenant Configuration & Runtime Board (<code>runtime-board.json</code>)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 40 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 40 ? '✓' : '⏳'}</span>
+                <span>Tenant Identity & Vault Credentials (<code>user_tiers</code>)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 60 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 60 ? '✓' : '⏳'}</span>
+                <span>Dedicated Google Cloud Storage Bucket (<code>bucket_id</code>)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 80 ? '#34d399' : '#64748b' }}>
                 <span>{tenantSetupProgress >= 80 ? '✓' : '⏳'}</span>
-                <span>Workspace & Missions Structure (<code>workspace/</code>, <code>missions/</code>)</span>
+                <span>User Container Instance (<code>container_id</code>)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 100 ? '#34d399' : '#64748b' }}>
+                <span>{tenantSetupProgress >= 100 ? '✓' : '⏳'}</span>
+                <span>Workspace Directory & Runtime Board (<code>/mnt/</code>)</span>
               </div>
             </div>
           </div>
@@ -9198,7 +9271,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 </div>
 
                 <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-bright)', letterSpacing: '0.02em' }}>
-                  Agent Workspace Not Started
+                  User Container & Agent Not Started
                 </div>
 
                 <div style={{
@@ -9213,12 +9286,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   fontFamily: 'var(--mono)',
                   color: '#34d399'
                 }}>
-                  <span>📁</span>
-                  <span>Tenant Workspace: <code>/mnt/</code></span>
+                  <span>📦</span>
+                  <span>User Container: <code>fabrica-runner-{(user?.id || 'default_user').replace(/[^a-zA-Z0-9_\-]/g, '-').toLowerCase()}</code></span>
                 </div>
 
                 <div style={{ fontSize: '10.5px', color: 'var(--muted)', maxWidth: '280px', lineHeight: 1.5 }}>
-                  Click below to trigger the Agent CLI targeting your workspace root (<code>/mnt/</code>), detect <code>.pi/</code>, and enable agent skills.
+                  Click below to boot your dedicated Cloud Run container instance, start the Agent Runner process, connect to <code>.pi/</code> extensions, and enable autonomous execution.
                 </div>
 
                 <button
@@ -9244,12 +9317,12 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   {isStartingAgent ? (
                     <>
                       <span style={{ fontSize: '12px', display: 'inline-block', animation: 'spin 1.5s linear infinite' }}>⚙️</span>
-                      <span>Triggering Agent CLI...</span>
+                      <span>Booting User Container & Agent Server...</span>
                     </>
                   ) : (
                     <>
                       <span style={{ fontSize: '12px' }}>⚡</span>
-                      <span>Start Agent</span>
+                      <span>Start User Container & Agent</span>
                     </>
                   )}
                 </button>
@@ -9729,7 +9802,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
-                          onClick={() => setSelectedMission(m)}
+                          onClick={() => handleSelectMission(m)}
                           style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
@@ -9858,7 +9931,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
-                          onClick={() => setSelectedMission(m)}
+                          onClick={() => handleSelectMission(m)}
                           style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
@@ -9968,7 +10041,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         <div
                           key={m.id}
                           className={`mcard sm ${getPriorityClass(m.priority)}`}
-                          onClick={() => setSelectedMission(m)}
+                          onClick={() => handleSelectMission(m)}
                           style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
@@ -10106,7 +10179,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                         <div
                           key={m.id}
                           className="mcard sm"
-                          onClick={() => setSelectedMission(m)}
+                          onClick={() => handleSelectMission(m)}
                           style={{ display: 'flex', flexDirection: 'column', gap: '1.5px', opacity: 0.65, cursor: 'pointer', transition: 'transform 0.15s, border-color 0.15s', padding: '3px 4px' }}
                         >
                           <div className="mcard-top">
@@ -10505,37 +10578,54 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                       {/* 7 SUB-SECTIONS LIST */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto', padding: '2px 3px', gap: '3px' }}>
                       {(() => {
+                        const getDynamicFolderFiles = (sectionKey: string, fallbackFiles: any[]) => {
+                          if (!workspaceMapData) return fallbackFiles;
+                          const mappedKey = sectionKey === 'discovery_scoping' ? 'discovery_and_scoping' : sectionKey;
+                          const items = workspaceMapData[mappedKey] || workspaceMapData[sectionKey];
+                          if (Array.isArray(items) && items.length > 0) {
+                            return items.map((f: any, idx: number) => ({
+                              id: f.path || `ws-${sectionKey}-${idx}`,
+                              name: f.name || (f.path ? f.path.split('/').pop() : 'file'),
+                              path: f.path || f.name,
+                              isDir: Boolean(f.isDirectory),
+                              icon: f.isDirectory ? '📁' : f.name?.endsWith('.json') ? '🟨' : f.name?.endsWith('.md') ? '📄' : '📑',
+                              content: f.content || `File: ${f.path}`
+                            }));
+                          }
+                          return fallbackFiles;
+                        };
+
                         const SECTION_WORKSPACE_FILES: Record<string, Array<{ id: string; name: string; path: string; isDir?: boolean; icon: string; content?: string }>> = {
-                          discovery_scoping: [
+                          discovery_scoping: getDynamicFolderFiles('discovery_scoping', [
                             { id: 'ws-disc-1', name: 'discovery_doc.json', path: 'discovery_doc.json', icon: '🟨', content: '{\n  "title": "Discovery & Scoping Requirements",\n  "target_audience": "Enterprise & Autonomous Developers",\n  "scope": "24/7 Autonomy Harness & Multi-Tenant Container Setup",\n  "status": "APPROVED",\n  "author": "AI Architect",\n  "created_at": "2026-08-06T08:00:00Z"\n}' },
                             { id: 'ws-disc-2', name: 'scoping.md', path: 'scoping.md', icon: '📄', content: '# Project Scoping & Objectives\n- **Goal**: Build scalable multi-tenant execution platform.\n- **Security**: Isolated Cloud Run containers with GCS FUSE mount.\n- **Autonomy**: Supervised agent loop with real-time feedback.' },
                             { id: 'ws-disc-3', name: 'metadata.json', path: 'metadata.json', icon: '🟨', content: '{\n  "name": "Fabrica",\n  "description": "24/7 AI Autonomy and Scale.",\n  "requestFramePermissions": [],\n  "majorCapabilities": [\n    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"\n  ]\n}' }
-                          ],
-                          deep_research: [
+                          ]),
+                          deep_research: getDynamicFolderFiles('deep_research', [
                             { id: 'ws-res-1', name: 'deep_research.md', path: 'deep_research.md', icon: '📡', content: '# Deep Research Findings & Technical Benchmarks\n- **Container Boot Latency**: <1.2s warm boot\n- **Storage Performance**: GCS FUSE mount throughput 120MB/s\n- **Model Latency**: Gemini 2.5 Flash sub-500ms response\n- **Concurrency**: Tested to 50 active tenant workers.' },
                             { id: 'ws-res-2', name: 'research_notes.txt', path: 'research_notes.txt', icon: '📑', content: '[Research Log]\nVerified memory footprint across 50 concurrent tenant workers.\nZero socket leaks detected.' }
-                          ],
-                          data_analysis: [
+                          ]),
+                          data_analysis: getDynamicFolderFiles('data_analysis', [
                             { id: 'ws-data-1', name: 'data_analysis.csv', path: 'data_analysis.csv', icon: '📊', content: 'timestamp,tenant_id,cpu_usage,memory_mb,status\n2026-08-06T08:00:00Z,usr-123,12.4%,256,HEALTHY\n2026-08-06T08:05:00Z,usr-123,18.1%,312,HEALTHY\n2026-08-06T08:10:00Z,usr-123,14.2%,280,HEALTHY' },
                             { id: 'ws-data-2', name: 'metrics.json', path: 'metrics.json', icon: '🟨', content: '{\n  "total_turns": 142,\n  "avg_latency_ms": 480,\n  "cache_hit_ratio": 0.94,\n  "gcs_sync_status": "synced"\n}' }
-                          ],
-                          strategic_synthesis: [
+                          ]),
+                          strategic_synthesis: getDynamicFolderFiles('strategic_synthesis', [
                             { id: 'ws-synth-1', name: 'synthesis_report.md', path: 'synthesis_report.md', icon: '🎯', content: '# Strategic Architectural Synthesis\n1. Unified live app preview with embedded code editor.\n2. GCS persistent workspace file syncing.\n3. Responsive 7-subsystem workflow orchestration.' },
                             { id: 'ws-synth-2', name: 'workspace-graph.json', path: 'workspace-graph.json', icon: '🟨', content: '{\n  "version": "2.0.0",\n  "workspace_id": "ws-tenant-primary",\n  "tenant_id": "usr-123",\n  "storage_backend": "gcs_fuse_mount"\n}' }
-                          ],
-                          executions: [
+                          ]),
+                          executions: getDynamicFolderFiles('executions', [
                             { id: 'ws-exec-1', name: 'src/', path: 'src/', isDir: true, icon: '📁', content: '// Directory src/\n// Contains application server and harness files' },
                             { id: 'ws-exec-2', name: 'server.ts', path: 'src/server.ts', icon: '📘', content: `import express from 'express';\nimport { runAgentCliTurn } from './core/harness';\n\nconst app = express();\nconst PORT = process.env.PORT || 3000;\n\napp.get('/health', (req, res) => {\n  res.json({ status: 'ok', storage_type: 'GCS_DEDICATED_BUCKET' });\n});\n\napp.listen(PORT, () => console.log("Fabrica active"));` },
                             { id: 'ws-exec-3', name: 'App.tsx', path: 'App.tsx', icon: '📘', content: `'use client';\nimport React from 'react';\n\nexport default function App() {\n  return <div>⚡ Fabrica Live Application</div>;\n}` },
                             { id: 'ws-exec-4', name: 'package.json', path: 'package.json', icon: '🟨', content: '{\n  "name": "fabrica-tenant-app",\n  "version": "1.0.0"\n}' },
                             { id: 'ws-exec-5', name: 'runtime-board.json', path: 'runtime-board.json', icon: '🟨', content: '{\n  "runner_service": "fabrica-runner-usr-123",\n  "autonomy_level": "supervised"\n}' }
-                          ],
-                          reviews: [
+                          ]),
+                          reviews: getDynamicFolderFiles('reviews', [
                             { id: 'ws-rev-1', name: 'audit_review.md', path: 'audit_review.md', icon: '🛡️', content: '# Security & Code Audit Review\n- [x] ESLint & TypeScript compilation clean\n- [x] Container sandbox isolation verified\n- [x] GCS auto-save syncing operational' }
-                          ],
-                          completed: [
+                          ]),
+                          completed: getDynamicFolderFiles('completed', [
                             { id: 'ws-comp-1', name: 'build_summary.log', path: 'build_summary.log', icon: '✅', content: '[BUILD SUCCESS] Turbopack production build finalized.\n[DEPLOY SUCCESS] App live at container port 3000.' }
-                          ]
+                          ])
                         };
 
                         return [

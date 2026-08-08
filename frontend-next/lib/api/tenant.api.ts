@@ -1,8 +1,12 @@
 import { request } from './client';
 
 export const tenantApi = {
-  getInitStatus: (tenantId: string = 'default_user') => request<{ ok: boolean; initialized: boolean; agentInitialized?: boolean; tenantId: string }>(`/api/tenant/init-status?tenantId=${encodeURIComponent(tenantId)}`),
-  initializeTenant: (tenantId: string = 'default_user') => request<{ ok: boolean; initialized: boolean; message: string }>(`/api/tenant/initialize`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
+  getInitStatus: (tenantId: string = 'default_user') => request<{ ok: boolean; initialized: boolean; agentInitialized?: boolean; onboardingCompleted?: boolean; tenantId: string; bucketId?: string; containerId?: string; plan?: string; credentials?: any; verified?: any }>(`/api/tenant/init-status?tenantId=${encodeURIComponent(tenantId)}`),
+  initializeTenant: (tenantId: string = 'default_user') => request<{ ok: boolean; initialized: boolean; onboardingCompleted?: boolean; message: string; bucketId?: string; containerId?: string }>(`/api/tenant/initialize`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
+  gcsSync: (tenantId: string = 'default_user') => request<{ ok: boolean; message: string; bucket: string }>(`/api/tenant/gcs-sync`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
+  containerRestart: (tenantId: string = 'default_user') => request<{ ok: boolean; message: string; container: string }>(`/api/tenant/container-restart`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
+  gcsExport: (tenantId: string = 'default_user') => request<{ ok: boolean; message: string; downloadUrl: string }>(`/api/tenant/gcs-export`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
+  gcsPurge: (tenantId: string = 'default_user') => request<{ ok: boolean; message: string }>(`/api/tenant/gcs-purge`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
   startAgent: (tenantId: string = 'default_user') => request<{ ok: boolean; agentInitialized: boolean; message?: string; error?: string }>(`/api/tenant/start-agent`, { method: 'POST', body: JSON.stringify({ tenantId }) }),
   getTenantProfile: (tenantId: string = 'default_user') => request<{ ok: boolean; profile: any }>(`/api/tenant/profile?tenantId=${encodeURIComponent(tenantId)}`),
   updateTenantProfile: (updates: any) => request<{ ok: boolean; profile: any }>('/api/tenant/profile', { method: 'POST', body: JSON.stringify(updates) }),

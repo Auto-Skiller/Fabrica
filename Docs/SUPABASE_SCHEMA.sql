@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS public.key_pools (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table 2: user_tiers (User Plan & Token Quotas)
--- Purpose: Manages tenant subscription tiers, card verification status, and monthly token usage.
+-- Table 2: user_tiers (User Plan, Infrastructure IDs & Quotas)
+-- Purpose: Manages tenant subscription tiers, card verification status, dedicated GCS bucket ID, container ID, onboarding completion status, and tenant credentials.
 -- Security Level: USER READ-ONLY (own row), SERVER READ-WRITE.
 CREATE TABLE IF NOT EXISTS public.user_tiers (
     tenant_id TEXT PRIMARY KEY,
@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS public.user_tiers (
     has_verified_card BOOLEAN NOT NULL DEFAULT false,
     monthly_token_quota BIGINT NOT NULL DEFAULT 1000000,
     used_tokens_this_month BIGINT NOT NULL DEFAULT 0,
+    bucket_id TEXT,
+    container_id TEXT,
+    onboarding_completed BOOLEAN NOT NULL DEFAULT false,
+    credentials JSONB NOT NULL DEFAULT '{}'::jsonb,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -120,9 +124,14 @@ DO UPDATE SET
     updated_at = NOW();
 
 -- Populate Default User Tier for System Admin / Default User
-INSERT INTO public.user_tiers (tenant_id, plan, has_verified_card, monthly_token_quota, used_tokens_this_month)
-VALUES ('default_user', 'pro', true, 10000000, 0)
-ON CONFLICT (tenant_id) DO NOTHING;
+INSERT INTO public.user_tiers (tenant_id, plan, has_verified_card, monthly_token_quota, used_tokens_this_month, bucket_id, container_id, onboarding_completed, credentials)
+VALUES ('default_user', 'pro', true, 10000000, 0, 'fabrica-tenant-default-user', 'fabrica-runner-default-user', true, '{"kms_status": "active", "api_key_vault": "configured"}'::jsonb)
+ON CONFLICT (tenant_id) DO UPDATE SET
+    bucket_id = EXCLUDED.bucket_id,
+    container_id = EXCLUDED.container_id,
+    onboarding_completed = EXCLUDED.onboarding_completed,
+    credentials = EXCLUDED.credentials,
+    updated_at = NOW();
 
 -- ------------------------------------------------------------------------------
 -- 6. AUTOMATIC AUTH TRIGGER FOR NEW USERS
@@ -132,8 +141,18 @@ ON CONFLICT (tenant_id) DO NOTHING;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_tiers (tenant_id, plan, has_verified_card, monthly_token_quota, used_tokens_this_month)
-    VALUES (NEW.id::text, 'free', false, 1000000, 0)
+    INSERT INTO public.user_tiers (tenant_id, plan, has_verified_card, monthly_token_quota, used_tokens_this_month, bucket_id, container_id, onboarding_completed, credentials)
+    VALUES (
+        NEW.id::text,
+        'free',
+        false,
+        1000000,
+        0,
+        'fabrica-tenant-' || lower(regexp_replace(NEW.id::text, '[^a-zA-Z0-9]', '-', 'g')),
+        'fabrica-runner-' || lower(regexp_replace(NEW.id::text, '[^a-zA-Z0-9]', '-', 'g')),
+        true,
+        jsonb_build_object('kms_status', 'active', 'api_key_vault', 'configured', 'created_at', NOW())
+    )
     ON CONFLICT (tenant_id) DO NOTHING;
     RETURN NEW;
 END;

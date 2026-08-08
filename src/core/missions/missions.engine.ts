@@ -95,6 +95,8 @@ export function updateMissionsGraphIndex(tenantId: string = 'default_user') {
   const graphPath = path.join(userRoot, 'missions-graph.json');
 
   let graphEntries: any[] = [];
+  let fullMissionsList: Mission[] = [];
+
   if (fs.existsSync(missionsDir)) {
     const files = fs.readdirSync(missionsDir).filter(f => f.endsWith('.json'));
     for (const file of files) {
@@ -103,6 +105,7 @@ export function updateMissionsGraphIndex(tenantId: string = 'default_user') {
         if (fs.statSync(fullPath).isFile()) {
           const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
           if (content && content.id) {
+            fullMissionsList.push(content);
             graphEntries.push({
               id: content.id,
               title: content.title || 'Untitled Mission',
@@ -120,10 +123,13 @@ export function updateMissionsGraphIndex(tenantId: string = 'default_user') {
     }
   }
 
-  fs.writeFileSync(graphPath, JSON.stringify({
+  const payload = {
     missions: graphEntries,
+    full_missions: fullMissionsList,
     last_updated: new Date().toISOString()
-  }, null, 2), 'utf8');
+  };
+
+  fs.writeFileSync(graphPath, JSON.stringify(payload, null, 2), 'utf8');
 }
 
 export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: string }) {
@@ -151,26 +157,9 @@ export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: 
 export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
   const userRoot = getTenantRoot(tenantId);
   const missionsDir = path.join(userRoot, 'missions');
-  const legacySingleMissionsPath = path.join(userRoot, 'missions.json');
 
   if (!fs.existsSync(missionsDir)) {
     fs.mkdirSync(missionsDir, { recursive: true });
-  }
-
-  if (fs.existsSync(legacySingleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(legacySingleMissionsPath, 'utf8'));
-      const oldList: Mission[] = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-      for (const m of oldList) {
-        if (m && m.id) {
-          const mPath = path.join(missionsDir, `${m.id}.json`);
-          if (!fs.existsSync(mPath)) {
-            fs.writeFileSync(mPath, JSON.stringify(m, null, 2), 'utf8');
-          }
-        }
-      }
-      try { fs.unlinkSync(legacySingleMissionsPath); } catch (_) {}
-    } catch (_) {}
   }
 
   const fullMissions: Mission[] = [];

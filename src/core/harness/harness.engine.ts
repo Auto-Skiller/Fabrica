@@ -10,7 +10,7 @@ import {
   PiSessionItem,
   PiProcessLogItem
 } from '../../types/harness.types.js';
-import { keyPoolManager, getUserTier, deductLlmCredits, checkUserCanRun } from '../auth/session.manager.js';
+import { keyPoolManager, getUserTier, deductLlmCredits, checkUserCanRun, syncUserSettingsToSupabase } from '../auth/session.manager.js';
 import { getTenantRoot, ensureTenantFilesAndFolders } from '../tenant/tenant.manager.js';
 import { getPiBinaryPath, syncPiUserAuthKeys, getPiExecutionOptions } from './extensions.registry.js';
 import { sanitizeText } from './prompt.builder.js';
@@ -271,6 +271,9 @@ export function updateHarnessState(tenantId: string = 'default_user', updates: R
   } catch (err) {
     console.warn(`[harness] Failed to update harness.json for tenant ${tenantId}:`, err);
   }
+
+  // Sync autonomy mode, timer, account & API details to Supabase (EXCLUDING BYOK keys)
+  syncUserSettingsToSupabase(tenantId, merged);
 
   return merged;
 }

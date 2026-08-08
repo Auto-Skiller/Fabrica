@@ -13,7 +13,7 @@ import { ensureUserHarness } from '../harness/harness.engine.js';
 
 export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceMap | null {
   const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace-graph.json');
+  const workspaceGraphJsonPath = path.join(userRoot, 'workspace-graph.json');
   const workspaceDir = path.join(userRoot, 'workspace');
 
   const workspaceDirs = [
@@ -66,9 +66,9 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
 
   const existingMetadataMap = new Map<string, Partial<WorkspaceItem>>();
 
-  if (fs.existsSync(workspaceJsonPath)) {
+  if (fs.existsSync(workspaceGraphJsonPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(workspaceJsonPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(workspaceGraphJsonPath, 'utf8'));
 
       const collectMetadata = (list: any[]) => {
         if (!Array.isArray(list)) return;
@@ -169,7 +169,7 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   };
 
   try {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify(workspaceMap, null, 2), 'utf8');
+    fs.writeFileSync(workspaceGraphJsonPath, JSON.stringify(workspaceMap, null, 2), 'utf8');
   } catch (err) {
     console.warn(`[WorkspaceCore] Failed writing workspace-graph.json for ${tenantId}:`, err);
   }
@@ -179,10 +179,11 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
 
 export function getWorkspaceMap(tenantId: string = 'default_user'): WorkspaceMap {
   const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace-graph.json');
-  if (fs.existsSync(workspaceJsonPath)) {
+  const workspaceGraphJsonPath = path.join(userRoot, 'workspace-graph.json');
+
+  if (fs.existsSync(workspaceGraphJsonPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(workspaceJsonPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(workspaceGraphJsonPath, 'utf8'));
       let needsResync = false;
       const checkItems = (list: any[]) => {
         if (!Array.isArray(list)) return;

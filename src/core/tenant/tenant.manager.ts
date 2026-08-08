@@ -12,6 +12,7 @@ import {
 } from '../../types/tenant.types.js';
 import { ensureUserHarness } from '../harness/harness.engine.js';
 import { getOrCreateTenantRunnerUrl, proxyTurnToRunner } from '../../services/cloudrun.orchestrator.js';
+import { syncUserSettingsToSupabase } from '../auth/session.manager.js';
 
 export function getTenantRoot(_tenantId?: string): string {
   const userRoot = '/mnt';
@@ -287,6 +288,10 @@ export function updateTenantProfile(tenantId: string = 'default_user', updates: 
   };
 
   fs.writeFileSync(boardPath, JSON.stringify(fullBoardData, null, 2), 'utf8');
+
+  // Sync profile & account details to Supabase (EXCLUDING BYOK keys)
+  syncUserSettingsToSupabase(tenantId, { account_details: updated });
+
   return updated;
 }
 

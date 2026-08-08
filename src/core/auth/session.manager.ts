@@ -357,19 +357,86 @@ export function updateUserTier(tenantId: string = 'default_user', updates: Parti
 
   const client = getSupabaseClient();
   if (client) {
-    Promise.resolve(client.from('user_tiers').upsert({
+    const supabasePayload: any = {
       tenant_id: tenantId,
       plan: updated.plan || 'pro',
       has_verified_card: Boolean(updated.hasVerifiedCard),
       monthly_token_quota: updated.monthlyTokenQuota || 1000000000,
       used_tokens_this_month: updated.usedTokensThisMonth || 0,
       updated_at: new Date().toISOString()
-    })).then(({ error }) => {
+    };
+    // Ensure BYOK keys are strictly NEVER sent to Supabase
+    delete supabasePayload.customApiKey;
+    delete supabasePayload.custom_api_key;
+    delete supabasePayload.customKey;
+
+    Promise.resolve(client.from('user_tiers').upsert(supabasePayload)).then(({ error }) => {
       if (error) console.warn('[AuthCore] Supabase user_tiers sync:', error.message);
     }).catch((err: any) => console.warn('[AuthCore] Supabase user_tiers error:', err));
   }
 
   return getUserTier(tenantId);
+}
+
+export function syncUserSettingsToSupabase(tenantId: string = 'default_user', stateUpdates: Record<string, any>): void {
+  const client = getSupabaseClient();
+  if (!client) return;
+
+  // STRICT SECURITY SANITIZATION: BYOK / API keys MUST NEVER be saved to Supabase
+  const sanitize = (obj: any): any => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(sanitize);
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      const kLower = key.toLowerCase();
+      if (
+        kLower.includes('key') ||
+        kLower.includes('secret') ||
+        kLower.includes('password') ||
+        kLower.includes('byok') ||
+        kLower.includes('token')
+      ) {
+        // Exclude BYOK & API secret keys completely
+        continue;
+      }
+      cleaned[key] = sanitize(val);
+    }
+    return cleaned;
+  };
+
+  const cleanUpdates = sanitize(stateUpdates);
+
+  const payload: any = {
+    tenant_id: tenantId,
+    autonomy: cleanUpdates.autonomy,
+    autonomy_interval: cleanUpdates.autonomy_interval,
+    selected_model: cleanUpdates.selected_model,
+    agent_lang: cleanUpdates.agent_lang,
+    web_search_enabled: cleanUpdates.web_search_enabled,
+    account_details: cleanUpdates.account_details || cleanUpdates.profile || {
+      name: cleanUpdates.name,
+      email: cleanUpdates.email,
+      plan: cleanUpdates.plan,
+      settings: cleanUpdates.settings
+    },
+    api_settings: cleanUpdates.api_settings || {
+      selected_model: cleanUpdates.selected_model,
+      agent_lang: cleanUpdates.agent_lang,
+      web_search_enabled: cleanUpdates.web_search_enabled
+    },
+    updated_at: new Date().toISOString()
+  };
+
+  delete payload.customApiKey;
+  delete payload.custom_api_key;
+  delete payload.customKey;
+  delete payload.byok;
+
+  Promise.resolve(client.from('user_tiers').upsert(payload))
+    .then(({ error }) => {
+      if (error) console.warn('[SupabaseSync] user_tiers sync notice:', error.message);
+    })
+    .catch((err: any) => console.warn('[SupabaseSync] user_tiers sync error:', err));
 }
 
 export function verifyUserCard(tenantId: string = 'default_user', cardData?: { cardLast4?: string; provider?: string }): UserTierInfo {

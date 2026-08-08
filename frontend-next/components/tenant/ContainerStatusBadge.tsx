@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ContainerState } from '../preview/LiveAppPreview';
+import { tenantApi } from '../../lib/api/tenant.api';
 
 interface ContainerStatusBadgeProps {
   tenantId?: string;
@@ -12,7 +13,7 @@ interface ContainerStatusBadgeProps {
 }
 
 export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
-  tenantId = 'usr-123',
+  tenantId = 'default_user',
   containerState = 'warm',
   onWarmup,
   onRestart,
@@ -24,14 +25,73 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
 
-  const triggerAction = (message: string, duration = 2000, callback?: () => void) => {
+  const handleGcsSync = async () => {
     setIsProcessing(true);
-    setStatusMessage(message);
-    if (callback) callback();
-    setTimeout(() => {
-      setIsProcessing(false);
-      setTimeout(() => setStatusMessage(null), 1500);
-    }, duration);
+    setStatusMessage('Syncing GCS Bucket workspace storage...');
+    try {
+      const res = await tenantApi.gcsSync(tenantId);
+      setStatusMessage(res.message || 'GCS Bucket workspace synced successfully!');
+      if (onWarmup) onWarmup();
+    } catch (err: any) {
+      setStatusMessage(err.message || 'Failed to sync GCS Bucket');
+    } finally {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setTimeout(() => setStatusMessage(null), 2000);
+      }, 1200);
+    }
+  };
+
+  const handleContainerRestart = async () => {
+    setIsProcessing(true);
+    setStatusMessage('Rebooting dedicated user container instance...');
+    try {
+      const res = await tenantApi.containerRestart(tenantId);
+      setStatusMessage(res.message || 'User container rebooted successfully!');
+      if (onRestart) onRestart();
+    } catch (err: any) {
+      setStatusMessage(err.message || 'Failed to restart container');
+    } finally {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setTimeout(() => setStatusMessage(null), 2000);
+      }, 1200);
+    }
+  };
+
+  const handleGcsExport = async () => {
+    setIsProcessing(true);
+    setStatusMessage('Preparing GCS Bucket workspace backup (.zip)...');
+    try {
+      const res = await tenantApi.gcsExport(tenantId);
+      setStatusMessage(res.message || 'Workspace archive generated!');
+      if (res.downloadUrl) {
+        window.open(res.downloadUrl, '_blank');
+      }
+    } catch (err: any) {
+      setStatusMessage(err.message || 'Failed to export workspace');
+    } finally {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setTimeout(() => setStatusMessage(null), 2000);
+      }, 1200);
+    }
+  };
+
+  const handleGcsPurge = async () => {
+    setIsProcessing(true);
+    setStatusMessage('Purging temporary cache in GCS Bucket...');
+    try {
+      const res = await tenantApi.gcsPurge(tenantId);
+      setStatusMessage(res.message || 'GCS Bucket storage cache purged!');
+    } catch (err: any) {
+      setStatusMessage(err.message || 'Failed to purge workspace');
+    } finally {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setTimeout(() => setStatusMessage(null), 2000);
+      }, 1200);
+    }
   };
 
   const togglePopover = () => {
@@ -167,7 +227,7 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             <button
               type="button"
               disabled={isProcessing}
-              onClick={() => triggerAction('Pre-warming user container instance...', 2000, onWarmup)}
+              onClick={handleGcsSync}
               style={{
                 backgroundColor: 'var(--accent)',
                 border: 'none',
@@ -183,14 +243,14 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
                 gap: '4px'
               }}
             >
-              <span>⚡</span>
-              <span>Manual Pre-warm</span>
+              <span>☁️</span>
+              <span>GCS Bucket Sync</span>
             </button>
 
             <button
               type="button"
               disabled={isProcessing}
-              onClick={() => triggerAction('Rebooting container instance...', 2000, onRestart)}
+              onClick={handleContainerRestart}
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-soft)',
@@ -213,7 +273,7 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             <button
               type="button"
               disabled={isProcessing}
-              onClick={() => triggerAction('Exporting workspace zip backup...', 2000)}
+              onClick={handleGcsExport}
               style={{
                 backgroundColor: 'var(--surface)',
                 border: '1px solid var(--border-soft)',
@@ -230,13 +290,13 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
               }}
             >
               <span>📥</span>
-              <span>Export Workspace (.zip)</span>
+              <span>Export GCS Bucket</span>
             </button>
 
             <button
               type="button"
               disabled={isProcessing}
-              onClick={() => triggerAction('Purging workspace storage...', 2000)}
+              onClick={handleGcsPurge}
               style={{
                 backgroundColor: 'rgba(239, 68, 68, 0.12)',
                 border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -253,7 +313,7 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
               }}
             >
               <span>🧹</span>
-              <span>Purge Workspace</span>
+              <span>Purge GCS Bucket</span>
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware.js';
 import {
   getMissions,
+  getMission,
   createMission,
   updateMission,
   deleteMission,
@@ -66,6 +67,18 @@ router.get('/schema', (req: AuthenticatedRequest, res: Response) => {
   const type = (req.query.type as string) || 'standard';
   const schema = getMissionSchema(type);
   res.json({ ok: true, schema });
+});
+
+// GET /api/missions/:id — Get details for <mission_id>.json in user GCS /missions/
+router.get('/:id', (req: AuthenticatedRequest, res: Response) => {
+  const tenantId = req.tenantId!;
+  const missionId = req.params.id;
+  const mission = getMission(tenantId, missionId);
+  if (!mission) {
+    res.status(404).json({ ok: false, error: 'Mission details file not found.' });
+    return;
+  }
+  res.json({ ok: true, mission });
 });
 
 export default router;

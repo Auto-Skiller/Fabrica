@@ -13,7 +13,7 @@ import {
 
 const router = Router();
 
-// GET /api/workspace/files — List workspace files from workspace.json index with path sanitization
+// GET /api/workspace/files — List workspace files from workspace-graph.json index with path sanitization
 router.get('/files', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId!;
   const subDir = (req.query.path as string) || '';
@@ -125,7 +125,7 @@ router.post('/file/delete', (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// GET /api/workspace/map — Get single workspace.json map
+// GET /api/workspace/map — Get single workspace-graph.json map
 router.get('/map', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId!;
   const map = getWorkspaceMap(tenantId);
