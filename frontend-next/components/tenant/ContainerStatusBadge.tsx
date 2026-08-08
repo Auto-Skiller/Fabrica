@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ContainerState } from '../workspace/LiveAppPreview';
+import { ContainerState } from '../preview/LiveAppPreview';
 
 interface ContainerStatusBadgeProps {
   tenantId?: string;
@@ -71,7 +71,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }} className={className}>
-      {/* Clickable Header Badge */}
       <button
         ref={buttonRef}
         type="button"
@@ -104,7 +103,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
         <span style={{ fontSize: '7px', opacity: 0.7 }}>▼</span>
       </button>
 
-      {/* Diagnostics Popover Modal */}
       {isOpen && (
         <div style={{
           position: 'fixed',
@@ -121,7 +119,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
           flexDirection: 'column',
           gap: '12px'
         }}>
-          {/* Popover Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-soft)', paddingBottom: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '14px' }}>☁️</span>
@@ -137,7 +134,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             </button>
           </div>
 
-          {/* Diagnostics Key Values */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--muted)' }}>Container Status:</span>
@@ -149,7 +145,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             </div>
           </div>
 
-          {/* Status Feedback Banner */}
           {statusMessage && (
             <div style={{
               backgroundColor: 'rgba(59, 130, 246, 0.15)',
@@ -168,7 +163,6 @@ export const ContainerStatusBadge: React.FC<ContainerStatusBadgeProps> = ({
             </div>
           )}
 
-          {/* Quick Actions (4 Moved Buttons) */}
           <div style={{ borderTop: '1px solid var(--border-soft)', paddingTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
             <button
               type="button"

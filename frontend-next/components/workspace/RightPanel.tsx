@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import LiveAppPreview, { ContainerState } from './LiveAppPreview';
-import GcsFileExplorer, { GcsFileNode } from './GcsFileExplorer';
+import LiveAppPreview, { ContainerState } from '../preview/LiveAppPreview';
+import GcsFileExplorer, { GcsFileNode } from '../editor/GcsFileExplorer';
 
 export type RightPanelTab = 'preview' | 'files';
 

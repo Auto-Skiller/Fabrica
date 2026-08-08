@@ -2,14 +2,14 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
-import { authMiddleware } from './src/api/middlewares/auth.middleware.js';
-import { errorMiddleware } from './src/api/middlewares/error.middleware.js';
+import { authMiddleware } from './src/middlewares/auth.middleware.js';
+import { errorMiddleware } from './src/middlewares/error.middleware.js';
 
-import authRouter from './src/api/routes/auth.routes.js';
-import tenantRouter from './src/api/routes/tenant.routes.js';
-import workspaceRouter from './src/api/routes/workspace.routes.js';
-import missionsRouter from './src/api/routes/missions.routes.js';
-import harnessRouter from './src/api/routes/harness.routes.js';
+import authRouter from './src/api/auth.controller.js';
+import tenantRouter from './src/api/tenant.controller.js';
+import workspaceRouter from './src/api/workspace.controller.js';
+import missionsRouter from './src/api/missions.controller.js';
+import harnessRouter from './src/api/harness.controller.js';
 
 import { ensureUserHarness } from './src/core/harness.js';
 import { syncMissionsJson } from './src/core/missions.js';

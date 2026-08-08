@@ -14,9 +14,9 @@ export interface ContextPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAttach: (items: AttachedContextItem[]) => void;
-  missions: any[];
-  rawDataList: any[];
-  systemComponents: any[];
+  missions?: any[];
+  rawDataList?: any[];
+  systemComponents?: any[];
 }
 
 export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
@@ -128,7 +128,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
           boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
         }}
       >
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1.5px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '14px' }}>📎</span>
@@ -137,7 +136,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '14px' }}>✕</button>
         </div>
 
-        {/* Navigation Tabs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderBottom: '1px solid var(--border-soft)', background: 'rgba(0,0,0,0.1)' }}>
           <button
             onClick={() => setActiveTab('files')}
@@ -174,7 +172,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Body */}
         <div style={{ flex: 1, padding: '16px', overflowY: 'auto', minHeight: 0 }}>
           {activeTab === 'files' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -250,7 +247,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
 
           {activeTab === 'workspace' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* Raw Data Assets */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>RAW DATA ASSETS:</span>
                 {rawDataList.length === 0 ? (
@@ -283,7 +279,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
                 )}
               </div>
 
-              {/* System Components */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase' }}>SYSTEM COMPONENTS:</span>
                 {systemComponents.length === 0 ? (
@@ -319,7 +314,6 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
           )}
         </div>
 
-        {/* Footer Actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--border-soft)', background: 'var(--surface-alt)' }}>
           <button onClick={onClose} style={{ padding: '6px 12px', fontSize: '9px', fontWeight: 800, background: 'var(--surface)', border: '1px solid var(--border-soft)', color: 'var(--text)', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleConfirmAttach} style={{ padding: '6px 14px', fontSize: '9px', fontWeight: 900, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>Confirm & Attach Items</button>
@@ -328,3 +322,5 @@ export const ContextPickerModal: React.FC<ContextPickerModalProps> = ({
     </div>
   );
 };
+
+export default ContextPickerModal;

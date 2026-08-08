@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ContainerState } from '../workspace/LiveAppPreview';
+import { ContainerState } from '../preview/LiveAppPreview';
 
 interface AgentExecutionNoticeProps {
   tenantId?: string;
