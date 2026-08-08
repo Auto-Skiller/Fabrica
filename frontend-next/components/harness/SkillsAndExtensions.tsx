@@ -689,10 +689,10 @@ const DEFAULT_METADATA_BY_SKILL: Record<string, SkillMetadata> = {
     outputs: 'Target element context for edits'
   },
   'gemini_api': {
-    what: 'Google GenAI TypeScript SDK integration (@google/genai)',
+    what: 'Pi Agent & Native LLM integration',
     when: 'Text generation, image analysis, chat, function calling',
-    why: 'Modern SDK patterns for Gemini models in full-stack routes',
-    triggers: '@google/genai, gemini_api, generateContent',
+    why: 'Autonomous Pi CLI agent execution patterns in full-stack routes',
+    triggers: 'pi_agent, gemini_api, generateContent',
     inputs: 'Text prompts, system instructions, tools schema',
     outputs: 'Structured responses, function calls, model streams'
   },

@@ -27,7 +27,7 @@ export function isCloudRunRunnerEnabled(): boolean {
  * Gets an existing dedicated Cloud Run runner URL for a user tenant,
  * or provisions a new scale-to-zero container with dedicated GCS bucket FUSE mount.
  */
-export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<string | null> {
+export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<string> {
   if (runnerUrlCache.has(tenantId)) {
     return runnerUrlCache.get(tenantId)!;
   }
@@ -98,12 +98,12 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
               volumeMounts: [
                 {
                   name: 'tenant-gcs-mount',
-                  mountPath: '/mnt/workspace'
+                  mountPath: '/mnt'
                 }
               ],
               env: [
                 { name: 'TENANT_ID', value: tenantId },
-                { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt/workspace' },
+                { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt' },
                 { name: 'GEMINI_API_KEY', value: process.env.GEMINI_API_KEY || '' }
               ]
             }
@@ -128,11 +128,11 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
       return uri;
     }
   } catch (err: any) {
-    console.warn(`[Orchestrator] Cloud Run provision error (${err.message}). Defaulting to in-process execution.`);
-    return null;
+    console.error(`[Orchestrator] Cloud Run provision error for tenant ${tenantId}: ${err.message}`);
+    throw new Error(`Failed to provision dedicated Cloud Run runner container for tenant ${tenantId}: ${err.message}`);
   }
 
-  return null;
+  throw new Error(`Dedicated Cloud Run runner container for tenant ${tenantId} failed to return a valid URL.`);
 }
 
 /**

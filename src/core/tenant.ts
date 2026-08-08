@@ -84,8 +84,17 @@ export interface AuditLogEvent {
 // ── Tenant Workspace Root Helper ───────────────────────────────────────────────
 
 export function getTenantRoot(tenantId: string): string {
+  const baseStorageDir = path.resolve(process.env.WORKSPACES_STORAGE_PATH || '/mnt');
+  // Dedicated per-container storage: when WORKSPACES_STORAGE_PATH is /mnt, the dedicated bucket is mounted at /mnt directly
+  if (baseStorageDir === '/mnt' || process.env.WORKSPACES_STORAGE_PATH === '/mnt') {
+    if (!fs.existsSync(baseStorageDir)) {
+      try {
+        fs.mkdirSync(baseStorageDir, { recursive: true });
+      } catch (_) {}
+    }
+    return baseStorageDir;
+  }
   const safeTenant = (tenantId || 'usr_anon').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const baseStorageDir = path.resolve(process.env.WORKSPACES_STORAGE_PATH || '/mnt/workspaces');
   const userRoot = path.join(baseStorageDir, safeTenant);
   if (!fs.existsSync(userRoot)) {
     fs.mkdirSync(userRoot, { recursive: true });

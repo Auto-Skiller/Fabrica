@@ -29,14 +29,14 @@ app.get('/health', (req, res) => {
     tenant_id: TENANT_ID,
     storage_type: 'GCS_DEDICATED_BUCKET',
     bucket: \`gs://fabrica-tenant-\${TENANT_ID}/\`,
-    mount_path: '/mnt/workspace'
+    mount_path: '/mnt'
   });
 });
 
 // Execute Agent CLI Turn locally inside tenant Cloud Run container
 app.post('/api/runner/turn', async (req, res) => {
   try {
-    const workspaceRoot = '/mnt/workspace';
+    const workspaceRoot = '/mnt';
     const result = await runAgentCliTurn(TENANT_ID, workspaceRoot, req.body);
     res.json({ success: true, result });
   } catch (err: any) {
@@ -111,7 +111,7 @@ export default function App() {
   "tenant_id": "usr-123",
   "storage_backend": "gcs_fuse_mount",
   "gcs_bucket": "gs://fabrica-tenant-usr-123/",
-  "mount_path": "/mnt/workspace",
+  "mount_path": "/mnt",
   "active_project": "default_project"
 }`,
 

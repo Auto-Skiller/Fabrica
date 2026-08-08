@@ -9,8 +9,6 @@ import {
   proxyTurnToRunner
 } from '../../services/cloudrun.orchestrator.js';
 import {
-  runPiAgentStream,
-  runPiAgent,
   stopPiAgent,
   listPiDaemons,
   listPiSessions,
@@ -28,7 +26,7 @@ import {
 
 const router = Router();
 
-// POST /api/harness/run-stream — Stream prompt execution via SSE
+// POST /api/harness/run-stream — Stream prompt execution via SSE strictly via dedicated runner container
 router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId!;
   const { prompt, sessionId, model, customKey, agentLang, webSearchEnabled, thinkingLevel } = req.body || {};
@@ -46,41 +44,23 @@ router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    let runnerUrl: string | null = null;
-    try {
-      runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
-    } catch (e: any) {
-      console.warn(`[HarnessRoutes] Orchestrator lookup failed: ${e.message}`);
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    if (!runnerUrl) {
+      throw new Error(`Dedicated tenant runner container is unavailable for tenant ${tenantId}.`);
     }
 
-    if (runnerUrl) {
-      await proxyTurnToRunnerStream(runnerUrl, {
-        prompt,
-        tenantId,
-        sessionId,
-        model,
-        customKey,
-        agentLang,
-        webSearchEnabled,
-        thinkingLevel
-      }, (chunkData: string) => {
-        res.write(chunkData);
-      });
-    } else {
-      // In-process agent execution fallback
-      await runPiAgentStream({
-        prompt,
-        tenantId,
-        sessionId,
-        model,
-        customKey,
-        agentLang,
-        webSearchEnabled,
-        thinkingLevel
-      }, (chunkData: string) => {
-        res.write(chunkData);
-      });
-    }
+    await proxyTurnToRunnerStream(runnerUrl, {
+      prompt,
+      tenantId,
+      sessionId,
+      model,
+      customKey,
+      agentLang,
+      webSearchEnabled,
+      thinkingLevel
+    }, (chunkData: string) => {
+      res.write(chunkData);
+    });
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err: any) {
@@ -90,7 +70,7 @@ router.post('/run-stream', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// POST /api/harness/run — Run prompt with Pi agent
+// POST /api/harness/run — Run prompt with Pi agent strictly via dedicated runner container
 router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId!;
   const { prompt, sessionId, model, customKey, agentLang, webSearchEnabled, thinkingLevel } = req.body || {};
@@ -101,39 +81,22 @@ router.post('/run', async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    let runnerUrl: string | null = null;
-    try {
-      runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
-    } catch (e: any) {
-      console.warn(`[HarnessRoutes] Orchestrator lookup failed: ${e.message}`);
+    const runnerUrl = await getOrCreateTenantRunnerUrl(tenantId);
+    if (!runnerUrl) {
+      throw new Error(`Dedicated tenant runner container is unavailable for tenant ${tenantId}.`);
     }
 
-    if (runnerUrl) {
-      const response = await proxyTurnToRunner(runnerUrl, {
-        prompt,
-        tenantId,
-        sessionId,
-        model,
-        customKey,
-        agentLang,
-        webSearchEnabled,
-        thinkingLevel
-      });
-      res.json(response);
-    } else {
-      // In-process agent execution fallback
-      const response = await runPiAgent({
-        prompt,
-        tenantId,
-        sessionId,
-        model,
-        customKey,
-        agentLang,
-        webSearchEnabled,
-        thinkingLevel
-      });
-      res.json(response);
-    }
+    const response = await proxyTurnToRunner(runnerUrl, {
+      prompt,
+      tenantId,
+      sessionId,
+      model,
+      customKey,
+      agentLang,
+      webSearchEnabled,
+      thinkingLevel
+    });
+    res.json(response);
   } catch (err: any) {
     res.status(500).json({
       ok: false,

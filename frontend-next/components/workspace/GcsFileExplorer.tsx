@@ -72,7 +72,7 @@ function buildTreeFromItems(items: Array<{ name: string; relativePath: string; i
 export const GcsFileExplorer: React.FC<GcsFileExplorerProps> = ({
   tenantId = 'usr-123',
   bucketName,
-  workspaceRoot = '/mnt/workspace',
+  workspaceRoot = '/mnt',
   onFileSelect,
   className = '',
   treeOnly = false,
