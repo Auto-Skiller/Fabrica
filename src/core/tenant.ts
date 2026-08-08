@@ -83,21 +83,12 @@ export interface AuditLogEvent {
 
 // ── Tenant Workspace Root Helper ───────────────────────────────────────────────
 
-export function getTenantRoot(tenantId: string): string {
-  const baseStorageDir = path.resolve(process.env.WORKSPACES_STORAGE_PATH || '/mnt');
-  // Dedicated per-container storage: when WORKSPACES_STORAGE_PATH is /mnt, the dedicated bucket is mounted at /mnt directly
-  if (baseStorageDir === '/mnt' || process.env.WORKSPACES_STORAGE_PATH === '/mnt') {
-    if (!fs.existsSync(baseStorageDir)) {
-      try {
-        fs.mkdirSync(baseStorageDir, { recursive: true });
-      } catch (_) {}
-    }
-    return baseStorageDir;
-  }
-  const safeTenant = (tenantId || 'usr_anon').replace(/[^a-zA-Z0-9_\-]/g, '_');
-  const userRoot = path.join(baseStorageDir, safeTenant);
+export function getTenantRoot(_tenantId?: string): string {
+  const userRoot = '/mnt';
   if (!fs.existsSync(userRoot)) {
-    fs.mkdirSync(userRoot, { recursive: true });
+    try {
+      fs.mkdirSync(userRoot, { recursive: true });
+    } catch (_) {}
   }
   return userRoot;
 }
@@ -113,12 +104,12 @@ export function resolveTenantPath(tenantId: string, targetPath: string = ''): st
 
 export function isTenantInitialized(tenantId: string): boolean {
   const userRoot = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(userRoot, 'tenant.json');
-  if (!fs.existsSync(userRoot) || !fs.existsSync(tenantJsonPath)) {
+  const runtimeBoardPath = path.join(userRoot, 'runtime-board.json');
+  if (!fs.existsSync(userRoot) || !fs.existsSync(runtimeBoardPath)) {
     return false;
   }
   try {
-    const data = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(runtimeBoardPath, 'utf8'));
     return Boolean(data.is_initialized);
   } catch (_) {
     return false;
@@ -129,33 +120,12 @@ export function ensureTenantFilesAndFolders(tenantId: string): string {
   const userRoot = getTenantRoot(tenantId);
   fs.mkdirSync(userRoot, { recursive: true });
 
-  const tenantJsonPath = path.join(userRoot, 'tenant.json');
-  if (!fs.existsSync(tenantJsonPath)) {
-    fs.writeFileSync(tenantJsonPath, JSON.stringify({
+  const runtimeBoardPath = path.join(userRoot, 'runtime-board.json');
+  if (!fs.existsSync(runtimeBoardPath)) {
+    fs.writeFileSync(runtimeBoardPath, JSON.stringify({
       tenant_id: tenantId,
       name: `Tenant (${tenantId})`,
       plan: "Professional",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      settings: { language: "EN", internet_access: true },
-      subscription: { plan: "Professional", active: true },
-      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
-      logs: [
-        {
-          id: `evt-init-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          type: "system",
-          event: "Workspace Initialized",
-          details: "Unified audit event stream initialized in tenant.json."
-        }
-      ]
-    }, null, 2), 'utf8');
-  }
-
-  const harnessJsonPath = path.join(userRoot, 'harness.json');
-  if (!fs.existsSync(harnessJsonPath)) {
-    fs.writeFileSync(harnessJsonPath, JSON.stringify({
-      tenant_id: tenantId,
       status: "idle",
       selected_model: "gemini-3.6-flash",
       autonomy: "director",
@@ -170,18 +140,30 @@ export function ensureTenantFilesAndFolders(tenantId: string): string {
       review_queues: [],
       review: [],
       new_user_actions: { backlog_actions: [], reviews_actions: [], missions_actions: [], workspace_actions: [] },
+      settings: { language: "EN", internet_access: true },
+      subscription: { plan: "Professional", active: true },
+      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
+      logs: [
+        {
+          id: `evt-init-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          type: "system",
+          event: "Workspace Initialized",
+          details: "Unified audit event stream initialized in runtime-board.json."
+        }
+      ],
       last_active: new Date().toISOString()
     }, null, 2), 'utf8');
   }
 
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  if (!fs.existsSync(singleMissionsPath)) {
-    fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: [] }, null, 2), 'utf8');
+  const missionsGraphPath = path.join(userRoot, 'missions-graph.json');
+  if (!fs.existsSync(missionsGraphPath)) {
+    fs.writeFileSync(missionsGraphPath, JSON.stringify({ missions: [], last_updated: new Date().toISOString() }, null, 2), 'utf8');
   }
 
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
-  if (!fs.existsSync(workspaceJsonPath)) {
-    fs.writeFileSync(workspaceJsonPath, JSON.stringify({
+  const workspaceGraphPath = path.join(userRoot, 'workspace-graph.json');
+  if (!fs.existsSync(workspaceGraphPath)) {
+    fs.writeFileSync(workspaceGraphPath, JSON.stringify({
       sources: {},
       deliverables: {},
       last_synced_at: new Date().toISOString()
@@ -192,6 +174,10 @@ export function ensureTenantFilesAndFolders(tenantId: string): string {
   if (!fs.existsSync(agentsMdPath)) {
     fs.writeFileSync(agentsMdPath, '', 'utf8');
   }
+
+  const piDir = path.join(userRoot, '.pi');
+  fs.mkdirSync(path.join(piDir, 'skills'), { recursive: true });
+  fs.mkdirSync(path.join(piDir, 'extensions'), { recursive: true });
 
   const workspaceDir = path.join(userRoot, 'workspace');
   const workspaceDirs = [
@@ -231,11 +217,11 @@ export function initializeUserTenant(tenantId: string = 'default_user'): { ok: b
 
 export function isAgentInitialized(tenantId: string = 'default_user'): boolean {
   const userRoot = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(userRoot, 'tenant.json');
+  const runtimeBoardPath = path.join(userRoot, 'runtime-board.json');
 
-  if (fs.existsSync(tenantJsonPath)) {
+  if (fs.existsSync(runtimeBoardPath)) {
     try {
-      const data = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      const data = JSON.parse(fs.readFileSync(runtimeBoardPath, 'utf8'));
       if (data.agent_initialized !== true) {
         return false;
       }
@@ -249,8 +235,12 @@ export function isAgentInitialized(tenantId: string = 'default_user'): boolean {
   const piDir = path.join(userRoot, '.pi');
   if (fs.existsSync(piDir)) {
     const piSkillsDir = path.join(piDir, 'skills');
+    const piExtDir = path.join(piDir, 'extensions');
     if (!fs.existsSync(piSkillsDir)) {
       fs.mkdirSync(piSkillsDir, { recursive: true });
+    }
+    if (!fs.existsSync(piExtDir)) {
+      fs.mkdirSync(piExtDir, { recursive: true });
     }
     return true;
   }
@@ -327,11 +317,11 @@ export const dbEngine = new DatabaseEngine('default_user');
 
 export function getTenantProfile(tenantId: string = 'default_user'): TenantProfile {
   const root = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(root, 'tenant.json');
+  const boardPath = path.join(root, 'runtime-board.json');
 
-  if (fs.existsSync(tenantJsonPath)) {
+  if (fs.existsSync(boardPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(boardPath, 'utf8'));
       return {
         tenantId,
         name: parsed.name || (tenantId === 'default_user' ? 'Default Workspace' : `Tenant (${tenantId})`),
@@ -353,36 +343,17 @@ export function getTenantProfile(tenantId: string = 'default_user'): TenantProfi
     settings: { language: 'EN', internet_access: true }
   };
 
-  try {
-    const fullTenantData = {
-      tenant_id: tenantId,
-      ...defaultProfile,
-      subscription: { plan: 'Professional', active: true },
-      telemetry: { total_runs: 0, last_active: new Date().toISOString() },
-      logs: [
-        {
-          id: `evt-init-${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          type: "system",
-          event: "Workspace Initialized",
-          details: "Unified audit event stream initialized in tenant.json."
-        }
-      ]
-    };
-    fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
-  } catch (_) {}
-
   return defaultProfile;
 }
 
 export function updateTenantProfile(tenantId: string = 'default_user', updates: Partial<TenantProfile>): TenantProfile {
   const root = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(root, 'tenant.json');
+  const boardPath = path.join(root, 'runtime-board.json');
 
-  let fullTenantData: any = {};
-  if (fs.existsSync(tenantJsonPath)) {
+  let fullBoardData: any = {};
+  if (fs.existsSync(boardPath)) {
     try {
-      fullTenantData = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      fullBoardData = JSON.parse(fs.readFileSync(boardPath, 'utf8'));
     } catch (_) {}
   }
 
@@ -394,14 +365,14 @@ export function updateTenantProfile(tenantId: string = 'default_user', updates: 
     updatedAt: new Date().toISOString()
   };
 
-  fullTenantData = {
-    ...fullTenantData,
+  fullBoardData = {
+    ...fullBoardData,
     ...updated,
     tenant_id: tenantId,
     updatedAt: updated.updatedAt
   };
 
-  fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
+  fs.writeFileSync(boardPath, JSON.stringify(fullBoardData, null, 2), 'utf8');
   return updated;
 }
 
@@ -450,11 +421,11 @@ export function getTenantTelemetry(tenantId: string = 'default_user'): TenantTel
 
 export function getTenantAuditLogs(tenantId: string = 'default_user'): AuditLogEvent[] {
   const root = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(root, 'tenant.json');
+  const boardPath = path.join(root, 'runtime-board.json');
 
-  if (fs.existsSync(tenantJsonPath)) {
+  if (fs.existsSync(boardPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(boardPath, 'utf8'));
       if (Array.isArray(parsed.logs)) return parsed.logs;
     } catch (_) {}
   }
@@ -467,21 +438,21 @@ export function appendTenantAuditLog(
   event: Omit<AuditLogEvent, 'id' | 'timestamp'>
 ): AuditLogEvent {
   const root = getTenantRoot(tenantId);
-  const tenantJsonPath = path.join(root, 'tenant.json');
+  const boardPath = path.join(root, 'runtime-board.json');
 
-  let fullTenantData: any = { tenant_id: tenantId, logs: [] };
+  let fullBoardData: any = { tenant_id: tenantId, logs: [] };
 
-  if (fs.existsSync(tenantJsonPath)) {
+  if (fs.existsSync(boardPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(tenantJsonPath, 'utf8'));
+      const parsed = JSON.parse(fs.readFileSync(boardPath, 'utf8'));
       if (parsed && typeof parsed === 'object') {
-        fullTenantData = parsed;
+        fullBoardData = parsed;
       }
     } catch (_) {}
   }
 
-  if (!Array.isArray(fullTenantData.logs)) {
-    fullTenantData.logs = [];
+  if (!Array.isArray(fullBoardData.logs)) {
+    fullBoardData.logs = [];
   }
 
   const newEntry: AuditLogEvent = {
@@ -490,14 +461,14 @@ export function appendTenantAuditLog(
     ...event
   };
 
-  fullTenantData.logs.unshift(newEntry);
-  if (fullTenantData.logs.length > 1000) {
-    fullTenantData.logs = fullTenantData.logs.slice(0, 1000);
+  fullBoardData.logs.unshift(newEntry);
+  if (fullBoardData.logs.length > 1000) {
+    fullBoardData.logs = fullBoardData.logs.slice(0, 1000);
   }
-  fullTenantData.last_event_at = newEntry.timestamp;
+  fullBoardData.last_event_at = newEntry.timestamp;
 
   try {
-    fs.writeFileSync(tenantJsonPath, JSON.stringify(fullTenantData, null, 2), 'utf8');
+    fs.writeFileSync(boardPath, JSON.stringify(fullBoardData, null, 2), 'utf8');
   } catch (err) {
     console.warn(`[TenantCore] Error appending audit log for ${tenantId}:`, err);
   }

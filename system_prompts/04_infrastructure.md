@@ -32,8 +32,8 @@ Each tenant executes within their own dedicated, isolated container runtime envi
 ## 4. AGENT DAEMON & PROCESS ISOLATION (`/src/core/harness.ts`)
 To handle autonomous background tasks and agentic mission execution:
 - **Interactive Daemon Session & Single Daemon Policy**: All agent executions run via persistent interactive daemon sessions (`PiDaemonProcess`). Enforces a strict 1:1 binding per tenant ID with zero concurrent daemon threads per tenant.
-- **Workspace CWD & Native Session Isolation**: Process CWD is explicitly set to `/workspaces/<tenantId>/`. Uses `PI_CODING_AGENT_DIR=/workspaces/<tenantId>/.pi/` with native session management inside `.pi/agent/sessions/`.
-- **Path Traversal Protection**: Target path resolving is validated with absolute boundary checks (`path.resolve` verifying target paths start with `/workspaces/<tenantId>`).
+- **Workspace CWD & Native Session Isolation**: Process CWD is explicitly set to `/mnt/`. Uses `PI_CODING_AGENT_DIR=/mnt/.pi/` with native session management inside `.pi/agent/sessions/`.
+- **Path Traversal Protection**: Target path resolving is validated with absolute boundary checks (`path.resolve` verifying target paths start with `/mnt`).
 
 ---
 
@@ -54,13 +54,17 @@ Supabase is integrated strictly for user authentication, session verification, a
 ---
 
 ## 7. TARGET WORKSPACE DIRECTORY HIERARCHY & STATE PERSISTENCE
-Every tenant operates within an isolated workspace root at `workspaces/<tenant_id>/` structured as follows:
+Every tenant operates within an isolated workspace root mounted at `/mnt/` structured as follows:
 
 ```
-workspaces/<tenant_id>/
+/mnt/ (User Tenant Root Mount)
 ├── .pi/                            # Hidden Pi Agent Runtime Folder
 │   ├── agent/sessions/             # Native Pi agent session history (.jsonl files)
 │   └── skills/                     # User-defined custom skills
+│
+├── Fabrica_kernel/                 # Read-Only Platform Kernel Mount
+│   ├── skills/                     # Global platform skills & workflows
+│   └── integrations/               # Shared integrations & tool manifests
 │
 ├── AGENTS.md                       # User context file (business context, domain rules, goals - kept empty by default)
 ├── tenant.json                     # Tenant profile, user preferences, telemetry metrics, & audit logs
@@ -69,16 +73,14 @@ workspaces/<tenant_id>/
 ├── workspace.json                  # Single index map for Sources, Deliverables, Pendings, Actions, and Action Items storage
 │
 ├── missions/{missionId}/           # Ephemeral scratchpad space (code runs, temp files, draft steps) - working area of active mission executions
-└── workspace/                      # Central storage of inputs/outputs and all storages
-    ├── Sources/                        
-    │   ├── Discovery & Scoping/        # Scoping documentations, interactive Q&A briefs, cost/time trade-off options
-    │   ├── Deep Research & Intelligence Gathering/ # Scraped docs, research papers, competitor scans, API references
-    │   ├── Data Analysis & Pattern Extraction/ # Processed datasets, computed metrics, anomaly reports, trend insights
-    │   └── Strategic Synthesis & Decision Support/ # Executive strategic plans, risk audits, roadmaps, decision matrices
-    └── Deliverables/                   
-        ├── Executions/                 # Generated codebases, database schemas, workflow automations, assets
-        ├── Reviews/                    # Verified production deliverables waiting for human sign-off
-        └── Completed/                  # Accepted production deliverables & archived release artifacts
+└── workspace/                      # Central storage of all 7 lifecycle phase directories
+    ├── Discovery & Scoping/        # Scoping documentations, interactive Q&A briefs, cost/time trade-off options
+    ├── Deep Research & Intelligence Gathering/ # Scraped docs, research papers, competitor scans, API references
+    ├── Data Analysis & Pattern Extraction/ # Processed datasets, computed metrics, anomaly reports, trend insights
+    ├── Strategic Synthesis & Decision Support/ # Executive strategic plans, risk audits, roadmaps, decision matrices
+    ├── Executions/                 # Generated codebases, database schemas, workflow automations, assets
+    ├── Reviews/                    # Verified production deliverables waiting for human sign-off
+    └── Completed/                  # Accepted production deliverables & archived release artifacts
 ```
 
 ### Protection of Mission Schemas & Phase Schemas
@@ -107,7 +109,7 @@ When adding new missions via the UI or updating `missions.json`:
 ### App Configuration & State Mirroring API
 User configuration and state persist across sign-out and re-login sessions and mirror automatically into `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, and global `.stash/auth.json`:
 
-- **Agent rules and kernel knowledge** are injected via `Fabrica_kernel/system_prompts/` and customizable per tenant via `AGENTS.md` (`workspaces/<tenant_id>/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/harness/agents-md` and `POST /api/harness/agents-md`.
+- **Agent rules and kernel knowledge** are injected via server system prompts (`/system_prompts/`) and customizable per tenant via `AGENTS.md` (`/mnt/AGENTS.md`). Users can inspect, edit, and save runtime directives dynamically via `GET /api/harness/agents-md` and `POST /api/harness/agents-md`.
 - **Tenant-Isolated API Routes**:
   - `GET /api/auth/*` & `POST /api/auth/*` — auth, BYOK keys, LLM key pool rotation, and pricing tier endpoints
   - `GET /api/tenant/*` & `POST /api/tenant/*` — tenant profile, user preferences, usage metrics, telemetry, and audit logs
@@ -137,7 +139,7 @@ User configuration and state persist across sign-out and re-login sessions and m
   6. `Reviews`
   7. `Completed`
 - **STRICT RULE**: The Agent reads inputs from scoping and research folders and generates working code, assets, or scripts into `Executions/`.
-- **Single Mapping Index**: `workspaces/<tenant_id>/workspace.json` indexes and maps all items in `workspace/`, along with `pendings`, `actions`, and `action_items` (items flagged as requiring execution action, with attributes `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`).
+- **Single Mapping Index**: `/mnt/workspace.json` indexes and maps all items in `workspace/`, along with `pendings`, `actions`, and `action_items` (items flagged as requiring execution action, with attributes `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`).
 - **Permitted Operations**:
   1. `READ` / `VIEW`: Inspecting workspace files.
   2. `LIST`: Listing directory contents.
@@ -145,27 +147,27 @@ User configuration and state persist across sign-out and re-login sessions and m
   4. `RELOCATE`: Promoting items (e.g., from `Executions` -> `Reviews` upon verification success, or `Reviews` -> `Completed` upon user acceptance, or `Reviews` -> `Executions` upon review feedback).
 
 ### `missions/` Directory
-- `missions/` is strictly the **active ephemeral scratchpad space for agent temp scripts** (`missions/{missionId}/`), hidden from end users.
+- `missions/` holds individual mission files (`missions/<mission_id>.json`).
 - **Workflow**:
-  1. Agent runtime temp scripts and scratchpad logs exist under `missions/{missionId}/`.
+  1. Individual mission data and task breakdowns reside in `missions/<mission_id>.json`.
   2. All phase artifacts (inputs, blueprints, execution outputs, assets) generated by the agent reside inside `workspace/` across the 7 phase directories.
-  3. `missions.json` automatically scans and lists all files across `workspace/` into mission workspace files with their `processed` boolean status.
+  3. `missions-graph.json` automatically indexes top-level mission metadata, while scanning files across `workspace/` into mission deliverables.
 
 ---
 
 ## 9. 3-WAY REAL-TIME BI-DIRECTIONAL SYNCHRONIZATION PROTOCOL
 
-The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Single State Mappings (`missions.json`, `workspace.json`, `tenant.json`) ↔ Disk Storage (`workspace/` & `missions/{missionId}/`)**:
+The application enforces strict **3-way real-time bi-directional state synchronization** across **User UI ↔ Single State Mappings (`missions-graph.json`, `workspace-graph.json`, `runtime-board.json`) ↔ Disk Storage (`workspace/` & `missions/`)**:
 
 1. **User UI → Index Files → Disk**:
-   - When a user adds, edits, or deletes a file or parameter in the UI, the backend updates `workspace.json` or `missions.json` instantly and automatically reflects changes in the physical folders and files.
+   - When a user adds, edits, or deletes a file or parameter in the UI, the backend updates `workspace-graph.json` or `missions-graph.json` instantly and automatically reflects changes in the physical folders and files.
 2. **Agent → Index Files → Disk & UI**:
-   - When the agent adds, edits, or deletes something in `missions.json`, `workspace.json`, or disk storage, the physical files update instantly and the dashboard UI updates in real time.
+   - When the agent adds, edits, or deletes something in `missions/<mission_id>.json`, `workspace-graph.json`, or disk storage, the physical files update instantly and the dashboard UI updates in real time.
 3. **Disk → Index Files → UI**:
-   - When files or folders inside `workspace/` or `missions/` are added, modified, or removed, `syncWorkspaceJson()` and `syncMissionsJson()` immediately re-index the changes into `workspace.json` and `missions.json`, broadcasting live updates to the UI.
+   - When files or folders inside `workspace/` or `missions/` are added, modified, or removed, `syncWorkspaceJson()` and `syncMissionsJson()` immediately re-index the changes into `workspace-graph.json` and `missions-graph.json`, broadcasting live updates to the UI.
 
-### `workspace/Sources/` & `workspace/Deliverables/` ↔ `workspace.json`
-- Every file and record in `workspace/Sources/` and `workspace/Deliverables/` is strictly mapped to `workspace.json` in real time.
+### `workspace/` ↔ `workspace-graph.json`
+- Every file and record in `workspace/` is strictly mapped to `workspace-graph.json` in real time.
 
-### `missions/` ↔ `missions.json`
-- Every mission, its status, stage, pending items, action logs, and dynamically scanned workspace `sources` and `deliverables` artifacts are strictly mapped to `missions.json` in real time.
+### `missions/` ↔ `missions-graph.json` & `missions/<mission_id>.json`
+- Every mission's top-level status is mapped to `missions-graph.json` while full details live in `missions/<mission_id>.json`.

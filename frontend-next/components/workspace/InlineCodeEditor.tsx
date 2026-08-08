@@ -105,7 +105,7 @@ export default function App() {
 2. GCS persistent workspace file syncing.
 3. Responsive 7-subsystem workflow orchestration across discovery, research, data, synthesis, execution, review, and completed states.`,
 
-  'workspace.json': `{
+  'workspace-graph.json': `{
   "version": "2.0.0",
   "workspace_id": "ws-tenant-primary",
   "tenant_id": "usr-123",
@@ -115,7 +115,7 @@ export default function App() {
   "active_project": "default_project"
 }`,
 
-  'harness.json': `{
+  'runtime-board.json': `{
   "runner_service": "fabrica-runner-usr-123",
   "region": "europe-west2",
   "autonomy_level": "supervised",
@@ -160,8 +160,8 @@ const SUBSYSTEM_FILES_MAP: Record<string, string[]> = {
   discovery_scoping: ['discovery_doc.json', 'scoping.md', 'metadata.json'],
   deep_research: ['deep_research.md', 'research_notes.txt'],
   data_analysis: ['data_analysis.csv', 'metrics.json'],
-  strategic_synthesis: ['synthesis_report.md', 'workspace.json'],
-  executions: ['src/', 'src/server.ts', 'App.tsx', 'package.json', 'harness.json'],
+  strategic_synthesis: ['synthesis_report.md', 'workspace-graph.json'],
+  executions: ['src/', 'src/server.ts', 'App.tsx', 'package.json', 'runtime-board.json'],
   reviews: ['audit_review.md'],
   completed: ['build_summary.log']
 };

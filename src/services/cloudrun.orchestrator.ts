@@ -74,6 +74,7 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
 
   // 4. Provision new scale-to-zero container for user mounting their dedicated bucket
   const runnerImage = process.env.RUNNER_CONTAINER_IMAGE || `gcr.io/${projectId}/fabrica-user-runner:latest`;
+  const kernelBucket = process.env.SHARED_KERNEL_GCS_BUCKET || 'fabrica-global-kernel-prod';
   try {
     const client = getRunClient();
 
@@ -99,12 +100,15 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
                 {
                   name: 'tenant-gcs-mount',
                   mountPath: '/mnt'
+                },
+                {
+                  name: 'fabrica-kernel-ro-mount',
+                  mountPath: '/mnt/Fabrica_kernel'
                 }
               ],
               env: [
                 { name: 'TENANT_ID', value: tenantId },
-                { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt' },
-                { name: 'GEMINI_API_KEY', value: process.env.GEMINI_API_KEY || '' }
+                { name: 'WORKSPACES_STORAGE_PATH', value: '/mnt' }
               ]
             }
           ],
@@ -114,6 +118,13 @@ export async function getOrCreateTenantRunnerUrl(tenantId: string): Promise<stri
               gcs: {
                 bucket: tenantBucket,
                 readOnly: false
+              }
+            } as any,
+            {
+              name: 'fabrica-kernel-ro-mount',
+              gcs: {
+                bucket: kernelBucket,
+                readOnly: true
               }
             } as any
           ]

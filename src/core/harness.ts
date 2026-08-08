@@ -295,8 +295,8 @@ export function syncPiUserAuthKeys(tenantId: string = 'default_user', customKey?
   if (!fs.existsSync(modelsJsonPath)) {
     fs.writeFileSync(modelsJsonPath, JSON.stringify({
       providers: {
-        google: { name: "Google Gemini", env_var: "GEMINI_API_KEY" },
-        gemini: { name: "Google Gemini", env_var: "GEMINI_API_KEY" },
+        google: { name: "Google Gemini", env_var: "GOOGLE_GENERATIVE_AI_API_KEY" },
+        gemini: { name: "Google Gemini", env_var: "GOOGLE_GENERATIVE_AI_API_KEY" },
         openrouter: { name: "OpenRouter", env_var: "OPENROUTER_API_KEY" },
         anthropic: { name: "Anthropic Claude", env_var: "ANTHROPIC_API_KEY" },
         openai: { name: "OpenAI", env_var: "OPENAI_API_KEY" },
@@ -346,7 +346,7 @@ export function ensureUserHarness(tenantId: string = 'default_user'): UserHarnes
 export function getHarnessState(tenantId: string = 'default_user'): Record<string, any> {
   ensureUserHarness(tenantId);
   const userRoot = getTenantRoot(tenantId);
-  const harnessJsonPath = path.join(userRoot, 'harness.json');
+  const harnessJsonPath = path.join(userRoot, 'runtime-board.json');
   try {
     if (fs.existsSync(harnessJsonPath)) {
       const data = JSON.parse(fs.readFileSync(harnessJsonPath, 'utf8'));
@@ -435,7 +435,7 @@ export function getHarnessState(tenantId: string = 'default_user'): Record<strin
 export function updateHarnessState(tenantId: string = 'default_user', updates: Record<string, any>): Record<string, any> {
   const current = getHarnessState(tenantId);
   const userRoot = getTenantRoot(tenantId);
-  const harnessJsonPath = path.join(userRoot, 'harness.json');
+  const harnessJsonPath = path.join(userRoot, 'runtime-board.json');
 
   const lang = updates.agent_lang || updates.output_language || current.agent_lang;
   const suggestionsList = updates.suggestions || updates.suggestion_cards || current.suggestions;
@@ -525,16 +525,20 @@ export function buildRunDirectives(tenantId: string = 'default_user'): string {
   }
 
   // Block 4: Suggestions audit
-  directives += '\n\n[SUGGESTIONS AUDIT]: Review your current suggestions in harness.json. Ensure they are relevant, actionable, and no more than 3. Replace stale suggestions with fresh ones based on current workspace context.';
+  directives += '\n\n[SUGGESTIONS AUDIT]: Review your current suggestions in runtime-board.json. Ensure they are relevant, actionable, and no more than 3. Replace stale suggestions with fresh ones based on current workspace context.';
 
   return directives;
 }
 
 export function loadKernelSystemPrompts(tenantId: string = 'default_user'): string {
-  const kernelPromptsDir = path.join(process.cwd(), 'Fabrica_kernel', 'system_prompts');
+  const candidatePromptsDirs = [
+    path.join(process.cwd(), 'system_prompts'),
+    '/system_prompts'
+  ];
+  const kernelPromptsDir = candidatePromptsDirs.find(d => fs.existsSync(d));
   let combinedPrompts = '';
 
-  if (fs.existsSync(kernelPromptsDir)) {
+  if (kernelPromptsDir) {
     const files = fs.readdirSync(kernelPromptsDir).filter(f => f.endsWith('.md')).sort();
     for (const f of files) {
       try {
@@ -577,12 +581,18 @@ export function getPiExecutionOptions(
   const cliFlags: string[] = [];
 
   // ── Kernel skills: always active ──────────────────────────────────────────
-  const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
-  if (fs.existsSync(kernelSkillsDir) && fs.readdirSync(kernelSkillsDir).length > 0) {
+  const candidateKernelSkillsDirs = [
+    path.join(userRoot, 'Fabrica_kernel', 'skills'),
+    '/mnt/Fabrica_kernel/skills',
+    '/Fabrica_kernel/skills',
+    path.join(process.cwd(), 'Fabrica_kernel', 'skills')
+  ];
+  const kernelSkillsDir = candidateKernelSkillsDirs.find(d => fs.existsSync(d) && fs.readdirSync(d).length > 0);
+  if (kernelSkillsDir) {
     cliFlags.push('--skill', kernelSkillsDir);
   }
 
-  // ── User workspace skills: per-skill toggle via harness.json skills_enabled ─
+  // ── User workspace skills: per-skill toggle via runtime-board.json skills_enabled ─
   const harnessData = getHarnessState(tenantId);
   const skillsEnabled: Record<string, boolean> = harnessData.skills_enabled || {};
   const userSkillsDir = path.join(userRoot, '.pi', 'skills');
@@ -598,9 +608,26 @@ export function getPiExecutionOptions(
     }
   }
 
+  // ── User workspace extensions: loaded from .pi/extensions/ ─────────────
+  const userExtensionsDir = path.join(userRoot, '.pi', 'extensions');
+  if (fs.existsSync(userExtensionsDir)) {
+    const extFiles = fs.readdirSync(userExtensionsDir, { withFileTypes: true })
+      .filter(f => !f.isDirectory() && (f.name.endsWith('.js') || f.name.endsWith('.ts')))
+      .map(f => f.name);
+    for (const extFile of extFiles) {
+      cliFlags.push('--extension', path.join(userExtensionsDir, extFile));
+    }
+  }
+
   // ── Kernel integrations: only toggled-on ones loaded (skills/ + extensions/) ──
-  const integrationsDir = path.join(process.cwd(), 'Fabrica_kernel', 'integrations');
-  if (fs.existsSync(integrationsDir)) {
+  const candidateIntegrationsDirs = [
+    path.join(userRoot, 'Fabrica_kernel', 'integrations'),
+    '/mnt/Fabrica_kernel/integrations',
+    '/Fabrica_kernel/integrations',
+    path.join(process.cwd(), 'Fabrica_kernel', 'integrations')
+  ];
+  const integrationsDir = candidateIntegrationsDirs.find(d => fs.existsSync(d));
+  if (integrationsDir) {
     const integrationsEnabled: Record<string, boolean> = harnessData.integrations_enabled || {};
     const integrationDirs = fs.readdirSync(integrationsDir, { withFileTypes: true })
       .filter(d => d.isDirectory())
@@ -705,7 +732,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
 
   const executeAttempt = async (apiKey?: string): Promise<{ stdout: string; stderr: string }> => {
     const apiKeyStrategy = options.customKey ? 'BYOK' : (apiKey ? 'Key Pool Rotation' : 'System Fallback');
-    const effectiveKey = apiKey || (options.customKey ? options.customKey : undefined) || (provider === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY) || process.env.GEMINI_API_KEY;
+    const effectiveKey = apiKey || (options.customKey ? options.customKey : undefined) || process.env.OPENROUTER_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     // Environmental isolation: Do not blindly inherit sensitive master server environment variables
     const env: Record<string, string> = {
@@ -718,7 +745,6 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
 
     if (effectiveKey) {
       if (provider === 'google' || provider === 'gemini') {
-        env.GEMINI_API_KEY = effectiveKey;
         env.GOOGLE_GENERATIVE_AI_API_KEY = effectiveKey;
       } else if (provider === 'openrouter') {
         env.OPENROUTER_API_KEY = effectiveKey;
@@ -743,7 +769,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
       } else if (provider === 'perplexity') {
         env.PERPLEXITY_API_KEY = effectiveKey;
       } else {
-        env.GEMINI_API_KEY = effectiveKey;
+        env.OPENROUTER_API_KEY = effectiveKey;
       }
     }
 
@@ -758,9 +784,9 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
 
     // Plan 4.1-E & 1.2-B: Prepend @path tokens for core workspace files so pi reads them natively
     const agentsMdPath = path.join(userRoot, 'AGENTS.md');
-    const missionsPath = path.join(userRoot, 'missions.json');
-    const workspacePath = path.join(userRoot, 'workspace.json');
-    const harnessJsonPath2 = path.join(userRoot, 'harness.json');
+    const missionsPath = path.join(userRoot, 'missions-graph.json');
+    const workspacePath = path.join(userRoot, 'workspace-graph.json');
+    const harnessJsonPath2 = path.join(userRoot, 'runtime-board.json');
     const filePaths = [agentsMdPath, missionsPath, workspacePath, harnessJsonPath2]
       .filter(p => fs.existsSync(p))
       .map(p => `@${p}`)
@@ -872,7 +898,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   // 2. Card verification check for Free tier users
   const userTier = getUserTier(tenantId);
   const isFreeTier = userTier.plan === 'free';
-  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified || process.env.GEMINI_API_KEY || true);
+  const isCardVerified = Boolean(userTier.hasVerifiedCard || userTier.cardVerified || userTier.paymentVerified || true);
 
   if (isFreeTier && !isCardVerified) {
     return {
@@ -894,7 +920,7 @@ export async function runPiAgent(options: PiAgentRunOptions): Promise<PiAgentRes
   while (attempts < maxAttempts) {
     attempts++;
     const keyItem = keyPoolManager.acquireKey(targetProvider, tenantId, excludedKeyIds);
-    const apiKey = keyItem ? (keyItem.rawDecryptedKey || keyItem.key) : (targetProvider === 'gemini' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY);
+    const apiKey = keyItem ? (keyItem.rawDecryptedKey || keyItem.key) : process.env.OPENROUTER_API_KEY;
 
     if (!apiKey && !keyItem) break;
 
@@ -996,7 +1022,7 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
   const piBin = getPiBinaryPath(tenantId);
 
   const apiKeyStrategy = options.customKey ? 'BYOK' : 'Key Pool Rotation';
-  const effectiveKey = options.customKey || (provider === 'google' ? process.env.GEMINI_API_KEY : process.env.OPENROUTER_API_KEY) || process.env.GEMINI_API_KEY;
+  const effectiveKey = options.customKey || process.env.OPENROUTER_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
   const env: Record<string, string> = {
     PATH: `${path.resolve(process.cwd(), 'node_modules/.bin')}:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin'}`,
@@ -1008,7 +1034,6 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
 
   if (effectiveKey) {
     if (provider === 'google' || provider === 'gemini') {
-      env.GEMINI_API_KEY = effectiveKey;
       env.GOOGLE_GENERATIVE_AI_API_KEY = effectiveKey;
     } else if (provider === 'openrouter') {
       env.OPENROUTER_API_KEY = effectiveKey;
@@ -1017,7 +1042,7 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
     } else if (provider === 'openai') {
       env.OPENAI_API_KEY = effectiveKey;
     } else {
-      env.GEMINI_API_KEY = effectiveKey;
+      env.OPENROUTER_API_KEY = effectiveKey;
     }
   }
 
@@ -1031,9 +1056,9 @@ export async function runPiAgentStream(options: PiAgentRunOptions, onChunk: (dat
   }
 
   const agentsMdPath = path.join(userRoot, 'AGENTS.md');
-  const missionsPath = path.join(userRoot, 'missions.json');
-  const workspacePath = path.join(userRoot, 'workspace.json');
-  const harnessJsonPath2 = path.join(userRoot, 'harness.json');
+  const missionsPath = path.join(userRoot, 'missions-graph.json');
+  const workspacePath = path.join(userRoot, 'workspace-graph.json');
+  const harnessJsonPath2 = path.join(userRoot, 'runtime-board.json');
   const filePaths = [agentsMdPath, missionsPath, workspacePath, harnessJsonPath2]
     .filter(p => fs.existsSync(p))
     .map(p => `@${p}`)
@@ -1385,26 +1410,17 @@ export function listPiModels(): PiModelItem[] {
 // ── User Activity Recording ────────────────────────────────────────────────────
 
 export function recordUserHarnessActivity(tenantId: string, runIncrement: number = 0) {
-  const harnessPath = path.join(getTenantRoot(tenantId), 'harness.json');
+  const boardPath = path.join(getTenantRoot(tenantId), 'runtime-board.json');
   try {
-    let harnessData: any = { tenant_id: tenantId, status: "running", last_active: new Date().toISOString() };
-    if (fs.existsSync(harnessPath)) {
-      harnessData = JSON.parse(fs.readFileSync(harnessPath, 'utf8'));
+    let boardData: any = { tenant_id: tenantId, status: "running", last_active: new Date().toISOString() };
+    if (fs.existsSync(boardPath)) {
+      boardData = JSON.parse(fs.readFileSync(boardPath, 'utf8'));
     }
-    harnessData.status = "running";
-    harnessData.last_active = new Date().toISOString();
-    fs.writeFileSync(harnessPath, JSON.stringify(harnessData, null, 2), 'utf8');
-  } catch (_) {}
-
-  const tenantPath = path.join(getTenantRoot(tenantId), 'tenant.json');
-  try {
-    let tenantData: any = {};
-    if (fs.existsSync(tenantPath)) {
-      tenantData = JSON.parse(fs.readFileSync(tenantPath, 'utf8'));
-    }
-    if (!tenantData.telemetry) tenantData.telemetry = {};
-    tenantData.telemetry.total_runs = (tenantData.telemetry.total_runs || 0) + runIncrement;
-    tenantData.telemetry.last_active = new Date().toISOString();
-    fs.writeFileSync(tenantPath, JSON.stringify(tenantData, null, 2), 'utf8');
+    boardData.status = "running";
+    boardData.last_active = new Date().toISOString();
+    if (!boardData.telemetry) boardData.telemetry = {};
+    boardData.telemetry.total_runs = (boardData.telemetry.total_runs || 0) + runIncrement;
+    boardData.telemetry.last_active = new Date().toISOString();
+    fs.writeFileSync(boardPath, JSON.stringify(boardData, null, 2), 'utf8');
   } catch (_) {}
 }

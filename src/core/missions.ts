@@ -96,7 +96,7 @@ export function getMissionSchema(missionType: string = 'standard'): MissionSchem
     supported_phases: ["discovery", "blueprint", "scaffold", "execute", "review"],
     phase_selection: "multi_or_single",
     storage_paths: {
-      scratchpad: "missions/{missionId}/",
+      scratchpad: "missions/",
       workspace: "workspace/",
       discovery_and_scoping: "workspace/Discovery & Scoping/",
       deep_research: "workspace/Deep Research & Intelligence Gathering/",
@@ -105,8 +105,8 @@ export function getMissionSchema(missionType: string = 'standard'): MissionSchem
       executions: "workspace/Executions/",
       reviews: "workspace/Reviews/",
       completed: "workspace/Completed/",
-      state_index: "missions.json",
-      workspace_index: "workspace.json",
+      state_index: "missions-graph.json",
+      workspace_index: "workspace-graph.json",
       event_stream: "logs.json"
     },
     pipeline: {
@@ -124,8 +124,7 @@ export function scanWorkspaceArtifacts(tenantId: string = 'default_user', existi
 export function ensureMissionWorkspaceDirs(tenantId: string, missionType: string, missionId: string) {
   const normType = (missionType || 'standard').replace(/^system_/, '');
   const userRoot = getTenantRoot(tenantId);
-  // missions/<mission_id>/ is strictly for runtime agent temp scripts that users do not see
-  const baseDir = path.join(userRoot, 'missions', missionId);
+  const baseDir = path.join(userRoot, 'missions');
   fs.mkdirSync(baseDir, { recursive: true });
 
   const workspaceDir = path.join(userRoot, 'workspace');
@@ -147,14 +146,9 @@ export function ensureMissionWorkspaceDirs(tenantId: string, missionType: string
 
 export function saveMissionToStore(tenantId: string = 'default_user', mission: Mission) {
   const userRoot = getTenantRoot(tenantId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  let missions: Mission[] = [];
-
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      missions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
-    } catch (_) {}
+  const missionsDir = path.join(userRoot, 'missions');
+  if (!fs.existsSync(missionsDir)) {
+    fs.mkdirSync(missionsDir, { recursive: true });
   }
 
   const { sources, deliverables } = scanWorkspaceArtifacts(tenantId, mission);
@@ -164,20 +158,49 @@ export function saveMissionToStore(tenantId: string = 'default_user', mission: M
     deliverables
   };
 
-  const idx = missions.findIndex(m => m.id === mission.id);
-  if (idx >= 0) {
-    missions[idx] = updatedMission;
-  } else {
-    missions.push(updatedMission);
-  }
+  // 1. Save actual mission file: missions/<mission_id>.json
+  const missionFilePath = path.join(missionsDir, `${mission.id}.json`);
+  fs.writeFileSync(missionFilePath, JSON.stringify(updatedMission, null, 2), 'utf8');
 
+  // 2. Update top-level graph in missions-graph.json
+  updateMissionsGraphIndex(tenantId);
+}
+
+export function updateMissionsGraphIndex(tenantId: string = 'default_user') {
+  const userRoot = getTenantRoot(tenantId);
   const missionsDir = path.join(userRoot, 'missions');
-  const mTempDir = path.join(missionsDir, mission.id);
-  if (!fs.existsSync(mTempDir)) {
-    fs.mkdirSync(mTempDir, { recursive: true });
+  const graphPath = path.join(userRoot, 'missions-graph.json');
+
+  let graphEntries: any[] = [];
+  if (fs.existsSync(missionsDir)) {
+    const files = fs.readdirSync(missionsDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const fullPath = path.join(missionsDir, file);
+        if (fs.statSync(fullPath).isFile()) {
+          const content = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+          if (content && content.id) {
+            graphEntries.push({
+              id: content.id,
+              title: content.title || 'Untitled Mission',
+              objective: content.objective || '',
+              type: content.type || 'standard',
+              user_id: content.user_id || tenantId,
+              status: content.status || 'drafting',
+              phase: content.phase || 'discovery',
+              created_at: content.created_at || new Date().toISOString(),
+              updated_at: content.updated_at || new Date().toISOString()
+            });
+          }
+        }
+      } catch (_) {}
+    }
   }
 
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions }, null, 2), 'utf8');
+  fs.writeFileSync(graphPath, JSON.stringify({
+    missions: graphEntries,
+    last_updated: new Date().toISOString()
+  }, null, 2), 'utf8');
 }
 
 export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: string }) {
@@ -202,72 +225,80 @@ export function syncMissionWorkspaceArtifacts(mission: Partial<Mission> & { id: 
   return { baseDir, workspaceDir };
 }
 
-// ── Single missions.json Persistence Store ─────────────────────────────────────
+// ── Single missions-graph.json Persistence Store ──────────────────────────────
 
 export function syncMissionsJson(tenantId: string = 'default_user'): Mission[] {
   const userRoot = getTenantRoot(tenantId);
   const missionsDir = path.join(userRoot, 'missions');
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
+  const legacySingleMissionsPath = path.join(userRoot, 'missions.json');
 
   if (!fs.existsSync(missionsDir)) {
     fs.mkdirSync(missionsDir, { recursive: true });
   }
 
-  let existingMissions: Mission[] = [];
-
-  if (fs.existsSync(singleMissionsPath)) {
+  // Legacy migration if missions.json exists
+  if (fs.existsSync(legacySingleMissionsPath)) {
     try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      existingMissions = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      const parsed = JSON.parse(fs.readFileSync(legacySingleMissionsPath, 'utf8'));
+      const oldList: Mission[] = Array.isArray(parsed) ? parsed : (parsed.missions || []);
+      for (const m of oldList) {
+        if (m && m.id) {
+          const mPath = path.join(missionsDir, `${m.id}.json`);
+          if (!fs.existsSync(mPath)) {
+            fs.writeFileSync(mPath, JSON.stringify(m, null, 2), 'utf8');
+          }
+        }
+      }
+      try { fs.unlinkSync(legacySingleMissionsPath); } catch (_) {}
     } catch (_) {}
   }
 
-  // Ensure each existing mission has runtime temp folder in missions/<mission_id>/ and dynamic sources & deliverables
-  const updatedMissions = existingMissions.map(m => {
-    if (!m || !m.id) return m;
-    const mTempDir = path.join(missionsDir, m.id);
-    if (!fs.existsSync(mTempDir)) {
-      fs.mkdirSync(mTempDir, { recursive: true });
+  const fullMissions: Mission[] = [];
+  if (fs.existsSync(missionsDir)) {
+    const files = fs.readdirSync(missionsDir).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const fullPath = path.join(missionsDir, file);
+        if (fs.statSync(fullPath).isFile()) {
+          const m: Mission = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+          if (m && m.id) {
+            const { sources, deliverables } = scanWorkspaceArtifacts(tenantId, m);
+            m.sources = sources;
+            m.deliverables = deliverables;
+            fs.writeFileSync(fullPath, JSON.stringify(m, null, 2), 'utf8');
+            fullMissions.push(m);
+          }
+        }
+      } catch (_) {}
     }
-    const { sources, deliverables } = scanWorkspaceArtifacts(tenantId, m);
-    return {
-      ...m,
-      sources,
-      deliverables
-    };
-  });
+  }
 
-  fs.writeFileSync(
-    singleMissionsPath,
-    JSON.stringify({ missions: updatedMissions }, null, 2),
-    'utf8'
-  );
-
-  return updatedMissions;
+  updateMissionsGraphIndex(tenantId);
+  return fullMissions;
 }
 
 export const syncMissionsDb = syncMissionsJson;
 
 export function getMissionsData(tenantId: string = 'default_user'): MissionsStoreData {
-  const userRoot = getTenantRoot(tenantId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-  syncMissionsJson(tenantId);
-
-  if (fs.existsSync(singleMissionsPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(singleMissionsPath, 'utf8'));
-      return {
-        missions: Array.isArray(parsed.missions) ? parsed.missions : []
-      };
-    } catch (_) {}
-  }
-  return { missions: [] };
+  const fullMissions = syncMissionsJson(tenantId);
+  return { missions: fullMissions };
 }
 
 // ── Missions CRUD Helpers ─────────────────────────────────────────────────────
 
 export function getMissions(tenantId: string = 'default_user'): Mission[] {
   return syncMissionsJson(tenantId);
+}
+
+export function getMission(tenantId: string = 'default_user', missionId: string): Mission | null {
+  const userRoot = getTenantRoot(tenantId);
+  const missionPath = path.join(userRoot, 'missions', `${missionId}.json`);
+  if (fs.existsSync(missionPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(missionPath, 'utf8')) as Mission;
+    } catch (_) {}
+  }
+  return null;
 }
 
 export function createMission(
@@ -297,7 +328,7 @@ export function createMission(
     user_id: tenantId,
     status: (missionData.status as any) || 'drafting',
     phase: (missionData.phase as any) || 'discovery',
-    scratchpad: `missions/${id}/`,
+    scratchpad: `missions/${id}.json`,
     metadata: missionData.metadata || { tasks: missionData.tasks || [] },
     workflow_history: [
       { timestamp: new Date().toISOString(), phase: missionData.phase || 'discovery', status: 'created' }
@@ -323,8 +354,7 @@ export function updateMission(
   missionId: string,
   updates: Partial<Mission>
 ): Mission | null {
-  const missions = getMissions(tenantId);
-  const target = missions.find(m => m.id === missionId);
+  const target = getMission(tenantId, missionId) || getMissions(tenantId).find(m => m.id === missionId);
   if (!target) return null;
 
   const isMoved = (updates.phase && updates.phase !== target.phase) || (updates.status && updates.status !== target.status);
@@ -370,13 +400,12 @@ export function updateMission(
 
 export function deleteMission(tenantId: string = 'default_user', missionId: string): boolean {
   const userRoot = getTenantRoot(tenantId);
-  const missionDir = path.join(userRoot, 'missions', missionId);
-  if (fs.existsSync(missionDir)) {
-    fs.rmSync(missionDir, { recursive: true, force: true });
+  const missionFilePath = path.join(userRoot, 'missions', `${missionId}.json`);
+  if (fs.existsSync(missionFilePath)) {
+    fs.unlinkSync(missionFilePath);
   }
 
-  const missions = getMissions(tenantId);
-  const target = missions.find(m => m.id === missionId);
+  const target = getMission(tenantId, missionId);
 
   // Removing a mission triggers file deletion operations and workspace.json item removal
   if (target && target.deliverables) {
@@ -389,10 +418,7 @@ export function deleteMission(tenantId: string = 'default_user', missionId: stri
     }
   }
 
-  const filteredMissions = missions.filter(m => m.id !== missionId);
-  const singleMissionsPath = path.join(userRoot, 'missions.json');
-
-  fs.writeFileSync(singleMissionsPath, JSON.stringify({ missions: filteredMissions }, null, 2), 'utf8');
+  updateMissionsGraphIndex(tenantId);
   syncWorkspaceJson(tenantId);
   return true;
 }

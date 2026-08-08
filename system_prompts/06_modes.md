@@ -21,7 +21,7 @@ Mission execution is the core operational state machine of the Fabrica kernel. W
 ### Step 2: Skill Discovery & Invocation (How & When to Use Skills)
 1. **When to Use Skills**: Whenever a mission phase or task requires domain-specific procedures, specialized coding frameworks, industry research protocols, or customized task rules, the agent MUST load and follow the corresponding **Skill**.
 2. **Skill Resolution Hierarchy**:
-   - Check workspace-level custom skills (`workspaces/<tenant_id>/.pi/skills/`).
+   - Check workspace-level custom skills (`/mnt/.pi/skills/`).
    - Check kernel-level default skills (`Fabrica_kernel/skills/`).
 3. **Skill Execution Protocol**:
    - Call `view_file` on the target skill's `SKILL.md` file before generating domain outputs.
@@ -139,7 +139,7 @@ When running multi-round loops (EFFORT >= MEDIUM):
 
 During every turn of mission execution, the agent MUST maintain strict state synchronization:
 1. **State Indexing**: Update `missions.json`, `workspace.json` (preserving/indexing `sources`, `deliverables`, `pendings`, `actions`, and `action_items` with metadata fields `type`, `level`, `description`, `when_to_use`, `triggers`, and `flagged_as_action`), `harness.json`, and `tenant.json` immediately upon completing task steps.
-2. **Disk Storage**: Store scoping, research, analytics, and plans in `workspace/Sources/` and generated code, assets, and reviews in `workspace/Deliverables/`. Maintain active execution scratchpads under `missions/{missionId}/`.
+2. **Disk Storage**: Store scoping, research, analytics, and plans in Phase subdirectories under `workspace/` (e.g. `Discovery & Scoping`, `Executions`, `Reviews`). Maintain active execution scratchpads under `missions/{missionId}/`.
 3. **Real-time Event Logging**: Append progress events and telemetry to `tenant.json` and `harness.json`.
 
 

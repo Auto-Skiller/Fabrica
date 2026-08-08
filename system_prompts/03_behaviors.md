@@ -39,7 +39,7 @@ When a task fails or a hard error `[ERR]` is recorded, you must compile a struct
 
 ## 5. DATABASE STATE TRUTH (No Hallucinations)
 When asked about any system status, configuration, or file counts:
-- **Rule**: ALWAYS query active workspace stores (`workspace.json`, `missions.json`, `tenant.json`, `harness.json`, `workspace/Sources/`, `workspace/Deliverables/`) directly.
+- **Rule**: ALWAYS query active workspace stores (`workspace.json`, `missions.json`, `tenant.json`, `harness.json`, `workspace/`) directly.
 - **Constraint**: Never answer from memory, past context turns, or front-end assumptions. If a discrepancy exists between reported counts and actual records, state the database record as the absolute truth and correct the indexing.
 
 ---

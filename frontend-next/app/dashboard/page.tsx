@@ -7936,11 +7936,11 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 15 ? '#34d399' : '#64748b' }}>
                 <span>{tenantSetupProgress >= 15 ? '✓' : '⏳'}</span>
-                <span>User Directory Workspace (<code>workspaces/{(user?.id || 'tenant').slice(0, 16)}/</code>)</span>
+                <span>User Directory Workspace (<code>/mnt/</code>)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 45 ? '#34d399' : '#64748b' }}>
                 <span>{tenantSetupProgress >= 45 ? '✓' : '⏳'}</span>
-                <span>Tenant Configuration & Harness (<code>tenant.json</code>, <code>harness.json</code>)</span>
+                <span>Tenant Configuration & Runtime Board (<code>runtime-board.json</code>)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tenantSetupProgress >= 80 ? '#34d399' : '#64748b' }}>
                 <span>{tenantSetupProgress >= 80 ? '✓' : '⏳'}</span>
@@ -9214,11 +9214,11 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   color: '#34d399'
                 }}>
                   <span>📁</span>
-                  <span>Tenant Workspace: <code>workspaces/{user?.id || activeEntity || 'default_user'}/</code></span>
+                  <span>Tenant Workspace: <code>/mnt/</code></span>
                 </div>
 
                 <div style={{ fontSize: '10.5px', color: 'var(--muted)', maxWidth: '280px', lineHeight: 1.5 }}>
-                  Click below to trigger the Agent CLI targeting your workspace directory (<code>workspaces/{user?.id || activeEntity || 'default_user'}/</code>), detect <code>.pi/</code>, and enable agent skills.
+                  Click below to trigger the Agent CLI targeting your workspace root (<code>/mnt/</code>), detect <code>.pi/</code>, and enable agent skills.
                 </div>
 
                 <button
@@ -10521,14 +10521,14 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                           ],
                           strategic_synthesis: [
                             { id: 'ws-synth-1', name: 'synthesis_report.md', path: 'synthesis_report.md', icon: '🎯', content: '# Strategic Architectural Synthesis\n1. Unified live app preview with embedded code editor.\n2. GCS persistent workspace file syncing.\n3. Responsive 7-subsystem workflow orchestration.' },
-                            { id: 'ws-synth-2', name: 'workspace.json', path: 'workspace.json', icon: '🟨', content: '{\n  "version": "2.0.0",\n  "workspace_id": "ws-tenant-primary",\n  "tenant_id": "usr-123",\n  "storage_backend": "gcs_fuse_mount"\n}' }
+                            { id: 'ws-synth-2', name: 'workspace-graph.json', path: 'workspace-graph.json', icon: '🟨', content: '{\n  "version": "2.0.0",\n  "workspace_id": "ws-tenant-primary",\n  "tenant_id": "usr-123",\n  "storage_backend": "gcs_fuse_mount"\n}' }
                           ],
                           executions: [
                             { id: 'ws-exec-1', name: 'src/', path: 'src/', isDir: true, icon: '📁', content: '// Directory src/\n// Contains application server and harness files' },
                             { id: 'ws-exec-2', name: 'server.ts', path: 'src/server.ts', icon: '📘', content: `import express from 'express';\nimport { runAgentCliTurn } from './core/harness';\n\nconst app = express();\nconst PORT = process.env.PORT || 3000;\n\napp.get('/health', (req, res) => {\n  res.json({ status: 'ok', storage_type: 'GCS_DEDICATED_BUCKET' });\n});\n\napp.listen(PORT, () => console.log("Fabrica active"));` },
                             { id: 'ws-exec-3', name: 'App.tsx', path: 'App.tsx', icon: '📘', content: `'use client';\nimport React from 'react';\n\nexport default function App() {\n  return <div>⚡ Fabrica Live Application</div>;\n}` },
                             { id: 'ws-exec-4', name: 'package.json', path: 'package.json', icon: '🟨', content: '{\n  "name": "fabrica-tenant-app",\n  "version": "1.0.0"\n}' },
-                            { id: 'ws-exec-5', name: 'harness.json', path: 'harness.json', icon: '🟨', content: '{\n  "runner_service": "fabrica-runner-usr-123",\n  "autonomy_level": "supervised"\n}' }
+                            { id: 'ws-exec-5', name: 'runtime-board.json', path: 'runtime-board.json', icon: '🟨', content: '{\n  "runner_service": "fabrica-runner-usr-123",\n  "autonomy_level": "supervised"\n}' }
                           ],
                           reviews: [
                             { id: 'ws-rev-1', name: 'audit_review.md', path: 'audit_review.md', icon: '🛡️', content: '# Security & Code Audit Review\n- [x] ESLint & TypeScript compilation clean\n- [x] Container sandbox isolation verified\n- [x] GCS auto-save syncing operational' }
@@ -11161,7 +11161,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 </button>
                 <button
                   onClick={() => {
-                    setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in db/missions.json and sync workspace artifacts.');
+                    setAgentsMdContent(prev => prev + '\n\n## Storage Directive\n- Store state in missions-graph.json and missions/<mission_id>.json and sync workspace artifacts.');
                     setToast({ message: 'Added Storage Directive snippet!', type: 'info', isOpen: true });
                   }}
                   className="mini outline"
@@ -11231,7 +11231,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                 </button>
                 <button
                   onClick={() => {
-                    setAgentsMdContent(prev => prev + '\n\n## Audit Directive\n- Log state transitions, mission progress, and telemetry events in tenant.json and harness.json.');
+                    setAgentsMdContent(prev => prev + '\n\n## Audit Directive\n- Log state transitions, mission progress, and telemetry events in runtime-board.json.');
                     setToast({ message: 'Added Audit Logging directive snippet!', type: 'info', isOpen: true });
                   }}
                   className="mini outline"
@@ -11398,7 +11398,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
               {/* Clean Single Title Badge */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--surface)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-soft)' }}>
                 <span style={{ fontSize: '10px' }}>📄</span>
-                <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', fontFamily: 'var(--mono)' }}>workspaces/{activeEntity || 'default_user'}/logs.json</span>
+                <span style={{ fontSize: '9px', fontWeight: 800, color: '#10b981', fontFamily: 'var(--mono)' }}>/mnt/logs.json</span>
               </div>
 
               <button
@@ -11431,7 +11431,7 @@ IMPORTANT: Respond ONLY with a valid JSON object matching this structure (no mar
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', padding: '8px 12px', background: 'var(--surface-alt)', border: '1px solid var(--border-soft)', borderRadius: '6px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-bright)', fontFamily: 'var(--mono)' }}>
-                        📁 workspaces/{activeEntity || 'default_user'}/logs.json
+                        📁 /mnt/logs.json
                       </span>
                       <span style={{ fontSize: '8px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: '#10b98122', color: '#10b981', border: '1px solid #10b98144' }}>
                         ACTIVE EVENT STREAM

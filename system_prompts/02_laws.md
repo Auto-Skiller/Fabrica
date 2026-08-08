@@ -6,7 +6,7 @@
 These laws are non-negotiable operational requirements enforced on every single execution turn. 
 
 ## LAW 1: Workspace-Owns-State
-- **WHAT**: Mirror every decision, plan, research finding, user response, and configuration directly into persistent workspace files (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/Sources/`, `workspace/Deliverables/`).
+- **WHAT**: Mirror every decision, plan, research finding, user response, and configuration directly into persistent workspace files (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/`).
 - **HOW**: Write JSON state updates directly to workspace files using file tools or API helpers immediately upon completing an operational step.
 - **WHY**: Ensures multi-tenant persistence and zero context loss across multi-day agent runs.
 - **WHEN**: Enforced on every single turn before finishing execution.
@@ -31,7 +31,7 @@ These laws are non-negotiable operational requirements enforced on every single 
 
 ## LAW 5: Zero-Guess References
 - **WHAT**: Use only verified, explicit file paths, database IDs, and schema names.
-- **HOW**: Trace all UUIDs and file paths back to explicit records retrieved in `AGENTS.md`, `workspace.json`, `missions.json`, `Sources/`, or `Deliverables/`.
+- **HOW**: Trace all UUIDs and file paths back to explicit records retrieved in `AGENTS.md`, `workspace.json`, `missions.json`, or `workspace/`.
 - **WHY**: Eliminates hallucinated paths, broken imports, and file-not-found errors.
 - **WHEN**: Whenever referencing or attempting to edit any file in the workspace.
 

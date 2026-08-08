@@ -476,7 +476,7 @@ export function getUserTier(tenantId: string): UserTierInfo {
   const rawTier = memoryAuthStore.tiers[tenantId] || {};
 
   const plan = rawTier.plan || 'pro';
-  const hasVerifiedCard = Boolean(rawTier.hasVerifiedCard || rawTier.cardVerified || rawTier.paymentVerified || process.env.GEMINI_API_KEY || true);
+  const hasVerifiedCard = Boolean(rawTier.hasVerifiedCard || rawTier.cardVerified || rawTier.paymentVerified || true);
   const monthlyTokenQuota = rawTier.monthlyTokenQuota || (plan === 'enterprise' ? 10000000 : plan === 'pro' ? 2000000 : 500000);
   const usedTokensThisMonth = rawTier.usedTokensThisMonth || 0;
   const remainingTokensThisMonth = Math.max(0, monthlyTokenQuota - usedTokensThisMonth);

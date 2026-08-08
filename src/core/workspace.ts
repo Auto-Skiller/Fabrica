@@ -65,11 +65,11 @@ export interface SyncResult {
   timestamp: string;
 }
 
-// ── Single workspace.json Index Mapping Engine ─────────────────────────────────
+// ── Single workspace-graph.json Index Mapping Engine ───────────────────────────
 
 export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceMap | null {
   const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  const workspaceJsonPath = path.join(userRoot, 'workspace-graph.json');
   const workspaceDir = path.join(userRoot, 'workspace');
 
   const workspaceDirs = [
@@ -228,7 +228,7 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
   try {
     fs.writeFileSync(workspaceJsonPath, JSON.stringify(workspaceMap, null, 2), 'utf8');
   } catch (err) {
-    console.warn(`[WorkspaceCore] Failed writing workspace.json for ${tenantId}:`, err);
+    console.warn(`[WorkspaceCore] Failed writing workspace-graph.json for ${tenantId}:`, err);
   }
 
   return workspaceMap;
@@ -236,7 +236,7 @@ export function syncWorkspaceJson(tenantId: string = 'default_user'): WorkspaceM
 
 export function getWorkspaceMap(tenantId: string = 'default_user'): WorkspaceMap {
   const userRoot = getTenantRoot(tenantId);
-  const workspaceJsonPath = path.join(userRoot, 'workspace.json');
+  const workspaceJsonPath = path.join(userRoot, 'workspace-graph.json');
   if (fs.existsSync(workspaceJsonPath)) {
     try {
       const parsed = JSON.parse(fs.readFileSync(workspaceJsonPath, 'utf8'));

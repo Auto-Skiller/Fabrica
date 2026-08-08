@@ -55,8 +55,8 @@ This guide describes how Fabrica manages and processes unstructured data inputs,
 ## 1. THE DUALITY OF DATA AND ARTIFACTS
 
 In Fabrica, everything is categorized into two fundamental pillars:
-1. **Sources / Raw Data (`workspace/Sources/` & `workspace.json` mapping)**: This contains the user's unstructured inputs. Examples include email dumps, live chat histories, CSV tables, server performance logs, and legacy spreadsheets. It acts as the "source of truth" and "context reservoir".
-2. **Deliverables / Artifacts (`workspace/Deliverables/` & `workspace.json` mapping)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a workspace. Each Artifact is its own separated domain unit or codebase.
+1. **Sources / Raw Data (`workspace/` & `workspace.json` mapping)**: This contains the user's unstructured inputs across scoping, research, data analysis, and strategic synthesis folders. Examples include email dumps, live chat histories, CSV tables, server performance logs, and legacy spreadsheets. It acts as the "source of truth" and "context reservoir".
+2. **Deliverables / Artifacts (`workspace/` & `workspace.json` mapping)**: An Artifact represents any user-built outcome, deliverable, modular unit, or capability within a workspace (`Executions`, `Reviews`, `Completed`). Each Artifact is its own separated domain unit or codebase.
 
 Every workspace item (folder or file, uploaded or generated) supports explicit metadata:
 - `type`: Category indicator (`source`, `deliverable`, `codebase`, `document`, `plan`, `workflow`, `component`, `pipeline`, `spec`, `other`).
@@ -96,7 +96,7 @@ In the workspace interface (Panel C), Raw Data inputs (`Sources/`) and Client De
 When raw unstructured files or streams enter the system, they are processed through dedicated **pipelines** (e.g., Build From Data, Optimization From Data, Test From Data, or Analytics).
 
 ### Ingestion Flow
-1. **Raw Ingestion**: Documents are written to `workspace/Sources/` and registered in `workspace.json` with detailed mime-type headers and origin metadata.
+1. **Raw Ingestion**: Documents are written to phase directories in `workspace/` and registered in `workspace.json` with detailed mime-type headers and origin metadata.
 2. **Analysis and Mapping**: The Analytics or Research phase maps these inputs to active project artifacts.
 3. **Upgrades & Normalization**: The optimization or build workflow converts raw inputs into schema definitions, seed queries, logic documents, or codebase modules.
 

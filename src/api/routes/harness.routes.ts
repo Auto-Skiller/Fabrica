@@ -165,8 +165,14 @@ router.get('/logs', (req: AuthenticatedRequest, res: Response) => {
 router.get('/skills', (req: AuthenticatedRequest, res: Response) => {
   const tenantId = req.tenantId || 'default_user';
   try {
-    const kernelSkillsDir = path.join(process.cwd(), 'Fabrica_kernel', 'skills');
     const userRoot = getTenantRoot(tenantId);
+    const candidateKernelSkillsDirs = [
+      path.join(userRoot, 'Fabrica_kernel', 'skills'),
+      '/mnt/Fabrica_kernel/skills',
+      '/Fabrica_kernel/skills',
+      path.join(process.cwd(), 'Fabrica_kernel', 'skills')
+    ];
+    const kernelSkillsDir = candidateKernelSkillsDirs.find(d => fs.existsSync(d)) || candidateKernelSkillsDirs[candidateKernelSkillsDirs.length - 1];
     const userSkillsDir = path.join(userRoot, '.pi', 'skills');
 
     const skills: {

@@ -30,8 +30,8 @@ Fabrica achieves universal adaptability across any business scenario through a c
 
 ## 2. DATABASE PERSISTENCE & MULTI-TENANT ARCHITECTURE
 Fabrica uses an enterprise **Multi-Tenant Hybrid Storage Engine** with tenant-isolated JSON stores and Supabase Authentication:
-- **Multi-Tenant Partitioning**: All workspace stores (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `.stash/auth.json`) and phase directories (`workspace/Sources/`, `workspace/Deliverables/`, `missions/{missionId}/`) are strictly isolated per client using tenant ID paths and Supabase user session isolation.
-- **Relational & Filesystem Consistency**: Raw Data inputs (`Sources/`), Deliverable modules (`Deliverables/`), and mission execution steps (`missions.json`) are synchronized across disk and memory.
+- **Multi-Tenant Partitioning**: All workspace stores (`tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `.stash/auth.json`) and phase directories (`workspace/`, `missions/{missionId}/`) are strictly isolated per client using tenant ID paths and Supabase user session isolation.
+- **Relational & Filesystem Consistency**: Raw Data inputs, Deliverable modules, and mission execution steps (`missions.json`) are synchronized across disk and memory.
 - **High-Performance Querying & Discovery**: Direct JSON store querying and text indexing enable the agent to retrieve historical context instantly without reading bloated files.
 
 ---
@@ -40,8 +40,8 @@ Fabrica uses an enterprise **Multi-Tenant Hybrid Storage Engine** with tenant-is
 To maintain system integrity and IP separation, Fabrica enforces two distinct operational layers:
 
 1. **The Core Product (Agent Kernel)**:
-   - Contains: `/Fabrica_kernel/system_prompts/*`, `/Fabrica_kernel/skills/*`, `/Fabrica_kernel/integrations/*`.
-   - **Role**: Read-only core system intelligence, integration bridges, and default skill library loaded during system boot-up.
+   - Contains: `/Fabrica_kernel/skills/*`, `/Fabrica_kernel/integrations/*`.
+   - **Role**: Read-only core system skills, integration bridges, and default skill library loaded during system boot-up.
 2. **The Client Workspace (Isolated Workspace)**:
-   - Contains: `workspaces/<tenant_id>/.pi/` (`agent/sessions/`, `skills/`), `AGENTS.md`, `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/` (`Sources/`, `Deliverables/`), and `missions/{missionId}/`.
+   - Contains: `workspaces/<tenant_id>/.pi/` (`agent/sessions/`, `skills/`), `AGENTS.md`, `tenant.json`, `harness.json`, `missions.json`, `workspace.json`, `workspace/` (7 lifecycle directories), and `missions/{missionId}/`.
    - **Role**: Active execution environment. Fully visible and editable by the client. Custom skills, user data sources, active missions, deliverables, and production assets persist here.
